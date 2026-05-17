@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>南投在地職人 AI 嚮導</title>
+    <style>
+        :root {
+            --primary-color: #4A5D4E; /* 大地綠，代表永續與自然 */
+            --bg-color: #F4F1EA; /* 溫暖的米白色 */
+            --chat-bg: #FFFFFF;
+            --user-msg: #DCE5D8;
+            --bot-msg: #F0F0F0;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'LiHei Pro', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #chat-container {
+            width: 100%;
+            max-width: 450px;
+            height: 85vh;
+            background: var(--chat-bg);
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #chat-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        #chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 15px;
+            line-height: 1.5;
+            font-size: 15px;
+            word-wrap: break-word;
+        }
+
+        .user-message {
+            background-color: var(--user-msg);
+            color: var(--text-color);
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .bot-message {
+            background-color: var(--bot-msg);
+            color: var(--text-color);
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
+        }
+
+        #input-container {
+            display: flex;
+            padding: 15px;
+            background: #fff;
+            border-top: 1px solid #eee;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+
+        #user-input:focus {
+            border-color: var(--primary-color);
+        }
+
+        #send-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 0 20px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        #send-btn:hover {
+            background-color: #38473b;
+        }
+
+        /* 載入動畫 (三個點) */
+        .typing-indicator {
+            display: none;
+            align-self: flex-start;
+            background-color: var(--bot-msg);
+            padding: 12px 16px;
+            border-radius: 15px;
+            border-bottom-left-radius: 2px;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background-color: #999;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: typing 1s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; margin-right: 0; }
+
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <div id="chat-header">🌿 南投職人探索 AI</div>
+    <div id="chat-box">
+        <div class="message bot-message">
+            你好！我是你的南投在地嚮導。想找冠軍咖啡師、隱藏版酒莊，還是原住民深度體驗？告訴我你的需求或預算吧！
+        </div>
+    </div>
+    
+    <!-- 載入動畫區塊 -->
+    <div class="typing-indicator" id="typing-indicator">
+        <span></span><span></span><span></span>
+    </div>
+
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder="例如：我想找埔里有拉花的冠軍咖啡廳..." autocomplete="off">
+        <button id="send-btn">發送</button>
+    </div>
+</div>
+
+<script>
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const typingIndicator = document.getElementById('typing-indicator');
+
+    // 處理發送訊息
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        // 1. 顯示使用者的訊息
+        appendMessage(text, 'user-message');
+        userInput.value = '';
+
+        // 2. 顯示 AI 正在思考的動畫
+        showTypingIndicator();
+
+        try {
+            // 3. 發送請求到 Flask 後端 (這裡假設你的 Flask 跑在 localhost:5000/api/chat)
+            // 注意：如果在本地測試未連後端，這裡會報錯是正常的，你可以先將這段註解，用下面的模擬回覆測試
+            
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await response.json();
+            
+            // 隱藏動畫，顯示後端真實回覆
+            hideTypingIndicator();
+            appendMessage(data.reply, 'bot-message');
+            
+
+            /* =========================================
+               如果你還沒寫好後端，可以先用下面這段「模擬」回覆來測試 UI：
+               
+               setTimeout(() => {
+                   hideTypingIndicator();
+                   appendMessage("這聽起來是個很棒的計畫！我正在為你聯繫埔里的冠軍咖啡師，稍等為你提供報價與行程安排。", 'bot-message');
+               }, 1500);
+               ========================================= */
+
+        } catch (error) {
+            hideTypingIndicator();
+            appendMessage("系統似乎有點狀況，請確認後端伺服器是否已啟動。", 'bot-message');
+            console.error("Error:", error);
+        }
+    }
+
+    // 增加訊息到畫面上
+    function appendMessage(text, className) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${className}`;
+        msgDiv.textContent = text;
+        chatBox.appendChild(msgDiv);
+        scrollToBottom();
+    }
+
+    // 控制載入動畫
+    function showTypingIndicator() {
+        typingIndicator.style.display = 'block';
+        chatBox.appendChild(typingIndicator); // 確保動畫始終在最下方
+        scrollToBottom();
+    }
+
+    function hideTypingIndicator() {
+        typingIndicator.style.display = 'none';
+    }
+
+    // 自動滾動到最底部
+    function scrollToBottom() {
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // 綁定事件：點擊按鈕或按 Enter 鍵
+    sendBtn.addEventListener('click', sendMessage);
+    userInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+</script>
+
+</body>
+</html>
