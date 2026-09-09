@@ -128,6 +128,7 @@
   }
   .field textarea{min-height:180px;resize:vertical;font-size:13px;line-height:1.55}
   .row{display:flex;gap:12px}
+  @media (max-width:520px){ .row{flex-direction:column;gap:0} }
   .row .field{flex:1}
   .modal .actions{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
   .modal .save{background:var(--accent);color:#0b1220;border:none;border-radius:9px;padding:10px 20px;font-weight:700}
@@ -197,8 +198,12 @@
       </div>
       <div class="field">
         <label>模型</label>
-        <input id="setModel" placeholder="gemini-2.5-flash" />
+        <select id="setModel"></select>
       </div>
+    </div>
+    <div class="field" id="customModelField" hidden>
+      <label>自訂模型 ID</label>
+      <input id="setModelCustom" placeholder="輸入完整模型名稱，例如 gemini-2.5-flash-preview" />
     </div>
     <div class="field">
       <label>API 金鑰</label>
@@ -272,7 +277,11 @@ const LS = {
   key(p){ return lsGet("tutor.key." + (p||this.provider)) || ""; },
   get prompt(){ return lsGet("tutor.prompt") || DEFAULT_PROMPT; },
 };
-function defaultModel(p){ return p === "openai" ? "gpt-4o-mini" : "gemini-2.5-flash"; }
+const MODELS = {
+  gemini: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-2.0-flash", "gemini-flash-latest"],
+  openai: ["gpt-4o-mini", "gpt-4o", "gpt-4.1-mini", "gpt-4.1"],
+};
+function defaultModel(p){ return MODELS[p] ? MODELS[p][0] : MODELS.gemini[0]; }
 
 /* ============ state ============ */
 const state = {
@@ -584,7 +593,12 @@ async function stream(messages, onDone){
   } catch (err){
     bubble.classList.remove("ai"); bubble.classList.add("sys");
     bubble.innerHTML = "";
-    bubble.textContent = "⚠ " + err.message;
+    let hint = "";
+    if (/404|not found|not_found|NOT_FOUND|unsupported/i.test(err.message))
+      hint = "\n\n→ 模型名稱可能不對，點右上「⚙ 設定」重新選一個模型。";
+    else if (/401|403|API key|api_key|invalid|permission/i.test(err.message))
+      hint = "\n\n→ 金鑰可能無效或未啟用，點右上「⚙ 設定」重新貼上。";
+    bubble.textContent = "⚠ " + err.message + hint;
     console.error(err);
   } finally {
     state.busy = false;
@@ -702,15 +716,37 @@ function fileToDataUrl(f){ return new Promise((res,rej) => { const r = new FileR
 
 /* ============ settings modal ============ */
 $("#btnSettings").addEventListener("click", () => openSettings());
-$("#setProvider").addEventListener("change", syncSettingsUi);
+$("#setProvider").addEventListener("change", () => { populateModelSelect($("#setProvider").value, ""); syncSettingsUi(); });
+$("#setModel").addEventListener("change", () => {
+  $("#customModelField").hidden = $("#setModel").value !== "__custom__";
+});
 $("#resetPrompt").addEventListener("click", () => { $("#setPrompt").value = DEFAULT_PROMPT; });
 $("#saveSettings").addEventListener("click", saveSettings);
 overlay.addEventListener("click", e => { if (e.target === overlay && LS.key()) overlay.hidden = true; });
 
+function populateModelSelect(p, selected){
+  const sel = $("#setModel");
+  const list = MODELS[p] || MODELS.gemini;
+  sel.innerHTML = "";
+  for (const m of list){
+    const o = document.createElement("option");
+    o.value = m; o.textContent = m; sel.appendChild(o);
+  }
+  const oc = document.createElement("option");
+  oc.value = "__custom__"; oc.textContent = "自訂…"; sel.appendChild(oc);
+  if (selected && list.includes(selected)){
+    sel.value = selected; $("#customModelField").hidden = true;
+  } else if (selected){
+    sel.value = "__custom__"; $("#customModelField").hidden = false;
+    $("#setModelCustom").value = selected;
+  } else {
+    sel.value = list[0]; $("#customModelField").hidden = true;
+  }
+}
+
 function openSettings(msg){
   $("#setProvider").value = LS.provider;
-  $("#setModel").value = LS.model;
-  $("#setModel").placeholder = defaultModel(LS.provider);
+  populateModelSelect(LS.provider, LS.model);
   $("#setKey").value = LS.key();
   $("#setBaseUrl").value = LS.baseUrl;
   $("#setLang").value = LS.lang;
@@ -721,7 +757,6 @@ function openSettings(msg){
 }
 function syncSettingsUi(){
   const p = $("#setProvider").value;
-  $("#setModel").placeholder = defaultModel(p);
   $("#baseUrlField").hidden = p !== "openai";
   $("#keyHelp").innerHTML = p === "gemini"
     ? '在 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Google AI Studio</a> 免費取得（需選一個模型並啟用）'
@@ -731,8 +766,11 @@ function saveSettings(){
   const p = $("#setProvider").value;
   const key = $("#setKey").value.trim();
   if (!key){ $("#setErr").textContent = "請填入 API 金鑰"; return; }
+  let model = $("#setModel").value;
+  if (model === "__custom__") model = $("#setModelCustom").value.trim();
+  if (!model) model = defaultModel(p);
   lsSet("tutor.provider", p);
-  lsSet("tutor.model", $("#setModel").value.trim());
+  lsSet("tutor.model", model);
   lsSet("tutor.lang", $("#setLang").value);
   lsSet("tutor.baseUrl", $("#setBaseUrl").value.trim());
   lsSet("tutor.key." + p, key);
