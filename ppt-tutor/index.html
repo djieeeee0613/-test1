@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AI 簡報導師 · PPT Tutor</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel-2:#1e222b; --line:#2a2f3a;
+    --text:#e7e9ee; --muted:#9aa3b2; --accent:#6ea8fe; --accent-2:#4ade80;
+    --user:#243043; --ai:#1c2530; --danger:#f87171;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  html,body{height:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font:15px/1.6 -apple-system,"Segoe UI",Roboto,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+  }
+  button{font:inherit;cursor:pointer}
+  input,select,textarea{font:inherit}
+
+  /* ---------- layout ---------- */
+  .app{display:flex;flex-direction:column;height:100%}
+  header{
+    display:flex;align-items:center;gap:12px;padding:10px 16px;
+    background:var(--panel);border-bottom:1px solid var(--line);flex:0 0 auto;
+  }
+  header .brand{font-weight:700;letter-spacing:.5px}
+  header .brand span{color:var(--accent)}
+  header .file{color:var(--muted);font-size:13px;max-width:32vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  header .spacer{flex:1}
+  header .mem{
+    font-size:12px;color:var(--accent-2);border:1px solid var(--line);
+    padding:4px 10px;border-radius:999px;background:var(--panel-2);
+  }
+  .icon-btn{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:6px 10px;
+  }
+  .icon-btn:hover{border-color:var(--accent)}
+
+  main{flex:1;display:grid;grid-template-columns:1fr 420px;min-height:0}
+  @media (max-width:900px){ main{grid-template-columns:1fr;grid-template-rows:1fr 1fr} }
+
+  /* ---------- viewer ---------- */
+  .viewer{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--line)}
+  .stage{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    overflow:auto;padding:18px;background:
+      radial-gradient(circle at 20% 20%, #1a1e27, var(--bg) 60%);
+  }
+  #pdfCanvas{max-width:100%;max-height:100%;box-shadow:0 10px 40px rgba(0,0,0,.5);border-radius:6px;background:#fff}
+  .slide-text{
+    background:#fff;color:#1a1a1a;width:min(880px,100%);min-height:60%;
+    border-radius:8px;padding:44px 52px;box-shadow:0 10px 40px rgba(0,0,0,.5);
+    white-space:pre-wrap;font-size:17px;line-height:1.7;
+  }
+  .slide-text h3{margin:0 0 18px;font-size:24px}
+  .dropzone{
+    border:2px dashed var(--line);border-radius:14px;padding:48px 40px;text-align:center;
+    color:var(--muted);max-width:520px;background:var(--panel)
+  }
+  .dropzone.drag{border-color:var(--accent);color:var(--text)}
+  .dropzone h2{margin:.2em 0;color:var(--text)}
+  .dropzone .pick{
+    display:inline-block;margin-top:14px;background:var(--accent);color:#0b1220;
+    padding:10px 18px;border-radius:10px;font-weight:600
+  }
+  .dropzone small{display:block;margin-top:14px;opacity:.8}
+
+  .toolbar{
+    flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:10px 14px;
+    background:var(--panel);border-top:1px solid var(--line)
+  }
+  .toolbar button{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:7px 12px
+  }
+  .toolbar button:disabled{opacity:.4;cursor:not-allowed}
+  .toolbar .page{font-size:13px;color:var(--muted)}
+  .toolbar input[type=number]{
+    width:56px;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    border-radius:6px;padding:4px 6px;text-align:center
+  }
+  .toolbar .spacer{flex:1}
+  .analyze{
+    background:linear-gradient(180deg,var(--accent),#4c8ef7)!important;
+    color:#0b1220!important;border:none!important;font-weight:700
+  }
+  .analyze:disabled{background:var(--panel-2)!important;color:var(--muted)!important}
+
+  /* ---------- tutor panel ---------- */
+  .tutor{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--panel)}
+  .tutor .head{padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px;display:flex;gap:8px;align-items:center}
+  .tutor .head .dot{width:8px;height:8px;border-radius:50%;background:var(--accent-2)}
+  .chat{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+  .msg{max-width:92%;padding:11px 14px;border-radius:12px;font-size:14.5px}
+  .msg.user{align-self:flex-end;background:var(--user)}
+  .msg.ai{align-self:flex-start;background:var(--ai);border:1px solid var(--line)}
+  .msg.ai .sum{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);color:var(--accent-2);font-size:13px}
+  .msg.sys{align-self:center;color:var(--muted);font-size:12px;background:transparent}
+  .msg b{color:#fff}
+  .msg ul{margin:.4em 0;padding-left:1.2em}
+  .msg .cursor{display:inline-block;width:7px;height:15px;background:var(--accent);animation:blink 1s steps(1) infinite;vertical-align:-2px}
+  @keyframes blink{50%{opacity:0}}
+  .composer{flex:0 0 auto;display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+  .composer textarea{
+    flex:1;resize:none;height:44px;max-height:120px;background:var(--panel-2);
+    border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px
+  }
+  .composer button{
+    background:var(--accent);color:#0b1220;border:none;border-radius:10px;padding:0 16px;font-weight:700
+  }
+  .composer button:disabled{opacity:.5}
+
+  /* ---------- settings modal ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
+  .overlay[hidden]{display:none}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(560px,92vw);max-height:90vh;overflow:auto;padding:22px}
+  .modal h2{margin:0 0 4px}
+  .modal p.hint{margin:0 0 18px;color:var(--muted);font-size:13px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+  .field input,.field select,.field textarea{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:9px 11px
+  }
+  .field textarea{min-height:180px;resize:vertical;font-size:13px;line-height:1.55}
+  .row{display:flex;gap:12px}
+  .row .field{flex:1}
+  .modal .actions{display:flex;justify-content:space-between;align-items:center;margin-top:18px}
+  .modal .save{background:var(--accent);color:#0b1220;border:none;border-radius:9px;padding:10px 20px;font-weight:700}
+  .modal .reset{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:9px;padding:9px 14px}
+  .keyhelp{font-size:12px;color:var(--muted);margin-top:4px}
+  .keyhelp a{color:var(--accent)}
+  .err{color:var(--danger);font-size:13px;margin-top:8px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">AI <span>簡報導師</span></div>
+    <div class="file" id="fileName">尚未載入檔案</div>
+    <div class="spacer"></div>
+    <div class="mem" id="memBadge">已學習 0 頁</div>
+    <button class="icon-btn" id="btnNew" title="換一份簡報">↻ 換檔</button>
+    <button class="icon-btn" id="btnSettings" title="設定">⚙ 設定</button>
+  </header>
+
+  <main>
+    <section class="viewer">
+      <div class="stage" id="stage">
+        <div class="dropzone" id="dropzone">
+          <h2>拖入簡報開始</h2>
+          <p>支援 <b>PDF</b>（最佳）、PPTX、以及圖片</p>
+          <label class="pick">選擇檔案
+            <input type="file" id="fileInput" accept=".pdf,.pptx,.png,.jpg,.jpeg,.webp" hidden />
+          </label>
+          <small>PPTX 只能抽取文字，建議先在 PowerPoint 匯出成 PDF 以獲得完整版面</small>
+        </div>
+      </div>
+      <div class="toolbar" id="toolbar" hidden>
+        <button id="prevBtn">‹ 上一頁</button>
+        <span class="page">第 <input type="number" id="pageNum" min="1" value="1" /> / <span id="pageCount">1</span> 頁</span>
+        <button id="nextBtn">下一頁 ›</button>
+        <span class="spacer"></span>
+        <button class="analyze" id="analyzeBtn">▶ 開始解析本頁</button>
+      </div>
+    </section>
+
+    <section class="tutor">
+      <div class="head"><span class="dot"></span> 導師講解 <span id="tutorSlideTag" style="color:var(--muted);font-weight:400"></span></div>
+      <div class="chat" id="chat">
+        <div class="msg sys">載入簡報後，翻到想學的一頁，按「開始解析本頁」。導師會自動翻譯英文並結合前面內容講解。</div>
+      </div>
+      <div class="composer">
+        <textarea id="qInput" placeholder="針對這一頁追問…（Enter 送出，Shift+Enter 換行）" disabled></textarea>
+        <button id="sendBtn" disabled>送出</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- settings -->
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <h2>設定</h2>
+    <p class="hint">金鑰只存在這台瀏覽器的 localStorage，不會上傳到任何伺服器。</p>
+    <div class="row">
+      <div class="field">
+        <label>AI 供應商</label>
+        <select id="setProvider">
+          <option value="gemini">Google Gemini</option>
+          <option value="openai">OpenAI（相容端點）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>模型</label>
+        <input id="setModel" placeholder="gemini-2.5-flash" />
+      </div>
+    </div>
+    <div class="field">
+      <label>API 金鑰</label>
+      <input id="setKey" type="password" placeholder="貼上你的 API Key" />
+      <div class="keyhelp" id="keyHelp"></div>
+    </div>
+    <div class="field" id="baseUrlField" hidden>
+      <label>Base URL（OpenAI 相容端點，選填）</label>
+      <input id="setBaseUrl" placeholder="https://api.openai.com/v1" />
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>講解語言</label>
+        <select id="setLang">
+          <option value="繁體中文">繁體中文</option>
+          <option value="简体中文">简体中文</option>
+          <option value="English">English</option>
+          <option value="日本語">日本語</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>導師 System Prompt（已預設，可微調）</label>
+      <textarea id="setPrompt"></textarea>
+    </div>
+    <div class="err" id="setErr"></div>
+    <div class="actions">
+      <button class="reset" id="resetPrompt">還原預設 Prompt</button>
+      <button class="save" id="saveSettings">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+"use strict";
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+
+/* ============ default prompt ============ */
+const DEFAULT_PROMPT =
+`你是一位親切、有耐心的大學課程導師。學生會一頁一頁地把投影片（可能是英文）交給你，你要像在課堂上帶著他一起讀一樣講解。
+
+規則：
+1. 一律用「{LANG}」回答。投影片若是其他語言，先在心中翻譯，再用「{LANG}」講解；關鍵術語第一次出現時用「譯名（原文）」標註。
+2. 講解要有結構：先用一句話點出這頁的主題，接著條列說明重點，必要時舉一個具體例子或生活化的比喻。
+3. 善用學生提供的「課程脈絡回顧」——把這頁和前面已經講過的內容連起來，明確指出延續、對比或因果關係。
+4. 不要只照唸投影片文字，要補充背景、說明為什麼重要、點出學生常見的誤解。
+5. 篇幅適中（約 200–400 字），不要冗長。
+6. 最後務必另起一行，用固定格式輸出這頁的一句話摘要（供後續記憶使用）：
+【本頁摘要】<20–40 字，這頁的核心重點>`;
+
+/* ============ settings store (localStorage may be blocked -> in-memory fallback) ============ */
+const memStore = {};
+function lsGet(k){
+  try { const v = localStorage.getItem(k); if (v !== null) return v; } catch(_){}
+  return k in memStore ? memStore[k] : null;
+}
+function lsSet(k, v){
+  memStore[k] = v;
+  try { localStorage.setItem(k, v); } catch(_){}
+}
+const LS = {
+  get provider(){ return lsGet("tutor.provider") || "gemini"; },
+  get model(){ return lsGet("tutor.model") || ""; },
+  get lang(){ return lsGet("tutor.lang") || "繁體中文"; },
+  get baseUrl(){ return lsGet("tutor.baseUrl") || ""; },
+  key(p){ return lsGet("tutor.key." + (p||this.provider)) || ""; },
+  get prompt(){ return lsGet("tutor.prompt") || DEFAULT_PROMPT; },
+};
+function defaultModel(p){ return p === "openai" ? "gpt-4o-mini" : "gemini-2.5-flash"; }
+
+/* ============ state ============ */
+const state = {
+  kind: null,          // 'pdf' | 'pptx' | 'image'
+  pdf: null,
+  total: 0,
+  page: 1,
+  scale: 1,
+  slides: [],          // { summary, chat:[{role,text,sum?}] , analyzed:bool }
+  pptxTexts: [],       // per slide plain text
+  imageDataUrl: null,  // single image mode
+  busy: false,
+};
+
+/* ============ elements ============ */
+const $ = s => document.querySelector(s);
+const stage = $("#stage"), dropzone = $("#dropzone"), fileInput = $("#fileInput");
+const toolbar = $("#toolbar"), pageNum = $("#pageNum"), pageCount = $("#pageCount");
+const chat = $("#chat"), qInput = $("#qInput"), sendBtn = $("#sendBtn"), analyzeBtn = $("#analyzeBtn");
+const memBadge = $("#memBadge"), fileName = $("#fileName"), tutorSlideTag = $("#tutorSlideTag");
+const overlay = $("#overlay");
+
+/* ============ file loading ============ */
+["dragenter","dragover"].forEach(ev => stage.addEventListener(ev, e => {
+  e.preventDefault(); dropzone && dropzone.classList.add("drag");
+}));
+["dragleave","drop"].forEach(ev => stage.addEventListener(ev, e => {
+  e.preventDefault(); dropzone && dropzone.classList.remove("drag");
+}));
+stage.addEventListener("drop", e => {
+  const f = e.dataTransfer.files[0]; if (f) loadFile(f);
+});
+fileInput.addEventListener("change", e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+$("#btnNew").addEventListener("click", () => location.reload());
+
+async function loadFile(file){
+  const ext = (file.name.split(".").pop() || "").toLowerCase();
+  resetForNewFile();
+  fileName.textContent = file.name;
+  try {
+    if (ext === "pdf") await loadPdf(file);
+    else if (ext === "pptx") await loadPptx(file);
+    else if (["png","jpg","jpeg","webp"].includes(ext)) await loadImage(file);
+    else throw new Error("不支援的檔案格式：" + ext);
+  } catch (err){
+    alert("載入失敗：" + err.message);
+    console.error(err);
+    return;
+  }
+  dropzone.remove();
+  toolbar.hidden = false;
+  qInput.disabled = false; sendBtn.disabled = false;
+  gotoPage(1);
+}
+
+function resetForNewFile(){
+  state.pdf = null; state.slides = []; state.pptxTexts = []; state.imageDataUrl = null;
+  state.total = 0; state.page = 1;
+}
+
+async function loadPdf(file){
+  const buf = await file.arrayBuffer();
+  state.pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  state.kind = "pdf";
+  state.total = state.pdf.numPages;
+  initSlides();
+}
+
+async function loadPptx(file){
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const names = Object.keys(zip.files)
+    .filter(n => /^ppt\/slides\/slide\d+\.xml$/.test(n))
+    .sort((a,b) => (+a.match(/\d+/)[0]) - (+b.match(/\d+/)[0]));
+  if (!names.length) throw new Error("這個 PPTX 找不到投影片");
+  state.pptxTexts = [];
+  for (const n of names){
+    const xml = await zip.file(n).async("string");
+    // grab <a:t> runs; keep paragraph breaks on </a:p>
+    const paras = xml.split(/<\/a:p>/).map(p => {
+      const runs = [...p.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)].map(m => decodeXml(m[1]));
+      return runs.join("");
+    }).filter(s => s.trim().length);
+    state.pptxTexts.push(paras.join("\n").trim() || "（此頁沒有文字）");
+  }
+  state.kind = "pptx";
+  state.total = state.pptxTexts.length;
+  initSlides();
+}
+
+async function loadImage(file){
+  state.imageDataUrl = await fileToDataUrl(file);
+  state.kind = "image";
+  state.total = 1;
+  initSlides();
+}
+
+function initSlides(){
+  state.slides = Array.from({length: state.total}, () => ({ summary:"", chat:[], analyzed:false }));
+  pageCount.textContent = state.total;
+  pageNum.max = state.total;
+  updateMemBadge();
+}
+
+/* ============ paging ============ */
+$("#prevBtn").addEventListener("click", () => gotoPage(state.page - 1));
+$("#nextBtn").addEventListener("click", () => gotoPage(state.page + 1));
+pageNum.addEventListener("change", () => gotoPage(+pageNum.value));
+window.addEventListener("keydown", e => {
+  if (overlay.hidden === false) return;
+  if (document.activeElement === qInput) return;
+  if (e.key === "ArrowLeft") gotoPage(state.page - 1);
+  if (e.key === "ArrowRight") gotoPage(state.page + 1);
+});
+
+async function gotoPage(n){
+  n = Math.max(1, Math.min(state.total, n | 0 || 1));
+  state.page = n;
+  pageNum.value = n;
+  $("#prevBtn").disabled = n <= 1;
+  $("#nextBtn").disabled = n >= state.total;
+  tutorSlideTag.textContent = `· 第 ${n} 頁`;
+  await renderStage();
+  renderChatForSlide();
+  refreshAnalyzeBtn();
+}
+
+async function renderStage(){
+  stage.querySelectorAll(".slide-text,canvas").forEach(el => el.remove());
+  if (state.kind === "pdf"){
+    const canvas = document.createElement("canvas");
+    canvas.id = "pdfCanvas";
+    stage.appendChild(canvas);
+    const page = await state.pdf.getPage(state.page);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const baseVp = page.getViewport({ scale: 1 });
+    const fit = Math.min((stage.clientWidth - 40) / baseVp.width, (stage.clientHeight - 40) / baseVp.height);
+    const vp = page.getViewport({ scale: Math.max(fit, .2) * dpr });
+    canvas.width = vp.width; canvas.height = vp.height;
+    canvas.style.width = (vp.width / dpr) + "px";
+    canvas.style.height = (vp.height / dpr) + "px";
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
+  } else if (state.kind === "pptx"){
+    const div = document.createElement("div");
+    div.className = "slide-text";
+    const txt = state.pptxTexts[state.page - 1] || "";
+    const lines = txt.split("\n");
+    div.innerHTML = `<h3>第 ${state.page} 頁</h3>` +
+      lines.map(l => escapeHtml(l)).join("<br>");
+    stage.appendChild(div);
+  } else if (state.kind === "image"){
+    const canvas = document.createElement("canvas");
+    canvas.id = "pdfCanvas";
+    stage.appendChild(canvas);
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+      canvas.getContext("2d").drawImage(img, 0, 0);
+    };
+    img.src = state.imageDataUrl;
+  }
+}
+
+/* ============ per-slide payload for the AI ============ */
+async function currentSlidePayload(){
+  if (state.kind === "pptx"){
+    return { text: state.pptxTexts[state.page - 1] || "（此頁沒有文字）", image: null };
+  }
+  // pdf / image -> downscaled jpeg
+  const src = document.getElementById("pdfCanvas");
+  const maxW = 1500;
+  const off = document.createElement("canvas");
+  const scale = Math.min(1, maxW / src.width);
+  off.width = Math.round(src.width * scale);
+  off.height = Math.round(src.height * scale);
+  off.getContext("2d").drawImage(src, 0, 0, off.width, off.height);
+  return { text: null, image: off.toDataURL("image/jpeg", 0.85) };
+}
+
+/* ============ memory ============ */
+function contextRecap(){
+  const prior = state.slides.slice(0, state.page - 1)
+    .map((s, i) => s.summary ? `第 ${i+1} 頁：${s.summary}` : null)
+    .filter(Boolean);
+  if (!prior.length) return "【課程脈絡回顧】這是目前第一頁被解析的內容，前面還沒有紀錄。";
+  return "【課程脈絡回顧】前面已經講解過的重點如下：\n" + prior.join("\n");
+}
+function updateMemBadge(){
+  const n = state.slides.filter(s => s.analyzed).length;
+  memBadge.textContent = `已學習 ${n} 頁`;
+}
+
+/* ============ chat rendering ============ */
+function renderChatForSlide(){
+  chat.innerHTML = "";
+  const s = state.slides[state.page - 1];
+  if (!s || !s.chat.length){
+    chat.innerHTML = `<div class="msg sys">這一頁還沒解析。按下方「開始解析本頁」讓導師講解。</div>`;
+    return;
+  }
+  for (const m of s.chat) addBubble(m.role, m.text, m.sum, false);
+  chat.scrollTop = chat.scrollHeight;
+}
+function addBubble(role, text, sum, scroll = true){
+  const div = document.createElement("div");
+  div.className = "msg " + (role === "user" ? "user" : role === "sys" ? "sys" : "ai");
+  div.innerHTML = role === "ai" ? formatMd(text) : escapeHtml(text);
+  if (sum) {
+    const s = document.createElement("div");
+    s.className = "sum"; s.textContent = "📌 " + sum;
+    div.appendChild(s);
+  }
+  chat.appendChild(div);
+  if (scroll) chat.scrollTop = chat.scrollHeight;
+  return div;
+}
+
+/* ============ analyze / ask ============ */
+function refreshAnalyzeBtn(){
+  const s = state.slides[state.page - 1];
+  analyzeBtn.disabled = state.busy || !s;
+  analyzeBtn.textContent = s && s.analyzed ? "↻ 重新解析本頁" : "▶ 開始解析本頁";
+}
+analyzeBtn.addEventListener("click", () => runAnalyze());
+sendBtn.addEventListener("click", () => runAsk());
+qInput.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); runAsk(); }
+});
+
+async function runAnalyze(){
+  if (state.busy) return;
+  if (!LS.key()){ openSettings("請先設定 API 金鑰"); return; }
+  const s = state.slides[state.page - 1];
+  s.chat = []; // fresh analysis for this slide
+  renderChatForSlide();
+  chat.innerHTML = "";
+
+  const payload = await currentSlidePayload();
+  const userLabel = `請講解第 ${state.page} 頁（共 ${state.total} 頁）。`;
+  addBubble("user", userLabel);
+  s.chat.push({ role:"user", text: userLabel });
+
+  const instruction =
+    contextRecap() + "\n\n" +
+    `這是「第 ${state.page} 頁 / 共 ${state.total} 頁」。` +
+    (payload.text ? `\n投影片文字如下：\n"""\n${payload.text}\n"""` : "\n投影片畫面見附圖。") +
+    `\n\n請依規則講解，並在最後輸出【本頁摘要】。`;
+
+  const messages = [{ role:"user", text: instruction, image: payload.image }];
+  await stream(messages, (full) => {
+    const { body, sum } = splitSummary(full);
+    const last = state.slides[state.page - 1];
+    last.chat.push({ role:"ai", text: body, sum });
+    last.summary = sum || body.slice(0, 40);
+    last.analyzed = true;
+    updateMemBadge();
+  });
+}
+
+async function runAsk(){
+  if (state.busy) return;
+  const q = qInput.value.trim();
+  if (!q) return;
+  if (!LS.key()){ openSettings("請先設定 API 金鑰"); return; }
+  qInput.value = "";
+  const s = state.slides[state.page - 1];
+  addBubble("user", q);
+  s.chat.push({ role:"user", text: q });
+
+  const payload = await currentSlidePayload();
+  const history = s.chat.filter(m => m.role !== "sys")
+    .map(m => ({ role: m.role === "user" ? "user" : "assistant", text: m.text }));
+  // prepend context + slide material to the first user turn
+  history[0] = {
+    role: "user",
+    text: contextRecap() + `\n\n（目前在第 ${state.page} 頁）` +
+          (payload.text ? `\n投影片文字：\n"""\n${payload.text}\n"""` : "\n投影片畫面見附圖。") +
+          `\n\n學生的問題：${history[0].text}`,
+    image: payload.image,
+  };
+  await stream(history, (full) => {
+    state.slides[state.page - 1].chat.push({ role:"ai", text: full });
+  });
+}
+
+/* ============ streaming core ============ */
+async function stream(messages, onDone){
+  state.busy = true;
+  refreshAnalyzeBtn(); sendBtn.disabled = true;
+  const bubble = addBubble("ai", "");
+  bubble.innerHTML = '<span class="cursor"></span>';
+  let full = "";
+  const onToken = t => {
+    full += t;
+    bubble.innerHTML = formatMd(full) + '<span class="cursor"></span>';
+    chat.scrollTop = chat.scrollHeight;
+  };
+  try {
+    const provider = LS.provider;
+    if (provider === "gemini") await callGemini(messages, onToken);
+    else await callOpenAI(messages, onToken);
+    const { body, sum } = splitSummary(full);
+    bubble.innerHTML = formatMd(body);
+    if (sum){
+      const el = document.createElement("div");
+      el.className = "sum"; el.textContent = "📌 " + sum;
+      bubble.appendChild(el);
+    }
+    onDone(full);
+  } catch (err){
+    bubble.classList.remove("ai"); bubble.classList.add("sys");
+    bubble.innerHTML = "";
+    bubble.textContent = "⚠ " + err.message;
+    console.error(err);
+  } finally {
+    state.busy = false;
+    refreshAnalyzeBtn();
+    sendBtn.disabled = false;
+    updateMemBadge();
+  }
+}
+
+async function* sse(res){
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "";
+  while (true){
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream:true });
+    let i;
+    while ((i = buf.indexOf("\n")) >= 0){
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (line.startsWith("data:")){
+        const d = line.slice(5).trim();
+        if (d && d !== "[DONE]") yield d;
+      }
+    }
+  }
+}
+
+async function callGemini(messages, onToken){
+  const model = LS.model || defaultModel("gemini");
+  const system = LS.prompt.replaceAll("{LANG}", LS.lang);
+  const contents = messages.map(m => {
+    const parts = [{ text: m.text }];
+    if (m.image){
+      parts.push({ inline_data: { mime_type: "image/jpeg", data: m.image.split(",")[1] } });
+    }
+    return { role: m.role === "assistant" ? "model" : "user", parts };
+  });
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(LS.key())}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents,
+      systemInstruction: { parts: [{ text: system }] },
+      generationConfig: { temperature: 0.7 },
+    }),
+  });
+  if (!res.ok) throw new Error(`Gemini ${res.status}：${(await res.text()).slice(0,300)}`);
+  for await (const d of sse(res)){
+    try {
+      const j = JSON.parse(d);
+      const t = (j.candidates?.[0]?.content?.parts || []).map(p => p.text || "").join("");
+      if (t) onToken(t);
+    } catch(_){}
+  }
+}
+
+async function callOpenAI(messages, onToken){
+  const model = LS.model || defaultModel("openai");
+  const base = (LS.baseUrl || "https://api.openai.com/v1").replace(/\/$/, "");
+  const system = LS.prompt.replaceAll("{LANG}", LS.lang);
+  const msgs = [{ role:"system", content: system }].concat(messages.map(m => {
+    if (m.image){
+      return { role: m.role, content: [
+        { type:"text", text: m.text },
+        { type:"image_url", image_url: { url: m.image } },
+      ]};
+    }
+    return { role: m.role, content: m.text };
+  }));
+  const res = await fetch(base + "/chat/completions", {
+    method:"POST",
+    headers: { "Content-Type":"application/json", "Authorization":"Bearer " + LS.key() },
+    body: JSON.stringify({ model, messages: msgs, stream:true, temperature:0.7 }),
+  });
+  if (!res.ok) throw new Error(`OpenAI ${res.status}：${(await res.text()).slice(0,300)}`);
+  for await (const d of sse(res)){
+    try {
+      const j = JSON.parse(d);
+      const t = j.choices?.[0]?.delta?.content || "";
+      if (t) onToken(t);
+    } catch(_){}
+  }
+}
+
+/* ============ helpers ============ */
+function splitSummary(text){
+  const m = text.match(/【本頁摘要】\s*(.+)\s*$/m);
+  if (!m) return { body: text.trim(), sum: "" };
+  const body = text.slice(0, m.index).trim();
+  return { body, sum: m[1].trim() };
+}
+function formatMd(t){
+  let h = escapeHtml(t);
+  h = h.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  const lines = h.split("\n");
+  let out = "", inList = false;
+  for (let line of lines){
+    if (/^\s*[-*•]\s+/.test(line)){
+      if (!inList){ out += "<ul>"; inList = true; }
+      out += "<li>" + line.replace(/^\s*[-*•]\s+/, "") + "</li>";
+    } else {
+      if (inList){ out += "</ul>"; inList = false; }
+      out += line.trim() ? "<div>" + line + "</div>" : "<div style='height:6px'></div>";
+    }
+  }
+  if (inList) out += "</ul>";
+  return out;
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+function decodeXml(s){ return s.replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'"); }
+function fileToDataUrl(f){ return new Promise((res,rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); }); }
+
+/* ============ settings modal ============ */
+$("#btnSettings").addEventListener("click", () => openSettings());
+$("#setProvider").addEventListener("change", syncSettingsUi);
+$("#resetPrompt").addEventListener("click", () => { $("#setPrompt").value = DEFAULT_PROMPT; });
+$("#saveSettings").addEventListener("click", saveSettings);
+overlay.addEventListener("click", e => { if (e.target === overlay && LS.key()) overlay.hidden = true; });
+
+function openSettings(msg){
+  $("#setProvider").value = LS.provider;
+  $("#setModel").value = LS.model;
+  $("#setModel").placeholder = defaultModel(LS.provider);
+  $("#setKey").value = LS.key();
+  $("#setBaseUrl").value = LS.baseUrl;
+  $("#setLang").value = LS.lang;
+  $("#setPrompt").value = LS.prompt;
+  $("#setErr").textContent = msg || "";
+  syncSettingsUi();
+  overlay.hidden = false;
+}
+function syncSettingsUi(){
+  const p = $("#setProvider").value;
+  $("#setModel").placeholder = defaultModel(p);
+  $("#baseUrlField").hidden = p !== "openai";
+  $("#keyHelp").innerHTML = p === "gemini"
+    ? '在 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer">Google AI Studio</a> 免費取得（需選一個模型並啟用）'
+    : '在 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">platform.openai.com</a> 取得，或填自架的相容端點';
+}
+function saveSettings(){
+  const p = $("#setProvider").value;
+  const key = $("#setKey").value.trim();
+  if (!key){ $("#setErr").textContent = "請填入 API 金鑰"; return; }
+  lsSet("tutor.provider", p);
+  lsSet("tutor.model", $("#setModel").value.trim());
+  lsSet("tutor.lang", $("#setLang").value);
+  lsSet("tutor.baseUrl", $("#setBaseUrl").value.trim());
+  lsSet("tutor.key." + p, key);
+  lsSet("tutor.prompt", $("#setPrompt").value.trim() || DEFAULT_PROMPT);
+  overlay.hidden = true;
+}
+
+/* ============ boot ============ */
+if (!LS.key()) openSettings("歡迎！先設定 AI 供應商與金鑰即可開始");
+</script>
+</body>
+</html>
