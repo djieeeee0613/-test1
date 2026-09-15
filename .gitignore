@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+*.pyc
+bookings.json
+n8n_*.json
+ngrok.exe
+*.exe
+*.pem
+.claude/
+.vscode/

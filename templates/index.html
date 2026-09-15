@@ -3,135 +3,798 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>南投在地職人 AI 嚮導</title>
+    <title>南投深度旅遊 - 職人永續體驗</title>
     <style>
         :root {
-            --primary-color: #4A5D4E; /* 大地綠，代表永續與自然 */
-            --bg-color: #F4F1EA; /* 溫暖的米白色 */
-            --chat-bg: #FFFFFF;
+            --primary: #4A5D4E;
+            --primary-dark: #38473b;
+            --accent: #C8A96E;
+            --bg: #F4F1EA;
+            --text: #333333;
             --user-msg: #DCE5D8;
             --bot-msg: #F0F0F0;
-            --text-color: #333333;
         }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             font-family: 'Helvetica Neue', Arial, 'LiHei Pro', sans-serif;
-            background-color: var(--bg-color);
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            background: var(--bg);
+            color: var(--text);
         }
 
-        #chat-container {
-            width: 100%;
-            max-width: 450px;
-            height: 85vh;
-            background: var(--chat-bg);
-            border-radius: 15px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+        /* ===== 導覽列 ===== */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            background: rgba(74, 93, 78, 0.95);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            height: 64px;
+        }
+
+        .nav-logo {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .nav-logo span { color: var(--accent); }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            font-size: 15px;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover { color: var(--accent); }
+
+        /* 語言切換 */
+        .lang-switcher {
+            display: flex;
+            gap: 4px;
+            margin-left: 24px;
+        }
+
+        .lang-btn {
+            background: rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.7);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-btn:hover, .lang-btn.active {
+            background: rgba(255,255,255,0.25);
+            color: white;
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        /* ===== Hero ===== */
+        .hero {
+            height: 100vh;
+            background: linear-gradient(135deg, #2d3d30 0%, #4A5D4E 50%, #6b7f55 100%);
             display: flex;
             flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
             overflow: hidden;
         }
 
-        #chat-header {
-            background-color: var(--primary-color);
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* 裝飾圓圈 */
+        .hero-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(200, 169, 110, 0.08);
+        }
+        .hero-circle.c1 { width: 500px; height: 500px; top: -100px; right: -100px; }
+        .hero-circle.c2 { width: 300px; height: 300px; bottom: 50px; left: -50px; }
+
+        .hero-content { position: relative; z-index: 1; }
+
+        .hero-badge {
+            display: inline-block;
+            background: rgba(200, 169, 110, 0.2);
+            border: 1px solid rgba(200, 169, 110, 0.5);
+            color: var(--accent);
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            letter-spacing: 2px;
+            margin-bottom: 24px;
+        }
+
+        .hero h1 {
             color: white;
-            padding: 20px;
-            text-align: center;
+            font-size: 56px;
+            font-weight: 900;
+            line-height: 1.15;
+            margin-bottom: 20px;
+            letter-spacing: 3px;
+        }
+
+        .hero h1 em {
+            font-style: normal;
+            color: var(--accent);
+        }
+
+        .hero p {
+            color: rgba(255,255,255,0.75);
             font-size: 18px;
+            line-height: 1.7;
+            max-width: 520px;
+            margin: 0 auto 40px;
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #2d2d2d;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 30px;
+            font-size: 16px;
             font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(200,169,110,0.4);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.4);
+            padding: 14px 32px;
+            border-radius: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-outline:hover { border-color: white; }
+
+        .hero-scroll {
+            position: absolute;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.4);
+            font-size: 13px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            animation: bounce 2s infinite;
+        }
+
+        .hero-scroll::after {
+            content: '↓';
+            font-size: 18px;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(6px); }
+        }
+
+        /* ===== 數據統計 ===== */
+        .stats {
+            background: var(--primary);
+            padding: 48px 40px;
+            display: flex;
+            justify-content: center;
+            gap: 80px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            color: white;
+        }
+
+        .stat-item .num {
+            font-size: 42px;
+            font-weight: 900;
+            color: var(--accent);
+            line-height: 1;
+        }
+
+        .stat-item .label {
+            font-size: 14px;
+            color: rgba(255,255,255,0.65);
+            margin-top: 6px;
             letter-spacing: 1px;
         }
 
+        /* ===== Section 通用 ===== */
+        section {
+            padding: 80px 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-tag {
+            display: inline-block;
+            background: rgba(74,93,78,0.1);
+            color: var(--primary);
+            padding: 4px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .section-title {
+            font-size: 36px;
+            font-weight: 900;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        .section-sub {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 48px;
+            line-height: 1.6;
+        }
+
+        /* ===== 體驗卡片 ===== */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+        }
+
+        .card-img {
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+        }
+
+        .card-img.green { background: linear-gradient(135deg, #c8e6c9, #a5d6a7); }
+        .card-img.brown { background: linear-gradient(135deg, #d7ccc8, #bcaaa4); }
+        .card-img.blue  { background: linear-gradient(135deg, #b3e5fc, #81d4fa); }
+        .card-img.gold  { background: linear-gradient(135deg, #fff9c4, #fff176); }
+        .card-img.red   { background: linear-gradient(135deg, #ffcdd2, #ef9a9a); }
+        .card-img.purple{ background: linear-gradient(135deg, #e1bee7, #ce93d8); }
+
+        .card-body { padding: 20px; }
+
+        .card-tag {
+            font-size: 12px;
+            color: var(--primary);
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .card-desc {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-price {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .card-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .card-btn:hover { background: var(--primary-dark); }
+
+        /* ===== 體驗分類 ===== */
+        .cat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .cat-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+            cursor: pointer;
+            transition: transform 0.25s, box-shadow 0.25s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cat-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 14px 36px rgba(0,0,0,0.13);
+        }
+
+        .cat-header {
+            height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .cat-emoji {
+            font-size: 52px;
+            filter: drop-shadow(0 2px 8px rgba(0,0,0,0.25));
+        }
+
+        .cat-count {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: rgba(255,255,255,0.25);
+            backdrop-filter: blur(4px);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .cat-body {
+            padding: 16px 18px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .cat-name {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .cat-desc {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .cat-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .cat-tag {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 10px;
+            background: var(--bg);
+            color: var(--primary);
+            font-weight: 600;
+            border: 1px solid rgba(74,93,78,0.15);
+        }
+
+        .cat-explore {
+            margin-top: auto;
+            padding-top: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--primary);
+            opacity: 0.55;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        .cat-card:hover .cat-explore {
+            opacity: 1;
+            transform: translateX(4px);
+        }
+
+        /* ===== 精選行程 ===== */
+        .itinerary-section {
+            background: linear-gradient(135deg, #f0ede5, #e8e3d8);
+            padding: 80px 0;
+        }
+
+        .itinerary-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+
+        .timeline {
+            display: flex;
+            gap: 0;
+            margin-top: 48px;
+        }
+
+        .timeline-item {
+            flex: 1;
+            position: relative;
+            padding: 24px;
+            background: white;
+            border-radius: 12px;
+            margin-right: 16px;
+        }
+
+        .timeline-item:last-child { margin-right: 0; }
+
+        .timeline-time {
+            font-size: 12px;
+            color: var(--accent);
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .timeline-title {
+            font-size: 17px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .timeline-desc {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .timeline-emoji {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        /* ===== 永續理念 ===== */
+        .values-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+
+        .value-item {
+            text-align: center;
+            padding: 32px 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+        }
+
+        .value-icon { font-size: 40px; margin-bottom: 16px; }
+
+        .value-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+
+        .value-desc { font-size: 14px; color: #666; line-height: 1.6; }
+
+        /* ===== CTA ===== */
+        .cta-section {
+            background: var(--primary);
+            text-align: center;
+            padding: 80px 40px;
+        }
+
+        .cta-section h2 {
+            color: white;
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+
+        .cta-section p {
+            color: rgba(255,255,255,0.7);
+            font-size: 17px;
+            margin-bottom: 36px;
+        }
+
+        /* ===== Footer ===== */
+        footer {
+            background: #1e2a20;
+            color: rgba(255,255,255,0.5);
+            text-align: center;
+            padding: 32px;
+            font-size: 14px;
+        }
+
+        footer strong { color: rgba(255,255,255,0.8); }
+
+        /* ===== 分享行程按鈕 ===== */
+        .share-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #f0ede5;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .share-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 5px 14px;
+            border-radius: 14px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .share-btn:hover { background: var(--primary-dark); }
+
+        .share-link {
+            color: var(--primary);
+            font-size: 12px;
+            word-break: break-all;
+            text-decoration: underline;
+        }
+
+        /* ===== 評分 Widget ===== */
+        .rating-widget {
+            margin-top: 8px;
+            padding: 12px 14px;
+            background: #fff9f0;
+            border: 1px solid #f0e0c0;
+            border-radius: 12px;
+            font-size: 13px;
+        }
+
+        .rating-widget .rw-title {
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .rating-widget .rw-stars {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .rating-widget .rw-star {
+            font-size: 24px;
+            cursor: pointer;
+            opacity: 0.3;
+            transition: opacity 0.15s;
+        }
+
+        .rating-widget .rw-star.lit { opacity: 1; }
+
+        .rating-widget .rw-link {
+            color: var(--primary);
+            font-size: 12px;
+            text-decoration: none;
+        }
+
+        /* ===== AI 浮動按鈕 ===== */
+        #ai-fab {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            width: 60px;
+            height: 60px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 26px;
+            cursor: pointer;
+            box-shadow: 0 6px 24px rgba(74,93,78,0.45);
+            z-index: 999;
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #ai-fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 10px 32px rgba(74,93,78,0.55);
+        }
+
+        #ai-fab .fab-tooltip {
+            position: absolute;
+            right: 70px;
+            white-space: nowrap;
+            background: #2d2d2d;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        #ai-fab:hover .fab-tooltip { opacity: 1; }
+
+        /* ===== 聊天小視窗 ===== */
+        #chat-widget {
+            position: fixed;
+            bottom: 100px;
+            right: 28px;
+            width: 370px;
+            height: 520px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 998;
+            transform: scale(0.85) translateY(20px);
+            transform-origin: bottom right;
+            opacity: 0;
+            pointer-events: none;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s;
+        }
+
+        #chat-widget.open {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #chat-header {
+            background: var(--primary);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .chat-avatar {
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .chat-header-info { flex: 1; }
+        .chat-header-name { font-weight: bold; font-size: 15px; }
+        .chat-header-status { font-size: 12px; color: rgba(255,255,255,0.65); }
+
+        #chat-close {
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            font-size: 20px;
+            cursor: pointer;
+            line-height: 1;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        #chat-close:hover { color: white; }
+
         #chat-box {
             flex: 1;
-            padding: 20px;
+            padding: 16px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 12px;
+            background: #f9f7f3;
         }
 
         .message {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 15px;
-            line-height: 1.5;
-            font-size: 15px;
+            max-width: 82%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            line-height: 1.55;
+            font-size: 14px;
             word-wrap: break-word;
         }
 
         .user-message {
-            background-color: var(--user-msg);
-            color: var(--text-color);
+            background: var(--user-msg);
+            color: var(--text);
             align-self: flex-end;
-            border-bottom-right-radius: 2px;
+            border-bottom-right-radius: 3px;
         }
 
         .bot-message {
-            background-color: var(--bot-msg);
-            color: var(--text-color);
+            background: white;
+            color: var(--text);
             align-self: flex-start;
-            border-bottom-left-radius: 2px;
+            border-bottom-left-radius: 3px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
         }
 
-        #input-container {
-            display: flex;
-            padding: 15px;
-            background: #fff;
-            border-top: 1px solid #eee;
-        }
-
-        #user-input {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 25px;
-            outline: none;
-            font-size: 15px;
-            transition: border-color 0.3s;
-        }
-
-        #user-input:focus {
-            border-color: var(--primary-color);
-        }
-
-        #send-btn {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 25px;
-            padding: 0 20px;
-            margin-left: 10px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.3s;
-        }
-
-        #send-btn:hover {
-            background-color: #38473b;
-        }
-
-        /* 載入動畫 (三個點) */
         .typing-indicator {
             display: none;
             align-self: flex-start;
-            background-color: var(--bot-msg);
-            padding: 12px 16px;
-            border-radius: 15px;
-            border-bottom-left-radius: 2px;
+            background: white;
+            padding: 10px 14px;
+            border-radius: 14px;
+            border-bottom-left-radius: 3px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
         }
 
         .typing-indicator span {
             display: inline-block;
-            width: 8px;
-            height: 8px;
-            background-color: #999;
+            width: 7px;
+            height: 7px;
+            background: #aaa;
             border-radius: 50%;
-            margin-right: 5px;
+            margin-right: 4px;
             animation: typing 1s infinite;
         }
 
@@ -142,72 +805,869 @@
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-5px); }
         }
+
+        /* AI 訊息內選項按鈕 */
+        .opt-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-top: 10px;
+        }
+
+        .opt-chip {
+            background: white;
+            border: 1.5px solid var(--primary);
+            color: var(--primary);
+            padding: 6px 13px;
+            border-radius: 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.18s, color 0.18s;
+            font-family: inherit;
+        }
+
+        .opt-chip:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* 訊息內嵌類別按鈕 */
+        .inline-chips {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 7px;
+            margin-top: 12px;
+        }
+
+        .inline-chip {
+            background: #f4f1ea;
+            border: 1px solid #d6cfc2;
+            color: var(--primary);
+            padding: 7px 10px;
+            border-radius: 14px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            text-align: center;
+        }
+
+        .inline-chip:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .inline-chip-full {
+            grid-column: 1 / -1;
+            background: rgba(74,93,78,0.08);
+            border-color: var(--primary);
+            font-weight: bold;
+        }
+
+        #input-container {
+            display: flex;
+            padding: 12px;
+            background: white;
+            border-top: 1px solid #eee;
+            gap: 8px;
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 22px;
+            outline: none;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            background: #f9f7f3;
+        }
+
+        #user-input:focus { border-color: var(--primary); background: white; }
+
+        #send-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 17px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        #send-btn:hover { background: var(--primary-dark); }
+
+        /* ===== 通知點 ===== */
+        .fab-dot {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 12px;
+            height: 12px;
+            background: #e53935;
+            border-radius: 50%;
+            border: 2px solid white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(229,57,53,0.5); }
+            70% { box-shadow: 0 0 0 8px rgba(229,57,53,0); }
+            100% { box-shadow: 0 0 0 0 rgba(229,57,53,0); }
+        }
+
+        /* ===== 漢堡選單 ===== */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 6px;
+            background: none;
+            border: none;
+        }
+        .nav-hamburger span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: white;
+            border-radius: 2px;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+        .nav-hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+        .nav-hamburger.open span:nth-child(2) { opacity: 0; }
+        .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+        .mobile-menu {
+            display: none;
+            position: fixed;
+            top: 64px;
+            left: 0; right: 0;
+            background: rgba(56, 71, 59, 0.98);
+            backdrop-filter: blur(8px);
+            z-index: 99;
+            flex-direction: column;
+            padding: 8px 0;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .mobile-menu.open { display: flex; }
+        .mobile-menu a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            padding: 15px 28px;
+            font-size: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            transition: background 0.2s;
+        }
+        .mobile-menu a:hover { background: rgba(255,255,255,0.08); color: var(--accent); }
+        .mobile-menu .mobile-lang {
+            display: flex;
+            gap: 8px;
+            padding: 14px 28px;
+        }
+
+        /* ===== 響應式 ===== */
+        @media (max-width: 900px) {
+            .cards-grid { grid-template-columns: repeat(2, 1fr); }
+            .values-grid { grid-template-columns: repeat(2, 1fr); }
+            .cat-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            nav { padding: 0 20px; }
+            .nav-links, .lang-switcher { display: none; }
+            .nav-hamburger { display: flex; }
+
+            .hero h1 { font-size: 34px; letter-spacing: 1px; }
+            .hero p { font-size: 15px; padding: 0 20px; }
+            .hero-btns { flex-direction: column; align-items: center; gap: 12px; }
+            .btn-primary, .btn-outline { width: 210px; text-align: center; display: block; }
+            .hero-circle.c1 { width: 280px; height: 280px; }
+            .hero-circle.c2 { width: 160px; height: 160px; }
+
+            .stats { gap: 28px; padding: 36px 20px; }
+            .stat-item .num { font-size: 30px; }
+
+            section { padding: 52px 20px; }
+            .section-title { font-size: 26px; }
+
+            .cards-grid { grid-template-columns: 1fr; gap: 16px; }
+
+            .itinerary-section { padding: 52px 0; }
+            .itinerary-inner { padding: 0 20px; }
+            .timeline { flex-direction: column; gap: 16px; }
+            .timeline-item { margin-right: 0; }
+
+            .values-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+            .value-item { padding: 24px 16px; }
+
+            .cta-section { padding: 52px 20px; }
+            .cta-section h2 { font-size: 26px; }
+            .cta-section p { font-size: 15px; }
+
+            #chat-widget {
+                bottom: 0;
+                right: 0;
+                left: 0;
+                width: 100%;
+                height: 88vh;
+                border-radius: 20px 20px 0 0;
+                transform-origin: bottom center;
+            }
+
+            #ai-fab {
+                bottom: 20px;
+                right: 20px;
+                width: 54px;
+                height: 54px;
+                font-size: 22px;
+            }
+            #ai-fab .fab-tooltip { display: none; }
+        }
+
+        @media (max-width: 480px) {
+            .hero h1 { font-size: 28px; }
+            .hero-badge { font-size: 11px; letter-spacing: 1px; }
+            .stats { gap: 20px; }
+            .stat-item .num { font-size: 26px; }
+            .values-grid { grid-template-columns: 1fr; }
+            .section-title { font-size: 22px; }
+            .section-sub { font-size: 14px; }
+        }
+
+        /* ===== 地圖區段 ===== */
+        .map-section {
+            background: #f0ede5;
+            padding: 80px 0;
+        }
+        .map-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 40px;
+        }
+        #nantou-map {
+            width: 100%;
+            height: 480px;
+            border-radius: 16px;
+            border: 2px solid rgba(74,93,78,0.2);
+            margin-top: 32px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.09);
+        }
+        .map-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+        .map-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #555;
+            cursor: pointer;
+        }
+        .map-legend-item:hover { color: var(--primary); }
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.8);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            flex-shrink: 0;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px !important;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
+        }
+        .map-popup-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; color: #333; }
+        .map-popup-desc { font-size: 13px; color: #666; line-height: 1.5; margin-bottom: 10px; }
+        .map-popup-btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .map-popup-btn:hover { background: var(--primary-dark); }
+        @media (max-width: 768px) {
+            .map-inner { padding: 0 20px; }
+            #nantou-map { height: 340px; }
+        }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 </head>
 <body>
 
-<div id="chat-container">
-    <div id="chat-header">🌿 南投職人探索 AI</div>
-    <div id="chat-box">
-        <div class="message bot-message">
-            你好！我是你的南投在地嚮導。想找冠軍咖啡師、隱藏版酒莊，還是原住民深度體驗？告訴我你的需求或預算吧！
+<!-- ===== 導覽列 ===== -->
+<nav>
+    <div class="nav-logo">🌿 南投<span>職人旅遊</span></div>
+    <ul class="nav-links">
+        <li><a href="#experiences">體驗項目</a></li>
+        <li><a href="#itinerary">精選行程</a></li>
+        <li><a href="#map">探索地圖</a></li>
+        <li><a href="#values">永續理念</a></li>
+        <li><a href="#" onclick="openChat()">AI 規劃行程</a></li>
+    </ul>
+    <div class="lang-switcher">
+        <button class="lang-btn active" onclick="setLang('zh-TW', this)">繁中</button>
+        <button class="lang-btn" onclick="setLang('en', this)">EN</button>
+        <button class="lang-btn" onclick="setLang('ja', this)">日本語</button>
+    </div>
+    <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileMenu()">
+        <span></span><span></span><span></span>
+    </button>
+</nav>
+
+<!-- ===== 手機選單 ===== -->
+<div class="mobile-menu" id="mobile-menu">
+    <a href="#experiences" onclick="closeMobileMenu()">🎯 體驗項目</a>
+    <a href="#itinerary" onclick="closeMobileMenu()">🗓️ 精選行程</a>
+    <a href="#map" onclick="closeMobileMenu()">🗺️ 探索地圖</a>
+    <a href="#values" onclick="closeMobileMenu()">🌱 永續理念</a>
+    <a href="#" onclick="closeMobileMenu(); openChat()">🤖 AI 規劃行程</a>
+    <div class="mobile-lang">
+        <button class="lang-btn active" id="ml-zh" onclick="setLangMobile('zh-TW')">繁中</button>
+        <button class="lang-btn" id="ml-en" onclick="setLangMobile('en')">EN</button>
+        <button class="lang-btn" id="ml-ja" onclick="setLangMobile('ja')">日本語</button>
+    </div>
+</div>
+
+<!-- ===== Hero ===== -->
+<div class="hero">
+    <div class="hero-circle c1"></div>
+    <div class="hero-circle c2"></div>
+    <div class="hero-content">
+        <div class="hero-badge">✦ 南投縣永續旅遊推薦平台 ✦</div>
+        <h1>探索南投<br><em>職人深度體驗</em></h1>
+        <p>從埔里冠軍咖啡到布農族部落文化，與在地職人面對面，感受最真實的台灣山林溫度。</p>
+        <div class="hero-btns">
+            <a href="#experiences" class="btn-primary">探索體驗</a>
+            <a href="#" onclick="openChat()" class="btn-outline">AI 幫我規劃 →</a>
         </div>
     </div>
-    
-    <!-- 載入動畫區塊 -->
+    <div class="hero-scroll">向下滾動</div>
+</div>
+
+<!-- ===== 數據 ===== -->
+<div class="stats">
+    <div class="stat-item">
+        <div class="num">30+</div>
+        <div class="label">在地職人商家</div>
+    </div>
+    <div class="stat-item">
+        <div class="num">7</div>
+        <div class="label">體驗類別</div>
+    </div>
+    <div class="stat-item">
+        <div class="num">1200+</div>
+        <div class="label">旅客好評</div>
+    </div>
+    <div class="stat-item">
+        <div class="num">100%</div>
+        <div class="label">在地永續認證</div>
+    </div>
+</div>
+
+<!-- ===== 體驗分類 ===== -->
+<section id="experiences">
+    <div class="section-tag">EXPERIENCES</div>
+    <div class="section-title">七大體驗分類</div>
+    <div class="section-sub">選擇您感興趣的類別，AI 嚮導立即介紹精選商家並協助預約。</div>
+    <div class="cat-grid">
+
+        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「☕ 咖啡職人」類別感興趣，請介紹南投有哪些咖啡相關的商家與體驗，並告訴我如何預約。')">
+            <div class="cat-header" style="background: linear-gradient(135deg, #5D4037, #8D6E63)">
+                <div class="cat-emoji">☕</div>
+                <span class="cat-count">5 家</span>
+            </div>
+            <div class="cat-body">
+                <div class="cat-name">咖啡職人</div>
+                <div class="cat-desc">從產地到杯中，感受冠軍手沖的溫度</div>
+                <div class="cat-tags">
+                    <span class="cat-tag">手沖體驗</span>
+                    <span class="cat-tag">莊園導覽</span>
+                    <span class="cat-tag">烘焙工坊</span>
+                </div>
+                <div class="cat-explore">探索商家 →</div>
+            </div>
+        </div>
+
+        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「🌾 農業休閒」類別感興趣，請介紹南投有哪些農業體驗商家，並告訴我如何預約。')">
+            <div class="cat-header" style="background: linear-gradient(135deg, #558B2F, #7CB342)">
+                <div class="cat-emoji">🌾</div>
+                <span class="cat-count">8 家</span>
+            </div>
+            <div class="cat-body">
+                <div class="cat-name">農業休閒</div>
+                <div class="cat-desc">採茶、種稻、走梅園，親土親水的慢活體驗</div>
+                <div class="cat-tags">
+                    <span class="cat-tag">採茶製茶</span>
+                    <span class="cat-tag">有機農場</span>
+                    <span class="cat-tag">梅園走讀</span>
+                </div>
+                <div class="cat-explore">探索商家 →</div>
+            </div>
+        </div>
+
+        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「♨️ 秘境溫泉」類別感興趣，請介紹南投有哪些溫泉體驗商家，並告訴我如何預約。')">
+            <div class="cat-header" style="background: linear-gradient(135deg, #b71c1c, #e53935)">
+                <div class="cat-emoji">♨️</div>
+                <span class="cat-count">4 家</span>
+            </div>
+            <div class="cat-body">
+                <div class="cat-name">秘境溫泉</div>
+                <div class="cat-desc">隱藏山中的美人湯，讓身心徹底放鬆歸零</div>
+                <div class="cat-tags">
+                    <span class="cat-tag">廬山溫泉</span>
+                    <span class="cat-tag">碳酸氫鈉泉</span>
+                    <span class="cat-tag">私人湯屋</span>
+                </div>
+                <div class="cat-explore">探索商家 →</div>
+            </div>
+        </div>
+
+        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「🍽️ 永續餐飲」類別感興趣，請介紹南投有哪些特色餐廳或飲食體驗，並告訴我如何預約。')">
+            <div class="cat-header" style="background: linear-gradient(135deg, #E65100, #FF8F00)">
+                <div class="cat-emoji">🍽️</div>
+                <span class="cat-count">6 家</span>
+            </div>
+            <div class="cat-body">
+                <div class="cat-name">永續餐飲</div>
+                <div class="cat-desc">在地食材上桌，原住民風味與創意料理</div>
+                <div class="cat-tags">
+                    <span class="cat-tag">原住民料理</span>
+                    <span class="cat-tag">在地食材</span>
+                    <span class="cat-tag">創意蔬食</span>
+                </div>
+                <div class="cat-explore">探索商家 →</div>
+            </div>
+        </div>
+
+        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「🏡 特色住宿」類別感興趣，請介紹南投有哪些特色住宿，並告訴我如何預約。')">
+            <div class="cat-header" style="background: linear-gradient(135deg, #4527A0, #7E57C2)">
+                <div class="cat-emoji">🏡</div>
+                <span class="cat-count">7 家</span>
+            </div>
+            <div class="cat-body">
+                <div class="cat-name">特色住宿</div>
+                <div class="cat-desc">竹林、農場、星空帳篷，過一晚不一樣的夜</div>
+                <div class="cat-tags">
+                    <span class="cat-tag">竹林民宿</span>
+                    <span class="cat-tag">農場莊園</span>
+                    <span class="cat-tag">星空帳篷</span>
+                </div>
+                <div class="cat-explore">探索商家 →</div>
+            </div>
+        </div>
+
+        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「🏔️ 部落文化」類別感興趣，請介紹南投有哪些部落文化體驗，並告訴我如何預約。')">
+            <div class="cat-header" style="background: linear-gradient(135deg, #3E2723, #6D4C41)">
+                <div class="cat-emoji">🏔️</div>
+                <span class="cat-count">5 家</span>
+            </div>
+            <div class="cat-body">
+                <div class="cat-name">部落文化</div>
+                <div class="cat-desc">跟著獵人走森林，體驗最真實的原住民生活</div>
+                <div class="cat-tags">
+                    <span class="cat-tag">賽德克族</span>
+                    <span class="cat-tag">布農族</span>
+                    <span class="cat-tag">獵人學校</span>
+                </div>
+                <div class="cat-explore">探索商家 →</div>
+            </div>
+        </div>
+
+        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「🎨 工藝手作」類別感興趣，請介紹南投有哪些工藝手作體驗，並告訴我如何預約。')">
+            <div class="cat-header" style="background: linear-gradient(135deg, #00695C, #26A69A)">
+                <div class="cat-emoji">🎨</div>
+                <span class="cat-count">4 家</span>
+            </div>
+            <div class="cat-body">
+                <div class="cat-name">工藝手作</div>
+                <div class="cat-desc">用雙手感受在地材料，帶走一件屬於自己的作品</div>
+                <div class="cat-tags">
+                    <span class="cat-tag">竹編工藝</span>
+                    <span class="cat-tag">天然染布</span>
+                    <span class="cat-tag">陶藝創作</span>
+                </div>
+                <div class="cat-explore">探索商家 →</div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- ===== 互動地圖 ===== -->
+<div class="map-section" id="map">
+    <div class="map-inner">
+        <div class="section-tag">EXPLORE MAP</div>
+        <div class="section-title">探索南投各地職人</div>
+        <div class="section-sub">點擊地圖上的標記，查看各地職人介紹，或讓 AI 嚮導幫你推薦。</div>
+        <div id="nantou-map"></div>
+        <div class="map-legend" id="map-legend">
+            <div class="map-legend-item" onclick="filterMap('coffee')"><div class="legend-dot" style="background:#4A5D4E"></div>☕ 咖啡職人</div>
+            <div class="map-legend-item" onclick="filterMap('tea')"><div class="legend-dot" style="background:#2D6A4F"></div>🍃 茶&amp;酒莊</div>
+            <div class="map-legend-item" onclick="filterMap('craft')"><div class="legend-dot" style="background:#D85A30"></div>🎨 工藝手作</div>
+            <div class="map-legend-item" onclick="filterMap('farm')"><div class="legend-dot" style="background:#C8A96E"></div>🌾 農業休閒</div>
+            <div class="map-legend-item" onclick="filterMap('hot_spring')"><div class="legend-dot" style="background:#3B82F6"></div>♨️ 秘境溫泉</div>
+            <div class="map-legend-item" onclick="filterMap('food')"><div class="legend-dot" style="background:#E85D04"></div>🍽️ 永續餐飲</div>
+            <div class="map-legend-item" onclick="filterMap('stay')"><div class="legend-dot" style="background:#0F6E56"></div>🏡 永續住宿</div>
+            <div class="map-legend-item" onclick="filterMap('tribal')"><div class="legend-dot" style="background:#7C3AED"></div>🏔️ 部落文化</div>
+            <div class="map-legend-item" onclick="filterMap('temple')"><div class="legend-dot" style="background:#92400E"></div>🏛️ 宗教文化</div>
+            <div class="map-legend-item" onclick="filterMap('all')" style="font-weight:600; color:var(--primary);">全部顯示</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 精選行程 ===== -->
+<div class="itinerary-section" id="itinerary">
+    <div class="itinerary-inner">
+        <div class="section-tag">ITINERARY</div>
+        <div class="section-title">南投一日深度行程</div>
+        <div class="section-sub">AI 嚮導根據旅客喜好即時規劃，以下為經典示範行程。</div>
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-emoji">🌅</div>
+                <div class="timeline-time">上午 9:00 - 12:00</div>
+                <div class="timeline-title">埔里冠軍咖啡師</div>
+                <div class="timeline-desc">清晨空氣最宜品味咖啡，親眼見證手沖職人技藝，一杯百香果淺焙開啟一天。</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-emoji">🌞</div>
+                <div class="timeline-time">下午 13:00 - 17:00</div>
+                <div class="timeline-title">達魯獵人學校</div>
+                <div class="timeline-desc">午後陽光下走讀仁愛鄉森林，學習賽德克族傳統知識，享用部落特色風味餐。</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-emoji">🌙</div>
+                <div class="timeline-time">傍晚 18:00 以後</div>
+                <div class="timeline-title">玉山星空酒莊</div>
+                <div class="timeline-desc">黃昏時分走入信義鄉梅園，品嚐國際金牌梅酒，在星空下聽莊主說布農族故事。</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 永續理念 ===== -->
+<section id="values">
+    <div class="section-tag">SUSTAINABILITY</div>
+    <div class="section-title">我們的永續承諾</div>
+    <div class="section-sub">每一筆預約，都直接回饋在地職人，守護南投的山林與文化。</div>
+    <div class="values-grid">
+        <div class="value-item">
+            <div class="value-icon">🌱</div>
+            <div class="value-title">在地生產</div>
+            <div class="value-desc">所有合作商家皆採用當地食材與原料，減少碳足跡。</div>
+        </div>
+        <div class="value-item">
+            <div class="value-icon">👨‍🌾</div>
+            <div class="value-title">職人傳承</div>
+            <div class="value-desc">支持年輕一代返鄉，讓傳統技藝繼續在土地上生根。</div>
+        </div>
+        <div class="value-item">
+            <div class="value-icon">🏔️</div>
+            <div class="value-title">環境守護</div>
+            <div class="value-desc">小規模深度旅遊，避免過度開發，讓山林自然呼吸。</div>
+        </div>
+        <div class="value-item">
+            <div class="value-icon">🤝</div>
+            <div class="value-title">部落共榮</div>
+            <div class="value-desc">文化體驗收入直接回饋原住民社區，促進族群文化延續。</div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<div class="cta-section">
+    <h2>讓 AI 幫你規劃專屬行程</h2>
+    <p>告訴我你的需求、預算與人數，一分鐘內給你最適合的南投深度體驗。</p>
+    <a href="#" onclick="openChat()" class="btn-primary" style="font-size:17px; padding: 16px 40px;">開始規劃我的行程 →</a>
+</div>
+
+<!-- ===== Footer ===== -->
+<footer>
+    <p><strong>南投職人旅遊平台</strong> · 守護山林，連結人心</p>
+    <p style="margin-top:8px;">© 2025 南投永續旅遊推廣協會</p>
+</footer>
+
+<!-- ===== AI 浮動按鈕 ===== -->
+<button id="ai-fab" onclick="toggleChat()">
+    <span class="fab-tooltip">AI 旅遊嚮導</span>
+    🌿
+    <span class="fab-dot"></span>
+</button>
+
+<!-- ===== 聊天小視窗 ===== -->
+<div id="chat-widget">
+    <div id="chat-header">
+        <div class="chat-avatar">🌿</div>
+        <div class="chat-header-info">
+            <div class="chat-header-name">南投職人 AI 嚮導</div>
+            <div class="chat-header-status">● 線上，隨時為您服務</div>
+        </div>
+        <button id="chat-close" onclick="closeChat()">✕</button>
+    </div>
+    <div id="chat-box">
+        <div class="message bot-message">
+            你好！我是南投在地嚮導 🌿<br><br>請選擇您感興趣的體驗類別，或直接輸入需求：
+            <div class="inline-chips" id="inline-chips">
+                <div class="inline-chip" onclick="pickCategory('【分類探索】☕ 咖啡職人')">☕ 咖啡職人</div>
+                <div class="inline-chip" onclick="pickCategory('【分類探索】🌾 農業休閒')">🌾 農業休閒</div>
+                <div class="inline-chip" onclick="pickCategory('【分類探索】♨️ 秘境溫泉')">♨️ 秘境溫泉</div>
+                <div class="inline-chip" onclick="pickCategory('【分類探索】🏔️ 部落文化')">🏔️ 部落文化</div>
+                <div class="inline-chip" onclick="pickCategory('【分類探索】🏡 特色住宿')">🏡 特色住宿</div>
+                <div class="inline-chip" onclick="pickCategory('【分類探索】🎨 工藝手作')">🎨 工藝手作</div>
+                <div class="inline-chip inline-chip-full" onclick="pickCategory('幫我規劃南投一日行程')">📅 規劃一日行程</div>
+            </div>
+        </div>
+    </div>
     <div class="typing-indicator" id="typing-indicator">
         <span></span><span></span><span></span>
     </div>
-
     <div id="input-container">
-        <input type="text" id="user-input" placeholder="例如：我想找埔里有拉花的冠軍咖啡廳..." autocomplete="off">
-        <button id="send-btn">發送</button>
+        <input type="text" id="user-input" placeholder="輸入你的需求..." autocomplete="off">
+        <button id="send-btn">➤</button>
     </div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+(function initMap() {
+    const CAT_COLORS = {
+        coffee:     '#4A5D4E',
+        tea:        '#2D6A4F',
+        craft:      '#D85A30',
+        farm:       '#C8A96E',
+        hot_spring: '#3B82F6',
+        food:       '#E85D04',
+        stay:       '#0F6E56',
+        tribal:     '#7C3AED',
+        temple:     '#92400E',
+    };
+
+    const LOCATIONS = [
+        // ☕ 咖啡職人
+        { lat: 24.030, lng: 120.857, cat: 'coffee', emoji: '☕', label: '向陽咖啡莊園', desc: '九份二山亞洲第一精品咖啡，災後重生的極致風味', ask: '推薦向陽咖啡莊園', phone: '049-272-1430' },
+        { lat: 23.912, lng: 120.676, cat: 'coffee', emoji: '☕', label: '日晨咖啡烘焙 SUNDaWN', desc: '榮獲杯測與手沖雙冠，精準烘焙展現精品咖啡純粹風味', ask: '推薦日晨咖啡烘焙', phone: '049-224-8289' },
+        { lat: 24.052, lng: 120.844, cat: 'coffee', emoji: '☕', label: '佳芳咖啡', desc: '千尺高山咖啡職人，手工採摘精湛烘焙，純粹高山風味', ask: '推薦佳芳咖啡', phone: '0921-918-638' },
+        { lat: 23.875, lng: 120.929, cat: 'coffee', emoji: '☕', label: '山豬衝吧咖啡館', desc: '全國烘豆大師打造的莊園，王牌技術展現精品咖啡極致', ask: '推薦山豬衝吧咖啡館', phone: '049-289-5090' },
+        { lat: 24.048, lng: 120.867, cat: 'coffee', emoji: '☕', label: '百勝村咖啡莊園', desc: '國姓高山精品推手，莊園嚴格管理孕育純粹在地咖啡香', ask: '推薦百勝村咖啡莊園', phone: '049-246-1001' },
+        // 🍃 茶 & 酒莊
+        { lat: 23.968, lng: 120.988, cat: 'tea', emoji: '🍃', label: '威石東台灣葡萄酒莊', desc: '埔里微氣候頂級酒莊，多家米其林餐廳指定用酒，全預約制', ask: '推薦威石東葡萄酒莊', phone: '04-2463-9871' },
+        { lat: 23.905, lng: 120.659, cat: 'tea', emoji: '🍃', label: '台灣菸酒南投酒廠', desc: '首席調酒師王婉鶯、全台唯一橡木桶修復大師陳慶昇駐廠', ask: '推薦南投酒廠參觀', phone: '049-223-4171' },
+        { lat: 23.990, lng: 120.655, cat: 'tea', emoji: '🍃', label: '蔡氏釀酒', desc: '英式精釀推手，改造廢棄工廠引進純正工藝推廣精釀美學', ask: '推薦蔡氏精釀體驗', phone: '049-236-2957' },
+        { lat: 23.892, lng: 120.940, cat: 'tea', emoji: '🍃', label: '吉臣茶廠（貓頭鷹之家）', desc: '邵族貓頭鷹傳說結合紅茶底蘊，木雕與紅茶 DIY 五感體驗', ask: '推薦吉臣茶廠體驗', phone: '049-289-9303' },
+        { lat: 23.889, lng: 120.937, cat: 'tea', emoji: '🍃', label: '和菓森林茶廠', desc: '承襲一甲子日式製茶工藝，彩繪茶罐或製作紅茶香皂', ask: '推薦和菓森林茶廠體驗', phone: '049-289-7238' },
+        { lat: 23.737, lng: 120.737, cat: 'tea', emoji: '🍃', label: '山中茶學（張東龍家族）', desc: '榮獲德國設計獎，將傳統茶學策展化，深度品味台灣好茶', ask: '推薦山中茶學體驗', phone: '049-275-0996' },
+        { lat: 23.801, lng: 120.706, cat: 'tea', emoji: '🍃', label: '連勝茶廠', desc: '蟬聯多屆特等獎的名間鄉青農，精湛製茶技術展現台灣茶韻', ask: '推薦連勝茶廠體驗', phone: '049-258-2835' },
+        { lat: 23.756, lng: 120.745, cat: 'tea', emoji: '🍃', label: '煜倫茶業', desc: '凍頂烏龍五十週年特等獎得主，茶湯獨特花果香', ask: '推薦煜倫茶業體驗', phone: '' },
+        // 🎨 工藝手作
+        { lat: 23.756, lng: 120.648, cat: 'craft', emoji: '🎨', label: '元泰竹藝社', desc: '年輕設計力復興竹藝，100% 南投竹材製環保竹牙刷，DIY 體驗', ask: '推薦元泰竹藝社', phone: '049-265-8681' },
+        { lat: 23.716, lng: 120.769, cat: 'craft', emoji: '🎨', label: '武岫竹炭窯文化園區', desc: '全台首座 CAS 認證傳統竹炭窯，大崙山銀杏森林孟宗竹林秘境', ask: '推薦武岫竹炭窯體驗', phone: '049-267-6262' },
+        { lat: 23.966, lng: 120.977, cat: 'craft', emoji: '🎨', label: '龍南天然漆博物館', desc: '台灣僅存天然漆產業文史基地，日治傳承割漆到髹飾完整工藝', ask: '推薦龍南漆器體驗', phone: '049-298-2076' },
+        { lat: 23.989, lng: 120.666, cat: 'craft', emoji: '🎨', label: '毓秀美術館', desc: '台灣建築獎首獎的全台最美私人美術館，全預約制禪意當代美學', ask: '推薦毓秀美術館', phone: '049-257-2999' },
+        { lat: 23.836, lng: 120.787, cat: 'craft', emoji: '🎨', label: '添興窯', desc: '集集最古老柴燒窯，林清河將自然生態融入陶藝', ask: '推薦添興窯陶藝體驗', phone: '049-278-1130' },
+        { lat: 23.811, lng: 120.861, cat: 'craft', emoji: '🎨', label: '水里蛇窯', desc: '百年柴燒蛇窯第三代傳人，策展與陶藝體驗創造感官記憶', ask: '推薦水里蛇窯體驗', phone: '049-277-0967' },
+        { lat: 23.738, lng: 120.740, cat: 'craft', emoji: '🎨', label: '葉寶蓮竹編工作室', desc: '精研傳統竹編技法，細緻工藝融入現代生活器物', ask: '推薦葉寶蓮竹編體驗', phone: '049-275-4216' },
+        { lat: 23.753, lng: 120.664, cat: 'craft', emoji: '🎨', label: '攻玉山房', desc: '玩玉治玉逾四十年，以他山之石可以攻玉精神雕琢頂級玉雕', ask: '推薦攻玉山房玉雕體驗', phone: '049-265-2593' },
+        { lat: 24.048, lng: 121.089, cat: 'craft', emoji: '🎨', label: '林喜美賽德克織布', desc: '賽德克族傳統織布工藝保存者，致力傳承原民編織技法', ask: '推薦賽德克織布體驗', phone: '' },
+        { lat: 23.750, lng: 120.658, cat: 'craft', emoji: '🎨', label: '大禾竹藝工坊', desc: '結合藝術與精巧機關設計，將南投竹材轉化為兼具實用美感器物', ask: '推薦大禾竹藝工坊體驗', phone: '049-263-5206' },
+        // 🌾 農業休閒
+        { lat: 23.893, lng: 120.944, cat: 'farm', emoji: '🌾', label: '大雁休閒農業區（澀水社區）', desc: '陶土與紅茶雙重文化聚落，侏儸紀般豐富蕨類生態森林步道', ask: '推薦大雁休閒農業區', phone: '049-289-5938' },
+        { lat: 23.950, lng: 120.964, cat: 'farm', emoji: '🌾', label: '桃米休閒農業區', desc: '台灣社造典範，青蛙螢火蟲夜間生態觀察，ESG 永續深度體驗', ask: '推薦桃米休閒農業區', phone: '049-291-1591' },
+        { lat: 24.044, lng: 120.862, cat: 'farm', emoji: '🌾', label: '糯米橋休閒農業區', desc: '縣定古蹟糯米橋串聯客家文化與精品咖啡，友善農業深度體驗', ask: '推薦糯米橋休閒農業區', phone: '0928-338-671' },
+        // ♨️ 秘境溫泉
+        { lat: 24.031, lng: 120.847, cat: 'hot_spring', emoji: '♨️', label: '秋山居（秋の山會館）', desc: '全預約制頂級日式禪風秘境，精緻無菜單料理，極致隱密感', ask: '推薦秋山居溫泉體驗', phone: '049-246-2302' },
+        { lat: 23.511, lng: 120.958, cat: 'hot_spring', emoji: '♨️', label: '蟬說：雅築', desc: '東埔溫泉區日式秘境美學，個人湯屋精準造景引入山林綠意', ask: '推薦蟬說雅築溫泉體驗', phone: '049-270-2310' },
+        { lat: 23.508, lng: 120.955, cat: 'hot_spring', emoji: '♨️', label: '達谷蘭溫泉渡假村', desc: '直視玉山群峰半露天景觀湯屋，融入布農族風情的壯闊山景', ask: '推薦達谷蘭溫泉渡假村', phone: '049-270-1000' },
+        // 🍽️ 永續餐飲
+        { lat: 23.533, lng: 120.857, cat: 'food', emoji: '🍽️', label: '慢午廚房 X 野食', desc: '綠色餐飲星級認證，布農族飲食文化，低碳精緻無菜單料理', ask: '推薦慢午廚房', phone: '0980-774-911' },
+        { lat: 23.975, lng: 120.665, cat: 'food', emoji: '🍽️', label: '仕合廖家', desc: 'FMG 三星認證全預約制私廚，南投友善環境小農食材慢食體驗', ask: '推薦仕合廖家', phone: '0937-931-202' },
+        { lat: 23.963, lng: 120.975, cat: 'food', emoji: '🍽️', label: '山中小廚房', desc: '綠色餐廳二星認證，無化學添加，在地小農蔬果與放山雞', ask: '推薦山中小廚房', phone: '049-298-9636' },
+        { lat: 23.960, lng: 120.979, cat: 'food', emoji: '🍽️', label: '魚光窯烤麵包', desc: 'GTS 綠色旅行標章，埔里刺蔥、日月潭紅茶融入柴燒窯烤麵包', ask: '推薦魚光窯烤麵包', phone: '0919-731-125' },
+        // 🏡 永續住宿
+        { lat: 23.833, lng: 120.785, cat: 'stay', emoji: '🏡', label: '陶花巷弄民宿', desc: '集集寧靜巷弄，親手為陶盤上色燒製，帶走屬於自己的器皿', ask: '推薦陶花巷弄民宿', phone: '0979-202-181' },
+        { lat: 23.855, lng: 120.921, cat: 'stay', emoji: '🏡', label: '散步的雲 - 日月潭生態民宿', desc: '會呼吸的綠建築，頭社活盆地純粹生態，贈送日月潭紅茶禮盒', ask: '推薦散步的雲生態民宿', phone: '0905-889-166' },
+        { lat: 23.835, lng: 120.782, cat: 'stay', emoji: '🏡', label: '兩腳詩集生活旅店', desc: 'GTS 綠色旅行標章與好食民宿雙認證，集集石虎友善農作早餐', ask: '推薦兩腳詩集生活旅店', phone: '049-276-2198' },
+        { lat: 23.857, lng: 120.924, cat: 'stay', emoji: '🏡', label: '四季時光', desc: '頭社活盆地，SUP 立槳水上秘境探索，空拍機跟拍電影感大片', ask: '推薦四季時光民宿', phone: '0932-376-767' },
+        { lat: 23.862, lng: 120.913, cat: 'stay', emoji: '🏡', label: '雲品溫泉酒店', desc: '南投永續奢華指標，全面禁絕一次性備品，地產地消低碳食材', ask: '推薦雲品溫泉酒店', phone: '049-285-6788' },
+        { lat: 23.970, lng: 120.983, cat: 'stay', emoji: '🏡', label: '承萬尊爵渡假酒店', desc: '埔里首家全面落實高效能節電省水系統的大型度假酒店', ask: '推薦承萬尊爵渡假酒店', phone: '049-299-5757' },
+        { lat: 23.860, lng: 120.910, cat: 'stay', emoji: '🏡', label: '日月潭力麗溫德姆溫泉酒店', desc: '日月潭畔國際級綠色奢華酒店，節能減廢高標準執行', ask: '推薦日月潭力麗溫德姆酒店', phone: '049-285-0085' },
+        { lat: 23.703, lng: 120.791, cat: 'stay', emoji: '🏡', label: '溪頭福華渡假飯店', desc: '隱身溪頭森林芬多精，環保標章銀級，採用國家認證綠色洗劑', ask: '推薦溪頭福華渡假飯店', phone: '049-261-2588' },
+        // 🏔️ 部落文化
+        { lat: 23.955, lng: 120.972, cat: 'tribal', emoji: '🏔️', label: '埔里巴宰原鄉文化園區', desc: '巴宰族帶領走入九二一重建基地，聆聽平埔族移居埔里文史故事', ask: '推薦巴宰原鄉文化體驗', phone: '0910-543-982' },
+        { lat: 23.628, lng: 120.972, cat: 'tribal', emoji: '🏔️', label: '地利站＆丹大布農生態旅遊', desc: '布農族四個核心部落起點，雙龍七彩吊橋、獵人山林智慧體驗', ask: '推薦丹大布農生態旅遊', phone: '049-274-2808' },
+        { lat: 23.967, lng: 120.970, cat: 'tribal', emoji: '🏔️', label: '原夢觀光農園（賽德克族）', desc: '賽德克 Gaya 律法與飲食智慧，刺蔥烤魚、小米醃肉原民料理', ask: '推薦原夢觀光農園', phone: '0943-356-078' },
+        // 🏛️ 宗教文化
+        { lat: 23.975, lng: 120.985, cat: 'temple', emoji: '🏛️', label: '寶湖宮天地堂地母廟', desc: '台灣地母信仰總堂，江南閩南融合建築，登頂鳥瞰埔里盆地', ask: '推薦寶湖宮地母廟參觀', phone: '049-298-2873' },
+        { lat: 23.952, lng: 120.958, cat: 'temple', emoji: '🏛️', label: '中台禪寺', desc: '李祖原設計當代佛教地標，宗教場所低碳認證，中台世界博物館', ask: '推薦中台禪寺參觀', phone: '049-293-0215' },
+    ];
+
+    function makeIcon(cat, emoji) {
+        const color = CAT_COLORS[cat];
+        return L.divIcon({
+            html: `<div style="width:36px;height:36px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);"><span style="transform:rotate(45deg);font-size:17px;line-height:1;">${emoji}</span></div>`,
+            className: '',
+            iconSize: [36, 36],
+            iconAnchor: [18, 36],
+            popupAnchor: [0, -38]
+        });
+    }
+
+    let map, allMarkers = [];
+
+    function buildMap() {
+        map = L.map('nantou-map', { zoomControl: true, scrollWheelZoom: false }).setView([23.82, 120.90], 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 17
+        }).addTo(map);
+
+        LOCATIONS.forEach(loc => {
+            const marker = L.marker([loc.lat, loc.lng], { icon: makeIcon(loc.cat, loc.emoji) }).addTo(map);
+            marker._cat = loc.cat;
+            const phoneHtml = loc.phone ? `<div style="font-size:12px;color:#888;margin-bottom:8px;">📞 ${loc.phone}</div>` : '';
+            marker.bindPopup(`
+                <div style="min-width:190px;">
+                    <div class="map-popup-title">${loc.emoji} ${loc.label}</div>
+                    <div class="map-popup-desc">${loc.desc}</div>
+                    ${phoneHtml}
+                    <button class="map-popup-btn" onclick="askAI('${loc.ask}')">🤖 讓 AI 推薦</button>
+                </div>`, { maxWidth: 260 });
+            allMarkers.push(marker);
+        });
+    }
+
+    window.filterMap = function(cat) {
+        allMarkers.forEach(m => {
+            if (cat === 'all' || m._cat === cat) {
+                if (!map.hasLayer(m)) m.addTo(map);
+            } else {
+                if (map.hasLayer(m)) map.removeLayer(m);
+            }
+        });
+    };
+
+    window.askAI = function(query) {
+        if (typeof openChat === 'function') openChat();
+        setTimeout(() => {
+            const inp = document.getElementById('user-input');
+            if (inp) inp.value = query;
+            if (typeof sendMessage === 'function') sendMessage();
+        }, 350);
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', buildMap);
+    } else {
+        buildMap();
+    }
+})();
+</script>
 
 <script>
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
     const typingIndicator = document.getElementById('typing-indicator');
+    const chatWidget = document.getElementById('chat-widget');
 
-    // 處理發送訊息
+    const conversationHistory = [];
+    let currentLang = 'zh-TW';
+
+    function pickCategory(text) {
+        const chips = document.getElementById('inline-chips');
+        if (chips) chips.remove();
+        userInput.value = text;
+        sendMessage();
+    }
+
+    // ===== 語言切換 =====
+    function setLang(lang, btn) {
+        currentLang = lang;
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const greetings = {
+            'zh-TW': '已切換為繁體中文，我會用中文和您溝通！',
+            'en': 'Switched to English! How can I help you explore Nantou?',
+            'ja': '日本語に切り替えました！南投の旅をご一緒に計画しましょう！'
+        };
+        const placeholders = {
+            'zh-TW': '輸入你的需求...',
+            'en': 'Ask me anything about Nantou...',
+            'ja': '南投の旅について聞いてください...'
+        };
+        userInput.placeholder = placeholders[lang];
+        openChat();
+        appendMessage(greetings[lang], 'bot-message');
+        conversationHistory.push({ role: 'model', text: greetings[lang] });
+    }
+
+    // ===== 聊天視窗控制 =====
+    function toggleChat() {
+        chatWidget.classList.contains('open') ? closeChat() : openChat();
+    }
+
+    function openChat() {
+        chatWidget.classList.add('open');
+        const fab = document.getElementById('ai-fab');
+        fab.style.display = 'none';
+        userInput.focus();
+        return false;
+    }
+
+    function closeChat() {
+        chatWidget.classList.remove('open');
+        document.getElementById('ai-fab').style.display = '';
+    }
+
+    function sendQuick(text) {
+        userInput.value = text;
+        sendMessage();
+    }
+
+    function openChatWithMsg(text) {
+        openChat();
+        setTimeout(() => { userInput.value = text; sendMessage(); }, 300);
+    }
+
+    // ===== 發送訊息 =====
     async function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
 
-        // 1. 顯示使用者的訊息
         appendMessage(text, 'user-message');
         userInput.value = '';
-
-        // 2. 顯示 AI 正在思考的動畫
         showTypingIndicator();
 
         try {
-            // 3. 發送請求到 Flask 後端 (這裡假設你的 Flask 跑在 localhost:5000/api/chat)
-            // 注意：如果在本地測試未連後端，這裡會報錯是正常的，你可以先將這段註解，用下面的模擬回覆測試
-            
             const response = await fetch('/api/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
+                body: JSON.stringify({
+                    message: text,
+                    history: conversationHistory.slice(-20),
+                    lang: currentLang
+                })
             });
             const data = await response.json();
-            
-            // 隱藏動畫，顯示後端真實回覆
+            conversationHistory.push({ role: 'user', text: text });
+            conversationHistory.push({ role: 'model', text: data.reply });
             hideTypingIndicator();
             appendMessage(data.reply, 'bot-message');
-            
-
-            /* =========================================
-               如果你還沒寫好後端，可以先用下面這段「模擬」回覆來測試 UI：
-               
-               setTimeout(() => {
-                   hideTypingIndicator();
-                   appendMessage("這聽起來是個很棒的計畫！我正在為你聯繫埔里的冠軍咖啡師，稍等為你提供報價與行程安排。", 'bot-message');
-               }, 1500);
-               ========================================= */
-
         } catch (error) {
             hideTypingIndicator();
             appendMessage("系統似乎有點狀況，請確認後端伺服器是否已啟動。", 'bot-message');
@@ -215,19 +1675,126 @@
         }
     }
 
-    // 增加訊息到畫面上
+    function markdownToHtml(text) {
+        return text
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/^---$/gm, '<hr>')
+            .replace(/\[選項:\s*([^\]]+)\]/g, (_, opts) => {
+                const btns = opts.split('|').map(o => {
+                    const v = o.trim();
+                    return `<button class="opt-chip" onclick="selectOpt(this,'${v}')">${v}</button>`;
+                }).join('');
+                return `<div class="opt-chips">${btns}</div>`;
+            })
+            .replace(/\n/g, '<br>');
+    }
+
+    function selectOpt(btn, val) {
+        btn.closest('.opt-chips').remove();
+        userInput.value = val;
+        sendMessage();
+    }
+
     function appendMessage(text, className) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `message ${className}`;
-        msgDiv.textContent = text;
+        if (className === 'bot-message') {
+            msgDiv.innerHTML = markdownToHtml(text);
+
+            // 偵測行程 → 顯示分享按鈕
+            if (text.includes('南投一日深度體驗行程') || text.includes('Day Trip') || text.includes('一日行程')) {
+                const shareBar = buildShareBar(text);
+                chatBox.appendChild(msgDiv);
+                chatBox.appendChild(shareBar);
+                scrollToBottom();
+                return;
+            }
+
+            // 偵測預約成功 → 顯示評分 widget
+            const bookingMatch = text.match(/預約編號[：:]\s*\*?\*?([A-Z0-9]{8})\*?\*?/);
+            if (bookingMatch) {
+                const ratingWidget = buildRatingWidget(bookingMatch[1]);
+                chatBox.appendChild(msgDiv);
+                chatBox.appendChild(ratingWidget);
+                scrollToBottom();
+                return;
+            }
+        } else {
+            msgDiv.textContent = text;
+        }
         chatBox.appendChild(msgDiv);
         scrollToBottom();
     }
 
-    // 控制載入動畫
+    // ===== 行程分享 =====
+    function buildShareBar(planText) {
+        const bar = document.createElement('div');
+        bar.className = 'share-bar';
+        bar.innerHTML = '<span style="color:#666">📤 分享此行程</span>';
+        const btn = document.createElement('button');
+        btn.className = 'share-btn';
+        btn.textContent = '取得連結';
+        btn.onclick = async () => {
+            btn.textContent = '生成中...';
+            btn.disabled = true;
+            try {
+                const res = await fetch('/api/share-plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan: planText })
+                });
+                const data = await res.json();
+                const link = window.location.origin + data.url;
+                bar.innerHTML = `<span style="color:#666">🔗 行程連結：</span><a class="share-link" href="${link}" target="_blank">${link}</a>`;
+                try { navigator.clipboard.writeText(link); } catch(e) {}
+            } catch(e) {
+                btn.textContent = '失敗，請重試';
+                btn.disabled = false;
+            }
+        };
+        bar.appendChild(btn);
+        return bar;
+    }
+
+    // ===== 評分 Widget =====
+    function buildRatingWidget(bookingId) {
+        const widget = document.createElement('div');
+        widget.className = 'rating-widget';
+        widget.innerHTML = `
+            <div class="rw-title">🌟 體驗後歡迎給我們評分！</div>
+            <div class="rw-stars" id="rw-${bookingId}">
+                <span class="rw-star" data-v="1">⭐</span>
+                <span class="rw-star" data-v="2">⭐</span>
+                <span class="rw-star" data-v="3">⭐</span>
+                <span class="rw-star" data-v="4">⭐</span>
+                <span class="rw-star" data-v="5">⭐</span>
+            </div>
+            <a class="rw-link" href="/rate/${bookingId}" target="_blank">或前往完整評價頁面 →</a>`;
+        let rating = 0;
+        widget.querySelectorAll('.rw-star').forEach((s, i) => {
+            s.addEventListener('mouseenter', () =>
+                widget.querySelectorAll('.rw-star').forEach((x, j) => x.classList.toggle('lit', j <= i)));
+            s.addEventListener('mouseleave', () =>
+                widget.querySelectorAll('.rw-star').forEach((x, j) => x.classList.toggle('lit', j < rating)));
+            s.addEventListener('click', async () => {
+                rating = i + 1;
+                widget.querySelectorAll('.rw-star').forEach((x, j) => x.classList.toggle('lit', j < rating));
+                await fetch('/api/rate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ booking_id: bookingId, rating, comment: '' })
+                });
+                widget.innerHTML = `<div style="color:#10b981;font-weight:bold">謝謝您給出 ${'⭐'.repeat(rating)} 的評分！</div>`;
+            });
+        });
+        return widget;
+    }
+
+    // ===== 載入動畫 =====
     function showTypingIndicator() {
         typingIndicator.style.display = 'block';
-        chatBox.appendChild(typingIndicator); // 確保動畫始終在最下方
+        chatBox.appendChild(typingIndicator);
         scrollToBottom();
     }
 
@@ -235,16 +1802,59 @@
         typingIndicator.style.display = 'none';
     }
 
-    // 自動滾動到最底部
     function scrollToBottom() {
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // 綁定事件：點擊按鈕或按 Enter 鍵
     sendBtn.addEventListener('click', sendMessage);
-    userInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            sendMessage();
+    userInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+
+    // ===== 手機選單 =====
+    function toggleMobileMenu() {
+        const menu = document.getElementById('mobile-menu');
+        const btn = document.getElementById('nav-hamburger');
+        const isOpen = menu.classList.toggle('open');
+        btn.classList.toggle('open', isOpen);
+    }
+
+    function closeMobileMenu() {
+        document.getElementById('mobile-menu').classList.remove('open');
+        document.getElementById('nav-hamburger').classList.remove('open');
+    }
+
+    function setLangMobile(lang) {
+        // sync desktop lang buttons
+        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+        ['zh-TW','en','ja'].forEach(l => {
+            const desktop = document.querySelector(`.lang-switcher .lang-btn[onclick*="${l}"]`);
+            const mobile  = document.getElementById('ml-' + (l === 'zh-TW' ? 'zh' : l === 'en' ? 'en' : 'ja'));
+            if (desktop) desktop.classList.toggle('active', l === lang);
+            if (mobile)  mobile.classList.toggle('active', l === lang);
+        });
+        currentLang = lang;
+        const greetings = {
+            'zh-TW': '已切換為繁體中文，我會用中文和您溝通！',
+            'en': 'Switched to English! How can I help you explore Nantou?',
+            'ja': '日本語に切り替えました！南投の旅をご一緒に計画しましょう！'
+        };
+        const placeholders = {
+            'zh-TW': '輸入你的需求...',
+            'en': 'Ask me anything about Nantou...',
+            'ja': '南投の旅について聞いてください...'
+        };
+        userInput.placeholder = placeholders[lang];
+        closeMobileMenu();
+        openChat();
+        appendMessage(greetings[lang], 'bot-message');
+        conversationHistory.push({ role: 'model', text: greetings[lang] });
+    }
+
+    // 點選頁面其他地方關閉手機選單
+    document.addEventListener('click', e => {
+        const menu = document.getElementById('mobile-menu');
+        const btn  = document.getElementById('nav-hamburger');
+        if (menu.classList.contains('open') && !menu.contains(e.target) && !btn.contains(e.target)) {
+            closeMobileMenu();
         }
     });
 </script>
