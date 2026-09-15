@@ -381,7 +381,7 @@ def index():
 def line_merchant_proxy():
     try:
         resp = requests.post(
-            'http://localhost:5678/webhook/line-merchant',
+            os.getenv('N8N_LINE_WEBHOOK_URL', 'https://nantoutravel.app.n8n.cloud/webhook/line-merchant'),
             json=request.get_json(silent=True),
             headers={'Content-Type': 'application/json'},
             timeout=10
