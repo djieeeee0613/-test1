@@ -690,4 +690,5 @@ def chat():
     return jsonify({"reply": "目前 AI 服務需求量很大，請稍等片刻再試一次 🙏"})
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=False)
