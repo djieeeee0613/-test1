@@ -75,7 +75,9 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ValueError("請在 .env 檔案中設定 GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
-N8N_WEBHOOK_URL = "http://localhost:5678/webhook/nantou-booking"
+N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "https://nantoutravel.app.n8n.cloud/webhook/nantou-booking")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://gbffodvtfirdtecsespm.supabase.co")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 MERCHANT_PASSWORD = os.getenv("MERCHANT_PASSWORD", "nantou2026")
 app = Flask(__name__)
 
