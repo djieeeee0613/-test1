@@ -1390,6 +1390,86 @@
 </section>
 
 <!-- ===== CTA ===== -->
+<!-- ===== 商家廣告輪播 ===== -->
+<section id="promotions" style="padding: 60px 20px; background: #f7f5f0;">
+    <div style="max-width: 900px; margin: 0 auto;">
+        <div class="section-tag">✨ 職人推廣</div>
+        <h2 class="section-title">精選體驗工作坊</h2>
+        <p class="section-sub">南投在地職人限定活動，名額有限，把握機會</p>
+
+        <div id="ad-carousel" style="position:relative; margin-top: 32px; overflow: hidden; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);">
+            <!-- 輪播軌道 -->
+            <div id="ad-track" style="display:flex; transition: transform 0.5s ease;">
+                <!-- 第1張：真實廣告 -->
+                <div class="ad-slide" style="min-width:100%; cursor:pointer;" onclick="alert('公告頁面（施工中）')">
+                    <img src="{{ url_for('static', filename='images/ad-sample.jpg') }}" alt="阿傑老闆的咖啡工作坊" style="width:100%; display:block; max-height:420px; object-fit:cover;">
+                </div>
+                <!-- 第2張：待推廣 -->
+                <div class="ad-slide" style="min-width:100%;">
+                    <div style="height:320px; background: linear-gradient(135deg, #e8e4dc, #d5cfc4); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
+                        <div style="font-size: 48px;">🌿</div>
+                        <div style="font-size: 22px; font-weight: 700; color: #5a5a4a;">待推廣</div>
+                        <div style="font-size: 14px; color: #888; letter-spacing: 1px;">你的工作坊廣告刊登於此</div>
+                        <div style="font-size: 13px; color: #aaa;">傳送訊息給 LINE Bot 登錄活動</div>
+                    </div>
+                </div>
+                <!-- 第3張：待推廣 -->
+                <div class="ad-slide" style="min-width:100%;">
+                    <div style="height:320px; background: linear-gradient(135deg, #dce8e0, #c4d5c8); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
+                        <div style="font-size: 48px;">☕</div>
+                        <div style="font-size: 22px; font-weight: 700; color: #3a5a3a;">待推廣</div>
+                        <div style="font-size: 14px; color: #888; letter-spacing: 1px;">你的體驗活動廣告刊登於此</div>
+                        <div style="font-size: 13px; color: #aaa;">傳送訊息給 LINE Bot 登錄活動</div>
+                    </div>
+                </div>
+                <!-- 第4張：待推廣 -->
+                <div class="ad-slide" style="min-width:100%;">
+                    <div style="height:320px; background: linear-gradient(135deg, #e8dce0, #d5c4c8); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
+                        <div style="font-size: 48px;">🎨</div>
+                        <div style="font-size: 22px; font-weight: 700; color: #5a3a3a;">待推廣</div>
+                        <div style="font-size: 14px; color: #888; letter-spacing: 1px;">你的手作工藝廣告刊登於此</div>
+                        <div style="font-size: 13px; color: #aaa;">傳送訊息給 LINE Bot 登錄活動</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 左右箭頭 -->
+            <button onclick="adPrev()" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.85); border:none; border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15); z-index:2;">‹</button>
+            <button onclick="adNext()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.85); border:none; border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15); z-index:2;">›</button>
+
+            <!-- 點點指示器 -->
+            <div id="ad-dots" style="position:absolute; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:2;">
+                <span class="ad-dot active" onclick="adGo(0)"></span>
+                <span class="ad-dot" onclick="adGo(1)"></span>
+                <span class="ad-dot" onclick="adGo(2)"></span>
+                <span class="ad-dot" onclick="adGo(3)"></span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.ad-dot { width:10px; height:10px; border-radius:50%; background:rgba(255,255,255,0.5); cursor:pointer; transition:background 0.3s; display:inline-block; }
+.ad-dot.active { background:#fff; }
+</style>
+
+<script>
+(function(){
+    let cur = 0;
+    const total = 4;
+    let timer = setInterval(() => adNext(), 4000);
+
+    function go(n) {
+        cur = (n + total) % total;
+        document.getElementById('ad-track').style.transform = `translateX(-${cur * 100}%)`;
+        document.querySelectorAll('.ad-dot').forEach((d,i) => d.classList.toggle('active', i === cur));
+    }
+    window.adNext = () => { clearInterval(timer); go(cur+1); timer = setInterval(() => adNext(), 4000); };
+    window.adPrev = () => { clearInterval(timer); go(cur-1); timer = setInterval(() => adNext(), 4000); };
+    window.adGo   = (n) => { clearInterval(timer); go(n);    timer = setInterval(() => adNext(), 4000); };
+})();
+</script>
+
 <div class="cta-section">
     <h2>讓 AI 幫你規劃專屬行程</h2>
     <p>告訴我你的需求、預算與人數，一分鐘內給你最適合的南投深度體驗。</p>
