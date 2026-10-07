@@ -1398,38 +1398,10 @@
         <p class="section-sub">南投在地職人限定活動，名額有限，把握機會</p>
 
         <div id="ad-carousel" style="position:relative; margin-top: 32px; overflow: hidden; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.12);">
-            <!-- 輪播軌道 -->
+            <!-- 輪播軌道（動態填入） -->
             <div id="ad-track" style="display:flex; transition: transform 0.5s ease;">
-                <!-- 第1張：真實廣告 -->
-                <div class="ad-slide" style="min-width:100%; height:380px; cursor:pointer;" onclick="openAdModal()">
-                    <img src="{{ url_for('static', filename='images/ad-sample.jpg') }}" alt="阿傑老闆的咖啡工作坊" style="width:100%; height:100%; display:block; object-fit:cover;">
-                </div>
-                <!-- 第2張：待推廣 -->
                 <div class="ad-slide" style="min-width:100%; height:380px;">
-                    <div style="height:100%; background: linear-gradient(135deg, #e8e4dc, #d5cfc4); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
-                        <div style="font-size: 48px;">🌿</div>
-                        <div style="font-size: 22px; font-weight: 700; color: #5a5a4a;">待推廣</div>
-                        <div style="font-size: 14px; color: #888; letter-spacing: 1px;">你的工作坊廣告刊登於此</div>
-                        <div style="font-size: 13px; color: #aaa;">傳送訊息給 LINE Bot 登錄活動</div>
-                    </div>
-                </div>
-                <!-- 第3張：待推廣 -->
-                <div class="ad-slide" style="min-width:100%; height:380px;">
-                    <div style="height:100%; background: linear-gradient(135deg, #dce8e0, #c4d5c8); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
-                        <div style="font-size: 48px;">☕</div>
-                        <div style="font-size: 22px; font-weight: 700; color: #3a5a3a;">待推廣</div>
-                        <div style="font-size: 14px; color: #888; letter-spacing: 1px;">你的體驗活動廣告刊登於此</div>
-                        <div style="font-size: 13px; color: #aaa;">傳送訊息給 LINE Bot 登錄活動</div>
-                    </div>
-                </div>
-                <!-- 第4張：待推廣 -->
-                <div class="ad-slide" style="min-width:100%; height:380px;">
-                    <div style="height:100%; background: linear-gradient(135deg, #e8dce0, #d5c4c8); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;">
-                        <div style="font-size: 48px;">🎨</div>
-                        <div style="font-size: 22px; font-weight: 700; color: #5a3a3a;">待推廣</div>
-                        <div style="font-size: 14px; color: #888; letter-spacing: 1px;">你的手作工藝廣告刊登於此</div>
-                        <div style="font-size: 13px; color: #aaa;">傳送訊息給 LINE Bot 登錄活動</div>
-                    </div>
+                    <div style="height:100%; background:#f0ede8; display:flex; align-items:center; justify-content:center; color:#aaa; font-size:16px;">載入中…</div>
                 </div>
             </div>
 
@@ -1437,13 +1409,8 @@
             <button onclick="adPrev()" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.85); border:none; border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15); z-index:2;">‹</button>
             <button onclick="adNext()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.85); border:none; border-radius:50%; width:44px; height:44px; font-size:20px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.15); z-index:2;">›</button>
 
-            <!-- 點點指示器 -->
-            <div id="ad-dots" style="position:absolute; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:2;">
-                <span class="ad-dot active" onclick="adGo(0)"></span>
-                <span class="ad-dot" onclick="adGo(1)"></span>
-                <span class="ad-dot" onclick="adGo(2)"></span>
-                <span class="ad-dot" onclick="adGo(3)"></span>
-            </div>
+            <!-- 點點指示器（動態填入） -->
+            <div id="ad-dots" style="position:absolute; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:2;"></div>
         </div>
     </div>
 </section>
@@ -1454,20 +1421,84 @@
 </style>
 
 <script>
-(function(){
-    let cur = 0;
-    const total = 4;
-    let timer = setInterval(() => adNext(), 4000);
+let _adCur = 0, _adTotal = 1, _adTimer = null, _adEvents = [];
+const SLIDE_BG = [
+    ['135deg,#e8f0e4,#c8d8c4','#2d5a2d'],
+    ['135deg,#e4eaf4,#c4cce8','#2d3a6a'],
+    ['135deg,#f4e8e4,#e0c8c0','#6a2d2d'],
+    ['135deg,#f0ece4,#ddd0b8','#5a4a2a'],
+];
+function _adGo(n) {
+    _adCur = (n + _adTotal) % _adTotal;
+    document.getElementById('ad-track').style.transform = `translateX(-${_adCur * 100}%)`;
+    document.querySelectorAll('.ad-dot').forEach((d,i) => d.classList.toggle('active', i === _adCur));
+}
+window.adNext = () => { clearInterval(_adTimer); _adGo(_adCur+1); _adTimer = setInterval(()=>adNext(),4000); };
+window.adPrev = () => { clearInterval(_adTimer); _adGo(_adCur-1); _adTimer = setInterval(()=>adNext(),4000); };
+window.adGo   = (n) => { clearInterval(_adTimer); _adGo(n);       _adTimer = setInterval(()=>adNext(),4000); };
 
-    function go(n) {
-        cur = (n + total) % total;
-        document.getElementById('ad-track').style.transform = `translateX(-${cur * 100}%)`;
-        document.querySelectorAll('.ad-dot').forEach((d,i) => d.classList.toggle('active', i === cur));
+function _buildSlide(type, ev, slideIdx, evIdx) {
+    if (type === 'sample') {
+        return `<div class="ad-slide" style="min-width:100%;height:380px;cursor:pointer;" onclick="openAdModal(-1)">
+            <img src="/static/images/ad-sample.jpg" alt="阿傑老闆的咖啡工作坊" style="width:100%;height:100%;display:block;object-fit:cover;">
+        </div>`;
     }
-    window.adNext = () => { clearInterval(timer); go(cur+1); timer = setInterval(() => adNext(), 4000); };
-    window.adPrev = () => { clearInterval(timer); go(cur-1); timer = setInterval(() => adNext(), 4000); };
-    window.adGo   = (n) => { clearInterval(timer); go(n);    timer = setInterval(() => adNext(), 4000); };
-})();
+    if (type === 'event') {
+        const [bg, tc] = SLIDE_BG[slideIdx % SLIDE_BG.length];
+        return `<div class="ad-slide" style="min-width:100%;height:380px;cursor:pointer;" onclick="openAdModal(${evIdx})">
+            <div style="height:100%;background:linear-gradient(${bg});display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:32px;text-align:center;">
+                <div style="font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase;">${ev.artisan}</div>
+                <div style="font-size:26px;font-weight:800;color:${tc};line-height:1.2;">${ev.title}</div>
+                <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:6px;">
+                    <span style="font-size:13px;color:#666;">📅 ${ev.event_date||''}</span>
+                    <span style="font-size:13px;color:#666;">👥 ${ev.capacity||''}人</span>
+                    <span style="font-size:13px;color:#666;">💰 NT$${ev.price||''}</span>
+                </div>
+                <div style="font-size:14px;color:#777;max-width:400px;line-height:1.5;margin-top:4px;">${ev.description||''}</div>
+                <div style="margin-top:10px;background:rgba(74,93,78,0.12);color:#4A5D4E;padding:8px 24px;border-radius:20px;font-size:13px;font-weight:600;">點擊查看詳情 →</div>
+            </div>
+        </div>`;
+    }
+    // placeholder
+    const PH = [
+        {icon:'☕',bg:'linear-gradient(135deg,#e8e4dc,#d5cfc4)',tc:'#5a5a4a',txt:'你的工作坊廣告刊登於此'},
+        {icon:'🎨',bg:'linear-gradient(135deg,#e8dce0,#d5c4c8)',tc:'#5a3a3a',txt:'你的手作工藝廣告刊登於此'},
+    ];
+    const p = PH[slideIdx % PH.length];
+    return `<div class="ad-slide" style="min-width:100%;height:380px;">
+        <div style="height:100%;background:${p.bg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+            <div style="font-size:48px;">${p.icon}</div>
+            <div style="font-size:22px;font-weight:700;color:${p.tc};">待推廣</div>
+            <div style="font-size:14px;color:#888;letter-spacing:1px;">${p.txt}</div>
+            <div style="font-size:13px;color:#aaa;">傳送訊息給 LINE Bot 登錄活動</div>
+        </div>
+    </div>`;
+}
+
+async function _loadAds() {
+    let events = [];
+    try {
+        const r = await fetch('/api/events');
+        events = await r.json();
+        if (!Array.isArray(events)) events = [];
+    } catch(e) {}
+    _adEvents = events;
+
+    const slides = [];
+    slides.push({ type:'sample' });
+    events.forEach((ev, i) => slides.push({ type:'event', ev, evIdx:i }));
+    while (slides.length < 3) slides.push({ type:'placeholder' });
+    _adTotal = slides.length;
+
+    const track = document.getElementById('ad-track');
+    track.innerHTML = slides.map((s,i) => _buildSlide(s.type, s.ev, i, s.evIdx)).join('');
+
+    const dots = document.getElementById('ad-dots');
+    dots.innerHTML = slides.map((_,i) => `<span class="ad-dot${i===0?' active':''}" onclick="adGo(${i})"></span>`).join('');
+
+    _adTimer = setInterval(()=>adNext(), 4000);
+}
+document.addEventListener('DOMContentLoaded', _loadAds);
 </script>
 
 <div class="cta-section">
@@ -1477,64 +1508,59 @@
 </div>
 
 <!-- ===== 廣告 Modal ===== -->
-<div id="ad-modal" style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;">
-    <div style="background:#fff; border-radius:20px; max-width:640px; width:100%; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-        <!-- 關閉按鈕 -->
-        <button onclick="closeAdModal()" style="position:absolute; top:14px; right:16px; background:rgba(0,0,0,0.15); border:none; border-radius:50%; width:36px; height:36px; font-size:18px; cursor:pointer; z-index:1; color:#333;">✕</button>
-        <!-- 圖片 -->
-        <img src="{{ url_for('static', filename='images/ad-sample.jpg') }}" alt="阿傑老闆的咖啡工作坊" style="width:100%; border-radius:20px 20px 0 0; display:block; max-height:300px; object-fit:cover;">
-        <!-- 內容 -->
-        <div style="padding:24px 28px 28px;">
-            <div style="display:inline-block; background:#f0f7f0; color:#4A5D4E; font-size:12px; font-weight:600; padding:4px 12px; border-radius:20px; letter-spacing:1px; margin-bottom:12px;">☕ 咖啡職人 · 限定體驗</div>
-            <h2 style="font-size:24px; font-weight:800; color:#1a1a1a; margin:0 0 6px;">阿傑老闆的咖啡工作坊</h2>
-            <p style="color:#888; font-size:14px; margin:0 0 20px;">手作體驗 × 職人手沖 × 豆品販售</p>
-            <p style="color:#444; font-size:15px; line-height:1.8; margin:0 0 20px;">
-                跟著阿傑老闆，探索最純粹的咖啡香。從生豆挑選、烘焙到手沖，一步一步感受咖啡的溫度與故事。課程結束後可帶走自己烘焙的豆子（50g），是送禮自用兩相宜的南投伴手禮。
-            </p>
-            <!-- 資訊列 -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:24px;">
-                <div style="background:#f7f5f0; border-radius:12px; padding:14px 16px;">
-                    <div style="font-size:11px; color:#999; letter-spacing:1px; margin-bottom:4px;">📅 開課時間</div>
-                    <div style="font-size:14px; font-weight:600; color:#333;">每週六、日<br>10:00 – 13:00</div>
-                </div>
-                <div style="background:#f7f5f0; border-radius:12px; padding:14px 16px;">
-                    <div style="font-size:11px; color:#999; letter-spacing:1px; margin-bottom:4px;">👥 每場名額</div>
-                    <div style="font-size:14px; font-weight:600; color:#333;">限 8 人<br><span style="color:#e85d04; font-size:12px;">▸ 名額有限，早報早得</span></div>
-                </div>
-                <div style="background:#f7f5f0; border-radius:12px; padding:14px 16px;">
-                    <div style="font-size:11px; color:#999; letter-spacing:1px; margin-bottom:4px;">💰 體驗費用</div>
-                    <div style="font-size:14px; font-weight:600; color:#333;">NT$800 / 人<br><span style="color:#888; font-size:12px;">含材料、豆子帶走</span></div>
-                </div>
-                <div style="background:#f7f5f0; border-radius:12px; padding:14px 16px;">
-                    <div style="font-size:11px; color:#999; letter-spacing:1px; margin-bottom:4px;">📍 地點</div>
-                    <div style="font-size:14px; font-weight:600; color:#333;">南投縣埔里鎮<br>仁愛路67號</div>
-                </div>
-            </div>
-            <!-- 預約按鈕 -->
-            <button onclick="closeAdModal(); openChat(); setTimeout(()=>sendMessage('我想預約阿傑老闆的咖啡工作坊'),400);" style="width:100%; background:linear-gradient(135deg,#4A5D4E,#2D6A4F); color:#fff; border:none; border-radius:14px; padding:16px; font-size:16px; font-weight:700; cursor:pointer; letter-spacing:1px;">
-                🤖 讓 AI 幫我預約
-            </button>
-        </div>
+<div id="ad-modal" style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this)closeAdModal()">
+    <div id="ad-modal-inner" style="background:#fff; border-radius:20px; max-width:640px; width:100%; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <button onclick="closeAdModal()" style="position:absolute; top:14px; right:16px; background:rgba(0,0,0,0.15); border:none; border-radius:50%; width:36px; height:36px; font-size:18px; cursor:pointer; z-index:10; color:#333;">✕</button>
+        <div id="ad-modal-content"></div>
     </div>
 </div>
+<script>
+const _SAMPLE_HTML = `
+    <img src="/static/images/ad-sample.jpg" alt="阿傑老闆的咖啡工作坊" style="width:100%;border-radius:20px 20px 0 0;display:block;max-height:300px;object-fit:cover;">
+    <div style="padding:24px 28px 28px;">
+        <div style="display:inline-block;background:#f0f7f0;color:#4A5D4E;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px;">☕ 咖啡職人 · 限定體驗</div>
+        <h2 style="font-size:24px;font-weight:800;color:#1a1a1a;margin:0 0 6px;">阿傑老闆的咖啡工作坊</h2>
+        <p style="color:#888;font-size:14px;margin:0 0 20px;">手作體驗 × 職人手沖 × 豆品販售</p>
+        <p style="color:#444;font-size:15px;line-height:1.8;margin:0 0 20px;">跟著阿傑老闆，探索最純粹的咖啡香。從生豆挑選、烘焙到手沖，一步一步感受咖啡的溫度與故事。課程結束後可帶走自己烘焙的豆子（50g），是送禮自用兩相宜的南投伴手禮。</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
+            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">📅 開課時間</div><div style="font-size:14px;font-weight:600;color:#333;">每週六、日<br>10:00 – 13:00</div></div>
+            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">👥 每場名額</div><div style="font-size:14px;font-weight:600;color:#333;">限 8 人<br><span style="color:#e85d04;font-size:12px;">▸ 名額有限，早報早得</span></div></div>
+            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">💰 體驗費用</div><div style="font-size:14px;font-weight:600;color:#333;">NT$800 / 人<br><span style="color:#888;font-size:12px;">含材料、豆子帶走</span></div></div>
+            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">📍 地點</div><div style="font-size:14px;font-weight:600;color:#333;">南投縣埔里鎮<br>仁愛路67號</div></div>
+        </div>
+        <button onclick="closeAdModal();openChat();setTimeout(()=>sendMessage('我想預約阿傑老闆的咖啡工作坊'),400);" style="width:100%;background:linear-gradient(135deg,#4A5D4E,#2D6A4F);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;">🤖 讓 AI 幫我預約</button>
+    </div>`;
 
-<style>
-#ad-modal.open { display:flex !important; }
-</style>
+function openAdModal(evIdx) {
+    const content = document.getElementById('ad-modal-content');
+    if (evIdx === -1 || evIdx === undefined) {
+        content.innerHTML = _SAMPLE_HTML;
+    } else {
+        const ev = _adEvents[evIdx] || {};
+        const esc = s => String(s||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+        content.innerHTML = `
+            <div style="background:linear-gradient(135deg,#4A5D4E,#2D6A4F);height:180px;border-radius:20px 20px 0 0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
+                <div style="font-size:48px;">🌿</div>
+                <div style="color:rgba(255,255,255,0.75);font-size:13px;letter-spacing:2px;">${esc(ev.artisan)}</div>
+            </div>
+            <div style="padding:24px 28px 28px;">
+                <h2 style="font-size:24px;font-weight:800;color:#1a1a1a;margin:0 0 8px;">${esc(ev.title)}</h2>
+                <p style="color:#666;font-size:15px;line-height:1.7;margin:0 0 20px;">${esc(ev.description)}</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
+                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">📅 活動日期</div><div style="font-size:14px;font-weight:600;color:#333;">${esc(ev.event_date)}</div></div>
+                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">👥 每場名額</div><div style="font-size:14px;font-weight:600;color:#333;">限 ${esc(ev.capacity)} 人</div></div>
+                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">💰 體驗費用</div><div style="font-size:14px;font-weight:600;color:#333;">NT$${esc(ev.price)} / 人</div></div>
+                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">🏪 主辦商家</div><div style="font-size:14px;font-weight:600;color:#333;">${esc(ev.artisan)}</div></div>
+                </div>
+                <button onclick="closeAdModal();openChat();setTimeout(()=>sendMessage('我想預約${esc(ev.artisan)}的${esc(ev.title)}'),400);" style="width:100%;background:linear-gradient(135deg,#4A5D4E,#2D6A4F);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;">🤖 讓 AI 幫我預約</button>
+            </div>`;
+    }
+    document.getElementById('ad-modal').style.display = 'flex';
+}
+function closeAdModal() { document.getElementById('ad-modal').style.display = 'none'; }
+</script>
 
 <script>
-function openAdModal() {
-    const m = document.getElementById('ad-modal');
-    m.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-}
-function closeAdModal() {
-    document.getElementById('ad-modal').style.display = 'none';
-    document.body.style.overflow = '';
-}
-document.getElementById('ad-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeAdModal();
-});
 function sendMessage(text) {
     const input = document.getElementById('user-input');
     if (input) { input.value = text; input.dispatchEvent(new Event('input')); }

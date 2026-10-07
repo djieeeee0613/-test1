@@ -377,6 +377,21 @@ Email：example@email.com
 def index():
     return render_template('index.html')
 
+@app.route('/api/events')
+def get_events():
+    try:
+        resp = requests.get(
+            f"{SUPABASE_URL}/rest/v1/events",
+            params={"active": "eq.true", "select": "*", "order": "id.desc", "limit": "10"},
+            headers={"apikey": SUPABASE_KEY},
+            timeout=8
+        )
+        if resp.status_code == 200:
+            return jsonify(resp.json())
+        return jsonify([])
+    except Exception:
+        return jsonify([])
+
 @app.route('/webhook/line-merchant', methods=['POST', 'GET'])
 def line_merchant_proxy():
     try:
