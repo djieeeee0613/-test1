@@ -4,23 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案說明
 
-南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Google Sheets 並推播 LINE 通知給商家。
+南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Supabase 並推播 LINE 通知給商家。
 
-## 啟動
+## 雲端部署架構
+
+| 服務 | 平台 | URL |
+|------|------|-----|
+| Flask 前後端 | Render | https://test1-yipa.onrender.com |
+| n8n 工作流 | n8n.cloud | https://nantoutravel.app.n8n.cloud |
+| 資料庫 | Supabase | https://gbffodvtfirdtecsespm.supabase.co |
+
+## 本機開發啟動
 
 ```powershell
-# 一鍵啟動 n8n + Flask（需在專案目錄內執行）
+# 僅啟動 Flask（開發用）
 cd "C:\Users\user\Desktop\dj\黑客松"
-.\start.ps1
-
-# 或分開啟動
-docker rm -f n8n 2>$null; docker run --rm --name n8n -p 5678:5678 -v "${env:USERPROFILE}\.n8n:/home/node/.n8n" docker.n8n.io/n8nio/n8n
 python app.py
 ```
 
 - Flask：`http://127.0.0.1:5001`（debug 模式，存檔自動重載）
-- n8n：`http://localhost:5678`
-- ngrok 對外：`ngrok http 5001`（free plan 只能一條 tunnel，LINE webhook 透過 Flask 代理）
+- n8n.cloud 常駐，不需本機啟動
+- Supabase 常駐，不需本機啟動
 
 查詢可用 Gemini 模型：
 ```powershell
@@ -29,13 +33,18 @@ python check_models.py
 
 ## 環境設定
 
-`.env`（不進 git）：
+`.env`（不進 git，本機開發用）：
 ```
 GEMINI_API_KEY=你的金鑰
 MERCHANT_PASSWORD=商家後台密碼（預設 nantou2026）
 ```
 
-`N8N_WEBHOOK_URL` 寫死在 `app.py`，本機固定用 `http://localhost:5678/webhook/nantou-booking`，不需改成 ngrok URL（Flask 和 n8n 在同一台機器上直接走 localhost）。
+Render 環境變數（在 Render dashboard 設定）：
+- `GEMINI_API_KEY`
+- `MERCHANT_PASSWORD`
+- `N8N_WEBHOOK_URL`（預設 https://nantoutravel.app.n8n.cloud/webhook/nantou-booking）
+- `SUPABASE_URL`（https://gbffodvtfirdtecsespm.supabase.co）
+- `SUPABASE_KEY`（Supabase anon key）
 
 ## 架構
 
@@ -43,19 +52,21 @@ MERCHANT_PASSWORD=商家後台密碼（預設 nantou2026）
 
 ```
 旅客瀏覽器
-  → GET /          → Flask → templates/index.html（旅遊網站 + 聊天視窗 + Leaflet 地圖）
-  → POST /api/chat → Flask → 速率限制檢查 → Gemini Agent 循環 → 回覆文字
+  → GET /          → Flask(Render) → templates/index.html（旅遊網站 + 聊天視窗 + Leaflet 地圖）
+  → POST /api/chat → Flask(Render) → 速率限制檢查 → Gemini Agent 循環 → 回覆文字
                                 ↓ function call
                            search_local_merchants / check_availability / book_experience
                                 ↓ book_experience
-                           POST localhost:5678/webhook/nantou-booking
+                           POST n8n.cloud/webhook/nantou-booking
                                 ↓
-                           n8n：寫 Sheet1 → 查 Sheet2(Line_ID) → LINE push message（含 Quick Reply 按鈕）
+                           n8n：POST Supabase bookings → GET Supabase merchants(line_id)
+                                → LINE push message（含 Quick Reply 按鈕）
 
 商家 LINE Bot
-  → LINE platform → POST /webhook/line-merchant → Flask proxy → n8n line-merchant workflow
-                                                                  ↓
-                                                         寫 Sheet2（職人名稱 + Line_ID）
+  → LINE platform → POST n8n.cloud/webhook/line-merchant（直接打 n8n，不經 Flask）
+                       ↓
+                    解析訊息 → 商家登錄：POST Supabase merchants（artisan + line_id）
+                             → 陌生訊息：回覆介紹文案
 
 商家後台（基本驗證）
   → GET /merchant  → HTTP Basic Auth（MERCHANT_PASSWORD）→ 預約記錄列表
@@ -68,7 +79,7 @@ MERCHANT_PASSWORD=商家後台密碼（預設 nantou2026）
 - **Agent 循環**：`/api/chat` 內 `while True` 跑 `generate_content` → 有 `function_call` 就執行並回送結果 → 無 `function_call` 才 return 文字
 - **容錯**：`candidate.parts` 可能為 `None`（Gemini 偶發），已加 guard；503 自動指數退避重試，fallback 到 `gemini-2.0-flash`
 - **對話記憶**：前端維護 `conversationHistory[]`，每次請求帶 `history` 陣列（最多 20 輪），後端 rebuild `contents`
-- **LINE webhook 代理**：`/webhook/line-merchant` → 轉發到 n8n，單一 ngrok tunnel 同時服務網頁與 LINE Bot
+- **LINE webhook 代理**：`/webhook/line-merchant` 路由存在但 LINE Developers Console webhook URL 直接指向 n8n.cloud（不經 Flask 代理）
 - **速率限制**：`check_rate(ip, limit=20, window=60)`，超過 20 req/min 回傳 429
 - **商家後台**：`/merchant` 路由加 `require_auth` decorator，讀取 `MERCHANT_PASSWORD` 環境變數
 - **日期解析**：`_parse_booking_date()` 先嘗試含年份格式，再嘗試無年份格式（自動補當年，若已過期則補明年）
@@ -97,28 +108,32 @@ MERCHANT_PASSWORD=商家後台密碼（預設 nantou2026）
   - `filterMap(cat)` 可按類別篩選，圖例點擊觸發
 - **多語系內容**：`data-zh` / `data-en` / `data-ja` attribute 驅動切換
 
-### n8n 工作流
+### n8n 工作流（n8n.cloud）
 
-`n8n_booking_workflow.json`（預約流程）：
-- Webhook1 → Append row（Sheet1，記錄預約）→ Get row（Sheet2，依 `artisan` 欄位查 `Line_ID`）→ Code node（組 LINE push payload）→ HTTP Request（LINE API）
+`n8n_booking_workflow.json`（預約流程，webhook path: `nantou-booking`）：
+- Webhook1 → HTTP Request POST Supabase bookings → HTTP Request GET Supabase merchants（依 artisan 查 line_id）→ Code node（組 LINE push payload，`to: lineId`，`lineId = $input.item.json.line_id`）→ HTTP Request LINE push API
 - 商家收到通知後有 **LINE Quick Reply 按鈕**：「✅ 確認預約」/ 「❌ 婉拒預約」（`確認/婉拒 {booking_id}` 訊息格式）
-- Sheet2 的「職人名稱」必須與 AI 送出的 `artisan` 值**完全一致**（含空格），否則查不到 Line_ID，LINE 通知不發出
-- 旅客不需提供 LINE ID（已移除此欄位）
+- Supabase merchants 的 `artisan` 必須與 AI 送出的 `artisan` 值**完全一致**，否則查不到 line_id
 
-`n8n_merchant_onboarding.json`（商家加入）：
-- 商家傳 `商家：[名稱]` → 寫入 Sheet2（職人名稱 + Line_ID）
+`n8n_merchant_onboarding.json`（商家加入，webhook path: `line-merchant`）：
+- 商家傳 `商家：[名稱]` → POST Supabase merchants（artisan + line_id）→ 回覆登錄成功
+- 傳 `我的ID` → 回覆 LINE User ID
 - 陌生訊息 → 回覆介紹文案
+- LINE Developers Console webhook URL 直接設為 `https://nantoutravel.app.n8n.cloud/webhook/line-merchant`
 
-### Google Sheets 結構
+### Supabase 資料表
 
-- **工作表1**：預約記錄（預約編號、職人名稱、預約日期、人數、旅客姓名、聯絡電話、Email、處理狀態）
-- **工作表2**：商家 LINE ID 對照（職人名稱、Line_ID）
+**bookings**（RLS disabled）：
+- `id`（int8, primary key）、`booking_id`、`artisan`、`booking_date`、`people_count`、`customer_name`、`phone`、`email`
+
+**merchants**（RLS disabled）：
+- `id`（int8, primary key）、`artisan`（text）、`line_id`（text）
 
 ## 安全性注意事項
 
 - `.env` 不進 git（含 `GEMINI_API_KEY`、`MERCHANT_PASSWORD`）
 - `n8n_*.json` 含 LINE Channel Access Token，已加入 `.gitignore`
-- 第一次 commit 的舊 Gemini API key 已曝光在 GitHub 歷史，需至 https://aistudio.google.com/app/apikey 手動撤銷，並執行 `git filter-branch` 清除歷史
+- 第一次 commit 的舊 Gemini API key 已曝光在 GitHub 歷史，需至 https://aistudio.google.com/app/apikey 手動撤銷
 - 速率限制保護 `/api/chat`（20 req/min per IP）
 - `/merchant` 後台以 HTTP Basic Auth 保護
 
