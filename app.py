@@ -52,6 +52,39 @@ def load_bookings():
             return json.load(f)
     return []
 
+def load_bookings_from_supabase():
+    """從 Supabase 讀取預約記錄，失敗時 fallback 到本機 JSON"""
+    try:
+        resp = requests.get(
+            f"{SUPABASE_URL}/rest/v1/bookings",
+            params={"select": "*", "order": "id.desc"},
+            headers={"apikey": SUPABASE_KEY},
+            timeout=8
+        )
+        if resp.status_code == 200:
+            rows = resp.json()
+            result = []
+            for r in rows:
+                created = r.get('created_at', '')
+                timestamp = created[:16].replace('T', ' ') if created else '—'
+                result.append({
+                    'id': r.get('booking_id', str(r.get('id', ''))),
+                    'timestamp': timestamp,
+                    'artisan': r.get('artisan', ''),
+                    'date': r.get('booking_date', ''),
+                    'pax': r.get('people_count', ''),
+                    'customer': r.get('customer_name', ''),
+                    'phone': r.get('phone', ''),
+                    'email': r.get('email', ''),
+                    'status': r.get('status', '待確認'),
+                    'rating': r.get('rating'),
+                    'rating_comment': r.get('rating_comment', ''),
+                })
+            return result
+    except Exception as e:
+        print(f"❌ Supabase 讀取預約失敗：{e}")
+    return load_bookings()
+
 def save_bookings(bookings):
     with open(BOOKINGS_FILE, 'w', encoding='utf-8') as f:
         json.dump(bookings, f, ensure_ascii=False, indent=2)
@@ -460,7 +493,7 @@ def view_plan(plan_id):
 @app.route('/merchant')
 @require_auth
 def merchant_dashboard():
-    bookings = load_bookings()
+    bookings = load_bookings_from_supabase()
     rows = ""
     status_colors = {"待確認": "#f59e0b", "已確認": "#10b981", "已婉拒": "#ef4444"}
     for b in reversed(bookings):
