@@ -411,11 +411,6 @@ Email：example@email.com
 def index():
     return render_template('index.html')
 
-@app.route('/category')
-def category_index():
-    cats = [CATEGORIES[s] for s in CATEGORY_ORDER]
-    return render_template('category_index.html', categories=cats)
-
 @app.route('/category/<slug>')
 def category_page(slug):
     cat = CATEGORIES.get(slug)

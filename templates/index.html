@@ -444,9 +444,23 @@
             border: 1px solid rgba(74,93,78,0.15);
         }
 
-        .cat-explore {
+        .cat-footer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             margin-top: auto;
             padding-top: 10px;
+        }
+        .cat-ask-ai {
+            font-size: 12px;
+            color: #888;
+            text-decoration: underline;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: color 0.2s;
+        }
+        .cat-ask-ai:hover { color: var(--primary); }
+        .cat-explore {
             font-size: 13px;
             font-weight: 700;
             color: var(--primary);
@@ -1187,7 +1201,7 @@
     <div class="section-sub">選擇您感興趣的類別，AI 嚮導立即介紹精選商家並協助預約。</div>
     <div class="cat-grid">
 
-        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「☕ 咖啡職人」類別感興趣，請介紹南投有哪些咖啡相關的商家與體驗，並告訴我如何預約。')">
+        <div class="cat-card" onclick="location.href='/category/coffee'">
             <div class="cat-header" style="background: linear-gradient(135deg, #5D4037, #8D6E63)">
                 <div class="cat-emoji">☕</div>
                 <span class="cat-count">5 家</span>
@@ -1200,14 +1214,17 @@
                     <span class="cat-tag">莊園導覽</span>
                     <span class="cat-tag">烘焙工坊</span>
                 </div>
-                <div class="cat-explore">探索商家 →</div>
+                <div class="cat-footer-row">
+                    <div class="cat-explore">查看商家 →</div>
+                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「☕ 咖啡職人」類別感興趣，請介紹南投有哪些咖啡相關的商家與體驗。')">問問 AI</span>
+                </div>
             </div>
         </div>
 
-        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「🌾 農業休閒」類別感興趣，請介紹南投有哪些農業體驗商家，並告訴我如何預約。')">
+        <div class="cat-card" onclick="location.href='/category/farm'">
             <div class="cat-header" style="background: linear-gradient(135deg, #558B2F, #7CB342)">
                 <div class="cat-emoji">🌾</div>
-                <span class="cat-count">8 家</span>
+                <span class="cat-count">3 家</span>
             </div>
             <div class="cat-body">
                 <div class="cat-name">農業休閒</div>
@@ -1217,14 +1234,17 @@
                     <span class="cat-tag">有機農場</span>
                     <span class="cat-tag">梅園走讀</span>
                 </div>
-                <div class="cat-explore">探索商家 →</div>
+                <div class="cat-footer-row">
+                    <div class="cat-explore">查看商家 →</div>
+                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「🌾 農業休閒」類別感興趣，請介紹南投有哪些農業體驗商家。')">問問 AI</span>
+                </div>
             </div>
         </div>
 
-        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「♨️ 秘境溫泉」類別感興趣，請介紹南投有哪些溫泉體驗商家，並告訴我如何預約。')">
+        <div class="cat-card" onclick="location.href='/category/spa'">
             <div class="cat-header" style="background: linear-gradient(135deg, #b71c1c, #e53935)">
                 <div class="cat-emoji">♨️</div>
-                <span class="cat-count">4 家</span>
+                <span class="cat-count">3 家</span>
             </div>
             <div class="cat-body">
                 <div class="cat-name">秘境溫泉</div>
@@ -1234,14 +1254,17 @@
                     <span class="cat-tag">碳酸氫鈉泉</span>
                     <span class="cat-tag">私人湯屋</span>
                 </div>
-                <div class="cat-explore">探索商家 →</div>
+                <div class="cat-footer-row">
+                    <div class="cat-explore">查看商家 →</div>
+                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「♨️ 秘境溫泉」類別感興趣，請介紹南投有哪些溫泉體驗商家。')">問問 AI</span>
+                </div>
             </div>
         </div>
 
-        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「🍽️ 永續餐飲」類別感興趣，請介紹南投有哪些特色餐廳或飲食體驗，並告訴我如何預約。')">
+        <div class="cat-card" onclick="location.href='/category/dining'">
             <div class="cat-header" style="background: linear-gradient(135deg, #E65100, #FF8F00)">
                 <div class="cat-emoji">🍽️</div>
-                <span class="cat-count">6 家</span>
+                <span class="cat-count">4 家</span>
             </div>
             <div class="cat-body">
                 <div class="cat-name">永續餐飲</div>
@@ -1251,31 +1274,37 @@
                     <span class="cat-tag">在地食材</span>
                     <span class="cat-tag">創意蔬食</span>
                 </div>
-                <div class="cat-explore">探索商家 →</div>
+                <div class="cat-footer-row">
+                    <div class="cat-explore">查看商家 →</div>
+                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「🍽️ 永續餐飲」類別感興趣，請介紹南投有哪些特色餐廳或飲食體驗。')">問問 AI</span>
+                </div>
             </div>
         </div>
 
-        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「🏡 特色住宿」類別感興趣，請介紹南投有哪些特色住宿，並告訴我如何預約。')">
+        <div class="cat-card" onclick="location.href='/category/stay'">
             <div class="cat-header" style="background: linear-gradient(135deg, #4527A0, #7E57C2)">
                 <div class="cat-emoji">🏡</div>
-                <span class="cat-count">7 家</span>
+                <span class="cat-count">8 家</span>
             </div>
             <div class="cat-body">
-                <div class="cat-name">特色住宿</div>
+                <div class="cat-name">永續住宿</div>
                 <div class="cat-desc">竹林、農場、星空帳篷，過一晚不一樣的夜</div>
                 <div class="cat-tags">
                     <span class="cat-tag">竹林民宿</span>
                     <span class="cat-tag">農場莊園</span>
-                    <span class="cat-tag">星空帳篷</span>
+                    <span class="cat-tag">環保認證</span>
                 </div>
-                <div class="cat-explore">探索商家 →</div>
+                <div class="cat-footer-row">
+                    <div class="cat-explore">查看商家 →</div>
+                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「🏡 永續住宿」類別感興趣，請介紹南投有哪些特色住宿。')">問問 AI</span>
+                </div>
             </div>
         </div>
 
-        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「🏔️ 部落文化」類別感興趣，請介紹南投有哪些部落文化體驗，並告訴我如何預約。')">
+        <div class="cat-card" onclick="location.href='/category/tribe'">
             <div class="cat-header" style="background: linear-gradient(135deg, #3E2723, #6D4C41)">
                 <div class="cat-emoji">🏔️</div>
-                <span class="cat-count">5 家</span>
+                <span class="cat-count">3 家</span>
             </div>
             <div class="cat-body">
                 <div class="cat-name">部落文化</div>
@@ -1285,14 +1314,17 @@
                     <span class="cat-tag">布農族</span>
                     <span class="cat-tag">獵人學校</span>
                 </div>
-                <div class="cat-explore">探索商家 →</div>
+                <div class="cat-footer-row">
+                    <div class="cat-explore">查看商家 →</div>
+                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「🏔️ 部落文化」類別感興趣，請介紹南投有哪些部落文化體驗。')">問問 AI</span>
+                </div>
             </div>
         </div>
 
-        <div class="cat-card" onclick="openChatWithMsg('【分類探索】我對「🎨 工藝手作」類別感興趣，請介紹南投有哪些工藝手作體驗，並告訴我如何預約。')">
+        <div class="cat-card" onclick="location.href='/category/craft'">
             <div class="cat-header" style="background: linear-gradient(135deg, #00695C, #26A69A)">
                 <div class="cat-emoji">🎨</div>
-                <span class="cat-count">4 家</span>
+                <span class="cat-count">10 家</span>
             </div>
             <div class="cat-body">
                 <div class="cat-name">工藝手作</div>
@@ -1302,7 +1334,10 @@
                     <span class="cat-tag">天然染布</span>
                     <span class="cat-tag">陶藝創作</span>
                 </div>
-                <div class="cat-explore">探索商家 →</div>
+                <div class="cat-footer-row">
+                    <div class="cat-explore">查看商家 →</div>
+                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「🎨 工藝手作」類別感興趣，請介紹南投有哪些工藝手作體驗。')">問問 AI</span>
+                </div>
             </div>
         </div>
 
