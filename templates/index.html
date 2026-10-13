@@ -1513,6 +1513,18 @@ async function _loadAds() {
     _adTimer = setInterval(()=>adNext(), 4000);
 }
 document.addEventListener('DOMContentLoaded', _loadAds);
+
+// 從分類頁跳回來時自動開啟聊天並送出查詢
+document.addEventListener('DOMContentLoaded', () => {
+    const autoAsk = sessionStorage.getItem('autoAsk');
+    if (autoAsk) {
+        sessionStorage.removeItem('autoAsk');
+        setTimeout(() => {
+            openChat();
+            setTimeout(() => sendMessage(autoAsk), 400);
+        }, 600);
+    }
+});
 </script>
 
 <div class="cta-section">

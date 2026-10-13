@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template, render_template_string, Response
 from functools import wraps
 from google import genai
+from merchants_data import CATEGORIES, CATEGORY_ORDER
 from google.genai import types
 
 load_dotenv()
@@ -409,6 +410,19 @@ Email：example@email.com
 @app.route('/')
 def index():
     return render_template('index.html')
+
+@app.route('/category')
+def category_index():
+    cats = [CATEGORIES[s] for s in CATEGORY_ORDER]
+    return render_template('category_index.html', categories=cats)
+
+@app.route('/category/<slug>')
+def category_page(slug):
+    cat = CATEGORIES.get(slug)
+    if not cat:
+        return "<h2 style='font-family:sans-serif;text-align:center;margin-top:80px'>找不到此分類</h2>", 404
+    cats = [CATEGORIES[s] for s in CATEGORY_ORDER]
+    return render_template('category.html', cat=cat, categories=cats)
 
 @app.route('/api/events')
 def get_events():

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>所有分類 — 南投職人旅遊</title>
+<style>
+  :root { --nav-bg: #2d4a35; --text: #1a1a1a; --muted: #666; --border: #e8e8e8; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans TC', sans-serif; background: #f7f5f2; color: var(--text); }
+
+  nav {
+    background: var(--nav-bg);
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .nav-logo { color: #fff; font-weight: 700; font-size: 16px; text-decoration: none; }
+  .nav-logo span { color: #a8d5b5; }
+
+  .hero {
+    background: linear-gradient(135deg, #2d4a35, #1a2e1e);
+    color: #fff;
+    text-align: center;
+    padding: 60px 24px 48px;
+  }
+  .hero h1 { font-size: clamp(24px, 5vw, 38px); font-weight: 800; margin-bottom: 12px; }
+  .hero p { font-size: 15px; opacity: 0.8; max-width: 480px; margin: 0 auto; }
+
+  .container { max-width: 1000px; margin: 0 auto; padding: 48px 20px 80px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+
+  .cat-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.25s, box-shadow 0.25s;
+  }
+  .cat-card:hover { transform: translateY(-4px); box-shadow: 0 10px 32px rgba(0,0,0,0.12); }
+  .cat-header {
+    padding: 28px 24px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .cat-emoji { font-size: 40px; line-height: 1; }
+  .cat-title { font-size: 20px; font-weight: 800; }
+  .cat-body { padding: 0 24px 20px; font-size: 13px; color: var(--muted); line-height: 1.75; flex: 1; }
+  .cat-footer {
+    padding: 14px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .cat-count { color: var(--muted); }
+  .cat-arrow { font-size: 16px; }
+
+  footer { background: var(--nav-bg); color: rgba(255,255,255,0.6); text-align: center; padding: 24px; font-size: 13px; }
+  footer a { color: #a8d5b5; text-decoration: none; }
+
+  @media (max-width: 600px) {
+    .container { padding: 32px 16px 60px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">🌿 <span>南投</span>職人旅遊</a>
+</nav>
+
+<div class="hero">
+  <h1>🗺️ 探索所有分類</h1>
+  <p>南投 9 大主題，46 家在地職人，為你打造最深度的永續旅遊體驗</p>
+</div>
+
+<div class="container">
+  <div class="grid">
+    {% for cat in categories %}
+    <a href="/category/{{ cat.slug }}" class="cat-card" style="border-top: 4px solid {{ cat.color }};">
+      <div class="cat-header">
+        <span class="cat-emoji">{{ cat.emoji }}</span>
+        <span class="cat-title" style="color: {{ cat.color }};">{{ cat.name }}</span>
+      </div>
+      <div class="cat-body">{{ cat.description[:60] }}…</div>
+      <div class="cat-footer">
+        <span class="cat-count">{{ cat.merchants|length }} 家商家</span>
+        <span class="cat-arrow" style="color: {{ cat.color }};">→</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+
+<footer>
+  <p>© 2026 南投職人旅遊 &nbsp;|&nbsp; <a href="/">回首頁</a></p>
+</footer>
+</body>
+</html>
