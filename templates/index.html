@@ -671,6 +671,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
+            padding: 0;
+        }
+        #ai-fab img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
         }
 
         #ai-fab:hover {
@@ -733,12 +742,15 @@
         .chat-avatar {
             width: 36px;
             height: 36px;
-            background: rgba(255,255,255,0.15);
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .chat-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
         .chat-header-info { flex: 1; }
@@ -1642,24 +1654,24 @@ function sendMessage(text) {
 
 <!-- ===== AI 浮動按鈕 ===== -->
 <button id="ai-fab" onclick="toggleChat()">
-    <span class="fab-tooltip">AI 旅遊嚮導</span>
-    🌿
+    <span class="fab-tooltip">緣投 AI 嚮導</span>
+    <img src="/static/images/mascot.jpg" alt="緣投">
     <span class="fab-dot"></span>
 </button>
 
 <!-- ===== 聊天小視窗 ===== -->
 <div id="chat-widget">
     <div id="chat-header">
-        <div class="chat-avatar">🌿</div>
+        <div class="chat-avatar"><img src="/static/images/mascot.jpg" alt="緣投"></div>
         <div class="chat-header-info">
-            <div class="chat-header-name">南投職人 AI 嚮導</div>
+            <div class="chat-header-name">緣投 AI 嚮導</div>
             <div class="chat-header-status">● 線上，隨時為您服務</div>
         </div>
         <button id="chat-close" onclick="closeChat()">✕</button>
     </div>
     <div id="chat-box">
         <div class="message bot-message">
-            你好！我是南投在地嚮導 🌿<br><br>請選擇您感興趣的體驗類別，或直接輸入需求：
+            你好！我是緣投，你的南投在地 AI 嚮導 🌿<br><br>請選擇您感興趣的體驗類別，或直接輸入需求：
             <div class="inline-chips" id="inline-chips">
                 <div class="inline-chip" onclick="pickCategory('【分類探索】☕ 咖啡職人')">☕ 咖啡職人</div>
                 <div class="inline-chip" onclick="pickCategory('【分類探索】🌾 農業休閒')">🌾 農業休閒</div>
