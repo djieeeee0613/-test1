@@ -1574,6 +1574,29 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<!-- ===== 遊戲入口 Banner ===== -->
+<section style="padding: 52px 20px; background: linear-gradient(135deg, #1a3a22 0%, #2d4a35 60%, #3d6645 100%);">
+  <div style="max-width: 780px; margin: 0 auto; display: flex; align-items: center; gap: 36px; flex-wrap: wrap; justify-content: center;">
+    <div style="flex: 1; min-width: 260px; color: white;">
+      <div style="display:inline-block; background:rgba(200,169,110,0.2); border:1px solid rgba(200,169,110,0.4); color:#f0e0b0; padding:3px 12px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:2px; margin-bottom:14px; text-transform:uppercase;">🎮 新功能</div>
+      <h2 style="font-size: clamp(24px,5vw,36px); font-weight:900; margin-bottom:10px; line-height:1.25;">緣投<span style="color:#f0e0b0;">探索者</span></h2>
+      <p style="font-size:14px; opacity:0.85; line-height:1.8; margin-bottom:22px;">走訪 46 間南投在地職人，AI 驗證打卡、每日問答，累積 XP 晉升職人等級，登上全球排行榜！</p>
+      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px;">
+        <span style="font-size:13px; opacity:0.75;">📸 打卡 +30 XP</span>
+        <span style="font-size:13px; opacity:0.75;">🧠 問答 +20 XP</span>
+        <span style="font-size:13px; opacity:0.75;">🏆 排行榜</span>
+      </div>
+      <a href="/game" style="display:inline-block; background:#C8A96E; color:white; font-weight:700; font-size:15px; padding:13px 28px; border-radius:26px; text-decoration:none; transition:opacity 0.2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">開始探索之旅 →</a>
+    </div>
+    <div style="flex-shrink:0; position:relative;">
+      <div style="width:120px; height:120px; border-radius:50%; overflow:hidden; border:4px solid rgba(200,169,110,0.5); box-shadow:0 8px 32px rgba(0,0,0,0.3);">
+        <img src="/static/images/mascot.jpg" alt="緣投" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+      <div style="position:absolute; bottom:-4px; right:-8px; background:#C8A96E; color:white; font-size:10px; font-weight:700; padding:3px 8px; border-radius:12px; white-space:nowrap;">Lv.6 職人大師</div>
+    </div>
+  </div>
+</section>
+
 <div class="cta-section">
     <h2>讓 AI 幫你規劃專屬行程</h2>
     <p>告訴我你的需求、預算與人數，一分鐘內給你最適合的南投深度體驗。</p>

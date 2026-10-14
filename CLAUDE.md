@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案說明
 
-南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Supabase 並推播 LINE 通知給商家。商家可透過 LINE Bot 登錄活動、上傳活動照片，照片自動顯示在網站輪播。
+南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Supabase 並推播 LINE 通知給商家。商家確認或婉拒後，系統自動寄 email 通知旅客。商家可透過 LINE Bot 登錄活動、上傳活動照片，照片自動顯示在網站輪播。吉祥物「緣投」圓形頭像用於 nav logo、FAB 按鈕、聊天視窗標頭（圖檔：`static/images/mascot.jpg`）。
 
 ## 雲端部署架構
 
@@ -67,6 +67,8 @@ Render 環境變數（在 Render dashboard 設定）：
                              → 圖片上傳：GET LINE Content API → POST Supabase Storage
                                          → PATCH Supabase events.image_url
                              → 確認/婉拒 {booking_id}：PATCH Supabase bookings.status
+                                         → GET Supabase bookings（取 email/name/artisan/date）
+                                         → Gmail OAuth2 寄信給旅客
                              → 陌生訊息：回覆介紹文案
 
 商家後台（基本驗證）
@@ -122,12 +124,18 @@ Render 環境變數（在 Render dashboard 設定）：
 
 `n8n_merchant_onboarding.json`（商家加入 + 活動管理，webhook path: `line-merchant`）：
 - `商家：[名稱]` → POST Supabase merchants（artisan + line_id）
-- `活動：[名稱]|[日期]|[人數]|[價格]|[說明]` → POST Supabase events
+- `活動登錄\n名稱：...\n日期：...\n名額：...\n費用：...\n描述：...` → POST Supabase events
 - 圖片訊息 → GET LINE Content API（binary）→ POST Supabase Storage `event-image/{userId}_{eventId}_{ts}.jpg` → PATCH events.image_url
-- `確認/婉拒 {booking_id}` → PATCH Supabase bookings.status
+- `確認 {booking_id}` → PATCH bookings.status=已確認 → GET bookings → Gmail 寄確認信給旅客
+- `婉拒 {booking_id}` → PATCH bookings.status=已婉拒 → GET bookings → Gmail 寄婉拒信給旅客
 - `我的ID` → 回覆 LINE User ID
 - 陌生訊息 → 回覆介紹文案
 - LINE Developers Console webhook URL：`https://nantoutravel.app.n8n.cloud/webhook/line-merchant`
+
+**Email 通知注意事項**：
+- 使用 **Gmail OAuth2 credential**（n8n Gmail node），不用 SMTP（n8n.cloud 有 IPv6 連線問題）
+- 確認/婉拒 email 節點：`n8n-nodes-base.gmail`，credential 名稱 `Gmail 帳號`
+- `To Email` 和 `message` 欄位用 `$json.email`、`$json.customer_name` 等（HTTP Request 回傳陣列後 n8n 自動拆成 individual item，不需 `$json[0].xxx`）
 
 **圖片上傳注意事項**：
 - Supabase Storage RLS：`storage.objects` 需有 anon INSERT policy，`WITH CHECK (bucket_id = 'event-image')`
