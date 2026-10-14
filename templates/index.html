@@ -85,6 +85,88 @@
             border-color: rgba(255,255,255,0.4);
         }
 
+        /* ===== 流光按鈕 ===== */
+        @keyframes glow-spin { to { transform: rotate(360deg); } }
+        @keyframes glow-sweep { 0% { left: -60%; } 60%, 100% { left: 130%; } }
+        @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 12px rgba(240,200,110,.45), 0 0 0 0 rgba(240,200,110,.35); } 50% { box-shadow: 0 0 22px rgba(240,200,110,.75), 0 0 0 6px rgba(240,200,110,0); } }
+        .glow-btn {
+            position: relative; display: inline-flex; padding: 3px; border-radius: 999px;
+            overflow: hidden; text-decoration: none; isolation: isolate;
+            animation: glow-pulse 2.4s ease-in-out infinite;
+            transition: transform .25s;
+        }
+        .glow-btn::before {
+            content: ''; position: absolute; inset: -250%; z-index: -2;
+            background: conic-gradient(from 0deg, rgba(255,255,255,.15) 0 45%, #fff 58%, #ffe08a 66%, #ff9a3c 74%, rgba(255,255,255,.15) 86%);
+            animation: glow-spin 2.6s linear infinite;
+        }
+        .glow-btn::after {
+            content: ''; position: absolute; inset: 3px; z-index: -1; border-radius: inherit;
+            background: linear-gradient(135deg, #d9b56f, #b88a3e);
+        }
+        .glow-btn > span {
+            position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 8px;
+            border-radius: inherit; color: #fff; font-weight: 800; letter-spacing: 1px; white-space: nowrap;
+            text-shadow: 0 1px 2px rgba(0,0,0,.2);
+        }
+        .glow-btn > span::after {
+            content: ''; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%;
+            background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
+            transform: skewX(-20deg); animation: glow-sweep 3s ease-in-out infinite;
+        }
+        .glow-btn:hover { transform: translateY(-2px) scale(1.04); }
+        .nav-game { margin-left: 20px; }
+        .nav-game > span { padding: 7px 16px 7px 8px; font-size: 14px; }
+        .nav-game img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; }
+        .nav-game-new {
+            font-style: normal; font-size: 10px; font-weight: 900; letter-spacing: .5px;
+            background: #e8590c; color: #fff; padding: 1px 6px; border-radius: 8px; text-shadow: none;
+        }
+
+        /* ===== 遊戲 Banner ===== */
+        .game-banner {
+            position: relative; overflow: hidden; color: #fff; padding: 72px 24px;
+            background: radial-gradient(circle at 85% 30%, rgba(200,169,110,.25), transparent 45%),
+                        linear-gradient(135deg, #142d1b 0%, #2d4a35 55%, #3d6645 100%);
+        }
+        .gb-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.4fr 1fr; gap: 48px; align-items: center; }
+        .gb-chip { display: inline-block; background: rgba(200,169,110,.2); border: 1px solid rgba(200,169,110,.45); color: #f0e0b0; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 2px; }
+        .gb-text h2 { font-size: clamp(32px, 5vw, 48px); font-weight: 900; margin: 16px 0 12px; }
+        .gb-text h2 span { color: #f0e0b0; }
+        .gb-text p { font-size: 15px; line-height: 1.9; opacity: .88; margin-bottom: 24px; max-width: 560px; }
+        .gb-feats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 30px; max-width: 560px; }
+        .gb-feats div { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 12px 14px; transition: background .25s, transform .25s; }
+        .gb-feats div:hover { background: rgba(255,255,255,.12); transform: translateY(-2px); }
+        .gb-feats b { display: block; font-size: 14px; }
+        .gb-feats small { font-size: 12px; opacity: .7; }
+        .gb-cta > span { padding: 14px 32px; font-size: 16px; }
+        .gb-visual { position: relative; height: 300px; display: grid; place-items: center; }
+        .gb-orbit { position: absolute; width: 270px; height: 270px; border-radius: 50%; border: 2px dashed rgba(240,224,176,.3); animation: glow-spin 30s linear infinite; }
+        @keyframes gb-bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-12px) rotate(3deg); } }
+        .gb-mascot { width: 190px; height: 190px; border-radius: 50%; object-fit: cover; border: 6px solid #C8A96E; box-shadow: 0 0 0 12px rgba(200,169,110,.15), 0 20px 50px rgba(0,0,0,.35); animation: gb-bob 3.4s ease-in-out infinite; }
+        .gb-float { position: absolute; background: #fff; color: #2d4a35; font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 14px; box-shadow: 0 8px 20px rgba(0,0,0,.25); animation: gb-bob 3s ease-in-out infinite; white-space: nowrap; }
+        .gb-float.f1 { top: 30px; left: 6%; color: #b88a3e; }
+        .gb-float.f2 { top: 52%; right: 0; animation-delay: -1s; color: #e8590c; }
+        .gb-float.f3 { bottom: 18px; left: 14%; animation-delay: -2s; }
+        .nav-game em { font-style: normal; }
+        .ng-short { display: none; }
+        @media (max-width: 1100px) { .nav-links { gap: 20px; } .nav-game-new { display: none; } }
+        @media (max-width: 768px) {
+            .nav-game { margin-left: auto; margin-right: 12px; }
+            .nav-game > span { padding: 5px 12px 5px 5px; font-size: 13px; }
+            .nav-game img { width: 22px; height: 22px; }
+            .ng-long { display: none; } .ng-short { display: inline; }
+        }
+        @media (max-width: 860px) {
+            .gb-inner { grid-template-columns: 1fr; text-align: center; gap: 12px; }
+            .gb-visual { order: -1; height: 230px; }
+            .gb-mascot { width: 150px; height: 150px; }
+            .gb-orbit { width: 210px; height: 210px; }
+            .gb-text p, .gb-feats { margin-left: auto; margin-right: auto; }
+            .game-banner { padding: 48px 18px; }
+        }
+        @media (prefers-reduced-motion: reduce) { .glow-btn, .glow-btn::before, .glow-btn > span::after, .gb-mascot, .gb-float, .gb-orbit { animation: none; } }
+
         /* ===== Hero ===== */
         .hero {
             height: 100vh;
@@ -1146,6 +1228,7 @@
         <li><a href="#values">永續理念</a></li>
         <li><a href="#" onclick="openChat()">AI 規劃行程</a></li>
     </ul>
+    <a href="/game" class="glow-btn nav-game"><span><img src="/static/images/mascot.jpg" alt=""><em class="ng-long">緣投探索遊戲</em><em class="ng-short">玩遊戲</em><i class="nav-game-new">NEW</i></span></a>
     <div class="lang-switcher">
         <button class="lang-btn active" onclick="setLang('zh-TW', this)">繁中</button>
         <button class="lang-btn" onclick="setLang('en', this)">EN</button>
@@ -1163,6 +1246,7 @@
     <a href="#map" onclick="closeMobileMenu()">🗺️ 探索地圖</a>
     <a href="#values" onclick="closeMobileMenu()">🌱 永續理念</a>
     <a href="#" onclick="closeMobileMenu(); openChat()">🤖 AI 規劃行程</a>
+    <a href="/game" style="color:#f0e0b0;font-weight:700">🎮 緣投探索遊戲</a>
     <div class="mobile-lang">
         <button class="lang-btn active" id="ml-zh" onclick="setLangMobile('zh-TW')">繁中</button>
         <button class="lang-btn" id="ml-en" onclick="setLangMobile('en')">EN</button>
@@ -1575,27 +1659,29 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <!-- ===== 遊戲入口 Banner ===== -->
-<section style="padding: 52px 20px; background: linear-gradient(135deg, #1a3a22 0%, #2d4a35 60%, #3d6645 100%);">
-  <div style="max-width: 780px; margin: 0 auto; display: flex; align-items: center; gap: 36px; flex-wrap: wrap; justify-content: center;">
-    <div style="flex: 1; min-width: 260px; color: white;">
-      <div style="display:inline-block; background:rgba(200,169,110,0.2); border:1px solid rgba(200,169,110,0.4); color:#f0e0b0; padding:3px 12px; border-radius:20px; font-size:11px; font-weight:700; letter-spacing:2px; margin-bottom:14px; text-transform:uppercase;">🎮 新功能</div>
-      <h2 style="font-size: clamp(24px,5vw,36px); font-weight:900; margin-bottom:10px; line-height:1.25;">緣投<span style="color:#f0e0b0;">探索者</span></h2>
-      <p style="font-size:14px; opacity:0.85; line-height:1.8; margin-bottom:22px;">走訪 46 間南投在地職人，AI 驗證打卡、每日問答，累積 XP 晉升職人等級，登上全球排行榜！</p>
-      <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px;">
-        <span style="font-size:13px; opacity:0.75;">📸 打卡 +30 XP</span>
-        <span style="font-size:13px; opacity:0.75;">🧠 問答 +20 XP</span>
-        <span style="font-size:13px; opacity:0.75;">🏆 排行榜</span>
+<div class="game-banner" id="game">
+  <div class="gb-inner">
+    <div class="gb-text">
+      <span class="gb-chip">🎮 互動遊戲</span>
+      <h2>緣投<span>探索者</span></h2>
+      <p>和吉祥物緣投一起走訪南投 46 間在地職人：AI 驗證打卡收集印章、挑戰問答、分享旅程，升到 Lv.{{ game_cfg.max_level }}「{{ game_cfg.max_title }}」就能領取專屬證書！</p>
+      <div class="gb-feats">
+        <div><b>📸 職人打卡</b><small>+{{ game_cfg.xp_checkin }} XP</small></div>
+        <div><b>🧠 問答大挑戰</b><small>每局 {{ game_cfg.quiz_round_size }} 題・無限挑戰</small></div>
+        <div><b>💬 旅人動態</b><small>分享・按讚・留言</small></div>
+        <div><b>📜 永續達人證書</b><small>Lv.{{ game_cfg.max_level }} 自動寄送</small></div>
       </div>
-      <a href="/game" style="display:inline-block; background:#C8A96E; color:white; font-weight:700; font-size:15px; padding:13px 28px; border-radius:26px; text-decoration:none; transition:opacity 0.2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">開始探索之旅 →</a>
+      <a href="/game" class="glow-btn gb-cta"><span>開始探索之旅 →</span></a>
     </div>
-    <div style="flex-shrink:0; position:relative;">
-      <div style="width:120px; height:120px; border-radius:50%; overflow:hidden; border:4px solid rgba(200,169,110,0.5); box-shadow:0 8px 32px rgba(0,0,0,0.3);">
-        <img src="/static/images/mascot.jpg" alt="緣投" style="width:100%;height:100%;object-fit:cover;">
-      </div>
-      <div style="position:absolute; bottom:-4px; right:-8px; background:#C8A96E; color:white; font-size:10px; font-weight:700; padding:3px 8px; border-radius:12px; white-space:nowrap;">Lv.6 職人大師</div>
+    <div class="gb-visual">
+      <div class="gb-orbit"></div>
+      <img src="/static/images/mascot.jpg" alt="緣投" class="gb-mascot">
+      <span class="gb-float f1">+{{ game_cfg.xp_checkin }} XP</span>
+      <span class="gb-float f2">🔥 連擊！</span>
+      <span class="gb-float f3">🏆 Lv.{{ game_cfg.max_level }}</span>
     </div>
   </div>
-</section>
+</div>
 
 <div class="cta-section">
     <h2>讓 AI 幫你規劃專屬行程</h2>

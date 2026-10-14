@@ -67,6 +67,10 @@ MERCHANT_GROUPS = [
 ]
 ALL_MERCHANTS = {m for g in MERCHANT_GROUPS for m in g['merchants']}
 
+@game_bp.app_context_processor
+def _inject_game_cfg():
+    return {"game_cfg": GAME_CFG}
+
 def level_info(xp):
     cur = LEVELS[0]
     for t in LEVELS:
