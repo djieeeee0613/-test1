@@ -36,22 +36,29 @@ def _gemini_client():
 
 # ───────── 等級與 XP ─────────
 LEVELS = [
-    (0,    1, "旅人",     "🧳"),
-    (300,  2, "探索者",   "🗺️"),
-    (900,  3, "在地達人", "🌿"),
-    (2000, 4, "職人知音", "⭐"),
-    (4000, 5, "永續達人", "🏆"),
+    (0,   1, "旅人",     "🧳"),
+    (300, 2, "探索者",   "🗺️"),
+    (900, 3, "永續達人", "🏆"),
 ]
 MAX_LEVEL = LEVELS[-1][1]
+MAX_LEVEL_XP = LEVELS[-1][0]
 
-XP_CHECKIN = 80
-XP_QUIZ_CORRECT = 50
-XP_QUIZ_WRONG = 10
-XP_QUIZ_COMBO = 10        # 連續答對，每多一題 +10
-XP_QUIZ_PERFECT = 100     # 一局 5 題全對
-XP_POST = 20
+XP_CHECKIN = 240
+XP_QUIZ_CORRECT = 150
+XP_QUIZ_WRONG = 30
+XP_QUIZ_COMBO = 30        # 連續答對，每多一題 +30
+XP_QUIZ_PERFECT = 300     # 一局全對
+XP_POST = 60
 POST_XP_DAILY_LIMIT = 3
-QUIZ_ROUND_SIZE = 5
+QUIZ_ROUND_SIZE = 10
+QUIZ_SECONDS = 20
+
+GAME_CFG = {
+    "max_level": MAX_LEVEL, "max_level_xp": MAX_LEVEL_XP, "max_title": LEVELS[-1][2],
+    "xp_checkin": XP_CHECKIN, "xp_quiz_correct": XP_QUIZ_CORRECT, "xp_quiz_wrong": XP_QUIZ_WRONG,
+    "xp_quiz_combo": XP_QUIZ_COMBO, "xp_quiz_perfect": XP_QUIZ_PERFECT, "xp_post": XP_POST,
+    "post_daily_limit": POST_XP_DAILY_LIMIT, "quiz_round_size": QUIZ_ROUND_SIZE, "quiz_seconds": QUIZ_SECONDS,
+}
 
 MERCHANT_GROUPS = [
     {"slug": s, "name": CATEGORIES[s]['name'], "emoji": CATEGORIES[s]['emoji'],
@@ -167,7 +174,7 @@ def certificate_html(name, xp, checkins, date_str):
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f5f0;border-radius:14px;"><tr>
     <td align="center" style="padding:18px 6px;"><div style="font-size:26px;font-weight:900;color:#C8A96E;">{xp:,}</div><div style="font-size:11px;color:#999;">累積 XP</div></td>
     <td align="center" style="padding:18px 6px;"><div style="font-size:26px;font-weight:900;color:#2d4a35;">{checkins}</div><div style="font-size:11px;color:#999;">走訪職人</div></td>
-    <td align="center" style="padding:18px 6px;"><div style="font-size:26px;font-weight:900;color:#2d4a35;">Lv.5</div><div style="font-size:11px;color:#999;">最高等級</div></td>
+    <td align="center" style="padding:18px 6px;"><div style="font-size:26px;font-weight:900;color:#2d4a35;">Lv.{MAX_LEVEL}</div><div style="font-size:11px;color:#999;">最高等級</div></td>
   </tr></table>
 </td></tr>
 <tr><td style="padding:0 40px 8px;">
@@ -249,7 +256,7 @@ def _unauth(_):
 def game_page():
     return render_template('game.html', google_client_id=GOOGLE_CLIENT_ID,
                            merchant_groups=MERCHANT_GROUPS, levels=LEVELS,
-                           total_merchants=len(ALL_MERCHANTS))
+                           total_merchants=len(ALL_MERCHANTS), cfg=GAME_CFG)
 
 @game_bp.route('/game/certificate/<gid>')
 def certificate_page(gid):

@@ -172,8 +172,8 @@ body.menu-open .sidebar { transform: none; }
 .stat .lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .stat .ic { font-size: 24px; margin-bottom: 4px; }
 .roadmap { display: flex; justify-content: space-between; position: relative; padding: 8px 0 0; }
-.roadmap::before { content: ''; position: absolute; top: 34px; left: 8%; right: 8%; height: 4px; background: var(--line); border-radius: 4px; }
-.roadmap .fill { position: absolute; top: 34px; left: 8%; height: 4px; background: linear-gradient(90deg, var(--green), var(--gold)); border-radius: 4px; transition: width 1.2s var(--ease); }
+.roadmap::before { content: ''; position: absolute; top: 34px; left: var(--edge); right: var(--edge); height: 4px; background: var(--line); border-radius: 4px; }
+.roadmap .fill { position: absolute; top: 34px; left: var(--edge); height: 4px; background: linear-gradient(90deg, var(--green), var(--gold)); border-radius: 4px; transition: width 1.2s var(--ease); }
 .step { position: relative; z-index: 1; text-align: center; flex: 1; }
 .step .dot { width: 54px; height: 54px; margin: 0 auto 8px; border-radius: 50%; background: #fff; border: 3px solid var(--line); display: grid; place-items: center; font-size: 22px; filter: grayscale(1); opacity: .55; transition: .4s var(--ease); }
 .step.done .dot { border-color: var(--green); filter: none; opacity: 1; }
@@ -227,7 +227,8 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 .rules span { background: var(--bg); padding: 7px 12px; border-radius: 12px; font-size: 13px; }
 .q-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .q-dots { display: flex; gap: 6px; }
-.q-dots i { width: 28px; height: 8px; border-radius: 6px; background: var(--line); transition: background .3s; }
+.q-dots { flex-wrap: wrap; }
+.q-dots i { width: 18px; height: 8px; border-radius: 6px; background: var(--line); transition: background .3s; }
 .q-dots i.cur { background: var(--gold); }
 .q-dots i.ok { background: var(--ok); }
 .q-dots i.ng { background: var(--ng); }
@@ -371,10 +372,10 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
       <h1>緣投<span>探索者</span></h1>
       <p>和吉祥物緣投一起走訪南投 {{ total_merchants }} 間在地職人，打卡收集印章、挑戰問答、分享旅程，從「旅人」一路升級成「永續達人」，領取專屬認證證書！</p>
       <div class="feat-row">
-        <div class="feat"><span class="ic">📸</span><div><b>職人打卡</b><small>AI 驗證 · +80 XP</small></div></div>
+        <div class="feat"><span class="ic">📸</span><div><b>職人打卡</b><small>AI 驗證 · +{{ cfg.xp_checkin }} XP</small></div></div>
         <div class="feat"><span class="ic">🧠</span><div><b>問答大挑戰</b><small>無限挑戰 · 連擊加分</small></div></div>
         <div class="feat"><span class="ic">💬</span><div><b>旅人動態</b><small>分享、按讚、留言</small></div></div>
-        <div class="feat"><span class="ic">📜</span><div><b>永續達人證書</b><small>Lv.5 自動寄送</small></div></div>
+        <div class="feat"><span class="ic">📜</span><div><b>永續達人證書</b><small>Lv.{{ cfg.max_level }} 自動寄送</small></div></div>
       </div>
     </div>
     <div class="login-card reveal">
@@ -455,7 +456,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 
       <div class="card reveal" style="margin-top:16px">
         <h3>🗺️ 升級之路</h3>
-        <div class="roadmap" id="roadmap">
+        <div class="roadmap" id="roadmap" style="--edge: {{ (50 / levels|length)|round(3) }}%">
           <div class="fill" id="road-fill" style="width:0"></div>
           {% for lv in levels %}
           <div class="step" data-lv="{{ lv[1] }}"><div class="dot">{{ lv[3] }}</div><div class="t">Lv.{{ lv[1] }} {{ lv[2] }}</div><div class="x">{{ lv[0] }} XP</div></div>
@@ -464,9 +465,9 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
       </div>
 
       <div class="grid g3" style="margin-top:16px">
-        <button class="quick reveal" onclick="go('checkin')"><span class="ic" style="background:#eaf1ec">📸</span><div><b>去打卡</b><small>每家職人 +80 XP</small></div></button>
+        <button class="quick reveal" onclick="go('checkin')"><span class="ic" style="background:#eaf1ec">📸</span><div><b>去打卡</b><small>每家職人 +{{ cfg.xp_checkin }} XP</small></div></button>
         <button class="quick reveal" onclick="go('quiz')"><span class="ic" style="background:#fbf5e8">🧠</span><div><b>挑戰問答</b><small>連擊越多分越高</small></div></button>
-        <button class="quick reveal" onclick="go('feed')"><span class="ic" style="background:#fdeef2">💬</span><div><b>看看大家</b><small>每日前 3 篇 +20 XP</small></div></button>
+        <button class="quick reveal" onclick="go('feed')"><span class="ic" style="background:#fdeef2">💬</span><div><b>看看大家</b><small>每日前 {{ cfg.post_daily_limit }} 篇 +{{ cfg.xp_post }} XP</small></div></button>
       </div>
 
       <div class="card reveal" style="margin-top:16px">
@@ -516,7 +517,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 
     <!-- 問答 -->
     <div class="view" id="v-quiz">
-      <div class="page-head"><h1>🧠 問答大挑戰</h1><p>每局 5 題，想玩幾局就玩幾局！連續答對有連擊加分，全對再送 +100 XP。</p></div>
+      <div class="page-head"><h1>🧠 問答大挑戰</h1><p>每局 {{ cfg.quiz_round_size }} 題，想玩幾局就玩幾局！連續答對有連擊加分，全對再送 +{{ cfg.xp_quiz_perfect }} XP。</p></div>
       <div class="card" id="quiz-box" style="max-width:720px"></div>
     </div>
 
@@ -555,7 +556,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 
     <!-- 證書 -->
     <div class="view" id="v-cert">
-      <div class="page-head"><h1>📜 永續達人證書</h1><p>達到 Lv.5「永續達人」後，緣投會把證書寄到你的 Gmail。</p></div>
+      <div class="page-head"><h1>📜 永續達人證書</h1><p>達到 Lv.{{ cfg.max_level }}「{{ cfg.max_title }}」後，緣投會把證書寄到你的 Gmail。</p></div>
       <div id="cert-box" style="max-width:720px"></div>
     </div>
   </main>
@@ -583,6 +584,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 <script>
 const MERCHANT_GROUPS = {{ merchant_groups|tojson }};
 const TOTAL = {{ total_merchants }};
+const CFG = {{ cfg|tojson }};
 const MASCOT = '/static/images/mascot.jpg';
 let me = null, lvl = null, checkins = [], images = { ck: null, cp: null }, shareUrl = null;
 let feedCursor = null, quiz = null, timerId = null;
@@ -664,7 +666,7 @@ function floatXp(amount, anchor) {
     s.style.fontSize = (14 + Math.random() * 16) + 'px';
     box.appendChild(s);
   }
-  const lines = ['嗨！我是緣投 🌿<br>登入後我就能幫你記錄冒險囉！', '南投有 {{ total_merchants }} 間職人<br>你能全部蓋到章嗎？', '升到 Lv.5 我會寄證書給你喔 📜', '點我幹嘛啦～快登入 😆'];
+  const lines = ['嗨！我是緣投 🌿<br>登入後我就能幫你記錄冒險囉！', '南投有 {{ total_merchants }} 間職人<br>你能全部蓋到章嗎？', '升到 Lv.{{ cfg.max_level }} 我會寄證書給你喔 📜', '點我幹嘛啦～快登入 😆'];
   let i = 0;
   $('login-mascot').onclick = () => {
     const m = $('login-mascot'); m.classList.remove('wiggle'); void m.offsetWidth; m.classList.add('wiggle');
@@ -768,7 +770,8 @@ function renderHome() {
   });
   const segs = steps.length - 1;
   const partial = (lvl.level - 1 + (lvl.next_xp ? levelPct() / 100 : 0)) / segs;
-  requestAnimationFrame(() => $('road-fill').style.width = (84 * Math.min(1, partial)) + '%');
+  const span = 100 - 100 / steps.length;
+  requestAnimationFrame(() => $('road-fill').style.width = (span * Math.min(1, partial)) + '%');
   $('daily-tip').textContent = TIPS[new Date().getDate() % TIPS.length];
 }
 function countUp(id, target) {
@@ -869,7 +872,7 @@ function renderQuizStart(prev) {
     <img src="${MASCOT}" alt="緣投">
     <h2>${prev ? '再來一局？' : '緣投出題時間！'}</h2>
     <p class="muted">南投的地理、歷史、職人與永續旅行，你懂多少？</p>
-    <div class="rules"><span>⏱️ 每題 20 秒</span><span>✅ 答對 +50</span><span>🔥 連擊每題 +10</span><span>💯 全對 +100</span><span>📚 答錯也有 +10</span></div>
+    <div class="rules"><span>📝 每局 ${CFG.quiz_round_size} 題</span><span>⏱️ 每題 ${CFG.quiz_seconds} 秒</span><span>✅ 答對 +${CFG.xp_quiz_correct}</span><span>🔥 連擊每題 +${CFG.xp_quiz_combo}</span><span>💯 全對 +${CFG.xp_quiz_perfect}</span><span>📚 答錯也有 +${CFG.xp_quiz_wrong}</span></div>
     <button class="btn btn-gold" onclick="startQuiz()">🎯 開始挑戰</button></div>`;
 }
 async function startQuiz() {
@@ -892,7 +895,7 @@ function renderQuestion() {
     <div class="opts">${q.options.map((o, i) => `<button class="opt" onclick="answer(${i})"><span class="k">${'ABCD'[i]}</span>${esc(o)}</button>`).join('')}</div>
     <div class="fact" id="fact"></div>
     <div id="next-wrap" style="margin-top:16px;text-align:right"></div>`;
-  const bar = $('timer-bar'), total = 20000, t0 = Date.now();
+  const bar = $('timer-bar'), total = CFG.quiz_seconds * 1000, t0 = Date.now();
   clearInterval(timerId);
   timerId = setInterval(() => {
     const p = Math.max(0, 1 - (Date.now() - t0) / total);
@@ -935,7 +938,7 @@ function showSummary(r) {
     <h2 style="color:var(--green)">${r.c} / ${total} 題答對</h2>
     <p class="muted" style="margin:6px 0 14px">${msg}</p>
     <div class="big">+${r.xp} XP</div>
-    ${r.perfect ? '<div class="xp-tag" style="margin-top:8px">💯 全對加碼 +100 XP 已包含</div>' : ''}
+    ${r.perfect ? `<div class="xp-tag" style="margin-top:8px">💯 全對加碼 +${CFG.xp_quiz_perfect} XP 已包含</div>` : ''}
     <div style="margin-top:22px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
       <button class="btn btn-gold" onclick="startQuiz()">🔁 再來一局</button>
       <button class="btn btn-ghost" onclick="go('rank')">🏆 看排行榜</button>
@@ -1044,20 +1047,20 @@ async function loadRank() {
 
 // ═══════ 證書 ═══════
 function renderCert() {
-  if (lvl.level >= 5) {
+  if (lvl.level >= CFG.max_level) {
     $('cert-box').innerHTML = `<div class="card" style="margin-bottom:16px;display:flex;gap:14px;align-items:center">
         <img src="${MASCOT}" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover">
         <div><b style="color:var(--green)">恭喜你成為永續達人！</b><div class="muted">證書已寄到你的 Gmail，也可以在這裡隨時查看、截圖分享。</div></div>
         <a class="btn btn-gold" style="margin-left:auto;padding:9px 14px;font-size:13px;text-decoration:none" href="/game/certificate/${encodeURIComponent(me.google_id)}" target="_blank">開新分頁</a></div>
       <iframe class="cert-frame" src="/game/certificate/${encodeURIComponent(me.google_id)}" title="永續達人證書"></iframe>`;
   } else {
-    const need = 4000 - lvl.xp;
+    const need = CFG.max_level_xp - lvl.xp;
     $('cert-box').innerHTML = `<div class="card locked">
       <div class="lock">🔒</div>
       <h2 style="color:var(--green);margin-bottom:6px">證書還沒解鎖</h2>
-      <p class="muted">升到 <b>Lv.5 永續達人</b>（4,000 XP）就能解鎖，緣投會自動寄到你的 Gmail！</p>
-      <div class="progress-pill" style="max-width:360px;margin:18px auto 8px;height:12px"><i style="width:${Math.min(100, lvl.xp / 40)}%"></i></div>
-      <div class="muted">${lvl.xp.toLocaleString()} / 4,000 XP · 還差 <b style="color:var(--gold)">${need.toLocaleString()} XP</b></div>
+      <p class="muted">升到 <b>Lv.${CFG.max_level} ${esc(CFG.max_title)}</b>（${CFG.max_level_xp.toLocaleString()} XP）就能解鎖，緣投會自動寄到你的 Gmail！</p>
+      <div class="progress-pill" style="max-width:360px;margin:18px auto 8px;height:12px"><i style="width:${Math.min(100, lvl.xp / CFG.max_level_xp * 100)}%"></i></div>
+      <div class="muted">${lvl.xp.toLocaleString()} / ${CFG.max_level_xp.toLocaleString()} XP · 還差 <b style="color:var(--gold)">${need.toLocaleString()} XP</b></div>
       <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
         <button class="btn btn-green" onclick="go('checkin')">📸 去打卡</button>
         <button class="btn btn-gold" onclick="go('quiz')">🧠 去答題</button>
@@ -1075,12 +1078,14 @@ const LEVEL_MSG = {
 function showLevelUp(s) {
   $('lu-lv').textContent = 'Lv.' + s.level;
   $('lu-title').textContent = `${s.title} ${s.emoji}`;
-  $('lu-msg').textContent = LEVEL_MSG[s.level] || '緣投替你開心得跳起來了！';
+  $('lu-msg').textContent = s.level >= CFG.max_level
+    ? `你是真正的${CFG.max_title}！證書已經寄到你的 Gmail 囉 📜`
+    : (LEVEL_MSG[s.level] || '緣投替你開心得跳起來了！');
   $('levelup').classList.add('show');
   confetti();
   say(`升級啦！你現在是「${s.title}」！`, 5000);
 }
-function closeLevelUp() { $('levelup').classList.remove('show'); if (lvl.level >= 5) go('cert', true); }
+function closeLevelUp() { $('levelup').classList.remove('show'); if (lvl.level >= CFG.max_level) go('cert', true); }
 function confetti() {
   const c = $('confetti'), ctx = c.getContext('2d');
   c.width = innerWidth; c.height = innerHeight;
