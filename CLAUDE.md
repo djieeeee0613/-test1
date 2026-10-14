@@ -140,6 +140,10 @@ Render 環境變數（在 Render dashboard 設定）：
 - 確認/婉拒 email 節點：`n8n-nodes-base.gmail`，credential 名稱 `Gmail 帳號`
 - `To Email` 和 `message` 欄位用 `$json.email`、`$json.customer_name` 等（HTTP Request 回傳陣列後 n8n 自動拆成 individual item，不需 `$json[0].xxx`）
 
+`n8n_certificate_workflow.json`（永續達人證書，webhook path: `nantou-certificate`）：
+- Webhook → Gmail 節點（`emailType: html`），收件人、主旨、HTML 內容都由 Flask 傳入（`body.email` / `body.subject` / `body.html`）
+- 匯入後需在「寄送證書」節點選擇 `Gmail 帳號` credential，並切成 Active
+
 **圖片上傳注意事項**：
 - Supabase Storage RLS：`storage.objects` 需有 anon INSERT policy，`WITH CHECK (bucket_id = 'event-image')`
 - 上傳時**不可加** `x-upsert: true` header（會觸發 ON CONFLICT UPDATE，anon 無 UPDATE policy 會 RLS 失敗）
@@ -149,10 +153,12 @@ Render 環境變數（在 Render dashboard 設定）：
 
 - 後端在 `game.py`（Flask Blueprint，`app.py` 只做 `register_blueprint`），題庫在 `game_quiz.py`（40 題）
 - **登入**：Google Identity Services → `POST /api/game/login` 驗 id_token → 寫入 Flask `session["gid"]`。所有寫入 API 都從 session 取使用者，**不信任前端傳的 google_id**
-- **等級**（最高 Lv.5）：旅人 0 → 探索者 300 → 在地達人 900 → 職人知音 2000 → 永續達人 4000 XP
-- **XP**：打卡 +80（Gemini Vision 驗人臉，每商家一次）；問答答對 +50、連擊每題 +10、答錯 +10、5 題全對 +100（可無限局）；發文 +20（每日前 3 篇）
+- **遊戲數值集中在 `game.py` 開頭**（`LEVELS`、`XP_*`、`QUIZ_ROUND_SIZE` 等），透過 `GAME_CFG` 傳給模板與前端 `CFG`，頁面文字自動跟著變；調數值只改這裡，不要在 `game.html` 寫死數字
+- **等級**（目前最高 Lv.3，暫定）：旅人 0 → 探索者 300 → 永續達人 900 XP。最高等級的稱號固定為「永續達人」，因為證書綁定最高等級
+- **XP**（已 ×3）：打卡 +240（Gemini Vision 驗人臉，每商家一次）；問答答對 +150、連擊每題 +30、答錯 +30、全對 +300；發文 +60（每日前 3 篇）
+- **問答大挑戰**：每局 10 題、每題 20 秒、可無限局。注意目前一局全對約 +3,150 XP，一局就能到最高等級；正式上線前應提高門檻
 - **問答 session** 存在記憶體 `QUIZ_SESSIONS`，答案不會送到前端；伺服器重啟會清空進行中的局
-- **證書**：首次達到 Lv.5 時，`award_xp()` 開 thread POST 到 n8n `nantou-certificate` webhook（`n8n_certificate_workflow.json`），由 Gmail OAuth2 寄出 HTML 證書；`/game/certificate/<google_id>` 可線上查看
+- **證書**：首次達到最高等級時（`certificate_sent` 為 false），`award_xp()` 開 thread POST 到 n8n `nantou-certificate` webhook（`n8n_certificate_workflow.json`），由 Gmail OAuth2 寄出 HTML 證書；`/game/certificate/<google_id>` 可線上查看
 - **圖片**：打卡與貼文照片上傳到 Supabase Storage `event-image` bucket 的 `checkins/`、`posts/` 資料夾
 - **前端** `templates/game.html`：左側抽屜選單（≥1000px 預設展開）、6 個頁面（主頁/打卡/問答/動態/排行/證書）、緣投浮動對話、升級彩帶動畫；所有使用者內容都經 `esc()` 轉義
 
