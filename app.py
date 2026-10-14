@@ -8,7 +8,6 @@ import time
 import random
 import traceback
 import requests
-import base64
 from datetime import datetime, date, timezone, timedelta
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template, render_template_string, Response
@@ -114,8 +113,10 @@ N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "https://nantoutravel.app.n8n.clo
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://gbffodvtfirdtecsespm.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 MERCHANT_PASSWORD = os.getenv("MERCHANT_PASSWORD", "nantou2026")
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(32)
+app.permanent_session_lifetime = timedelta(days=30)
+app.config.update(SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_HTTPONLY=True)
 
 def require_auth(f):
     @wraps(f)
@@ -674,247 +675,10 @@ def submit_rate():
     return jsonify({"ok": True})
 
 # ==========================================
-# GAME — 緣投探索者
+# GAME — 緣投探索者（見 game.py）
 # ==========================================
-
-ALL_MERCHANT_NAMES = sorted(m['name'] for s in CATEGORY_ORDER for m in CATEGORIES[s]['merchants'])
-
-LEVEL_THRESHOLDS = [
-    (0,    1, "旅人",    "🧳"),
-    (100,  2, "探索者",  "🗺️"),
-    (300,  3, "職人學徒", "📚"),
-    (600,  4, "在地達人", "🌿"),
-    (1000, 5, "南投職人", "⭐"),
-    (1500, 6, "職人大師", "🏆"),
-]
-
-QUIZ_QUESTIONS = [
-    {"q": "南投縣哪個鄉鎮以竹藝工藝聞名，素有「竹之鄉」之稱？",
-     "options": ["竹山鎮", "集集鎮", "魚池鄉", "鹿谷鄉"], "answer": 0,
-     "fact": "竹山鎮林業資源豐富，竹炭、竹編等工藝享譽全台，是台灣重要的竹藝產業重鎮。"},
-    {"q": "日月潭位於南投縣哪個鄉？",
-     "options": ["水里鄉", "魚池鄉", "信義鄉", "國姓鄉"], "answer": 1,
-     "fact": "日月潭位於魚池鄉，是台灣最大的天然湖泊，因北形如日、南形如月而得名。"},
-    {"q": "南投縣生產「凍頂烏龍茶」最著名的地區是？",
-     "options": ["埔里", "鹿谷", "竹山", "信義"], "answer": 1,
-     "fact": "鹿谷鄉凍頂烏龍茶馳名中外，是台灣高山茶的代表，海拔600-1000公尺的茶園造就其獨特風味。"},
-    {"q": "「桃米生態村」以哪種生態著稱，是921地震後轉型的代表？",
-     "options": ["螢火蟲", "青蛙", "台灣黑熊", "石虎"], "answer": 1,
-     "fact": "桃米里位於埔里鎮，擁有台灣29種青蛙中的23種，是921地震後社區重建的典範案例。"},
-    {"q": "南投縣最主要的原住民族群是哪一族？",
-     "options": ["排灣族", "布農族", "泰雅族", "阿美族"], "answer": 1,
-     "fact": "布農族是南投縣最主要的原住民族群，以八部合音、打耳祭聞名，主要分布在信義鄉、仁愛鄉等山區。"},
-    {"q": "台灣菸酒南投酒廠（紹興酒）位於哪個地方？",
-     "options": ["竹山", "埔里", "魚池", "集集"], "answer": 1,
-     "fact": "台灣菸酒南投酒廠位於埔里，利用埔里優質水源釀造紹興酒，已有百年歷史，是埔里的代表性特產。"},
-    {"q": "集集綠色隧道由哪種百年老樹構成，全長約5公里？",
-     "options": ["樟樹", "楓樹", "茄苳", "台灣欒樹"], "answer": 0,
-     "fact": "集集綠色隧道由百年以上的老樟樹構成，是著名的觀光景點，秋天落葉時景色尤為迷人。"},
-    {"q": "中台禪寺位於南投縣哪個鄉鎮，是台灣規模最大的佛教寺院之一？",
-     "options": ["埔里鎮", "魚池鄉", "草屯鎮", "南投市"], "answer": 0,
-     "fact": "中台禪寺位於埔里鎮，由惟覺老和尚創建，融合中西建築美學，每年吸引數十萬信眾朝聖。"},
-    {"q": "台灣最高峰玉山主峰海拔多少公尺，位於南投縣信義鄉境內？",
-     "options": ["3,286公尺", "3,886公尺", "3,952公尺", "4,020公尺"], "answer": 2,
-     "fact": "玉山主峰海拔3952公尺，是台灣最高峰，也是東北亞最高峰，每年吸引無數登山客朝聖。"},
-    {"q": "南投縣哪條公路被稱為「咖啡公路」，兩旁遍佈精品咖啡農場？",
-     "options": ["台14線", "台16線", "台21線", "縣道131線"], "answer": 3,
-     "fact": "縣道131線（國姓鄉）海拔適中、雲霧繚繞，沿線咖啡農場林立，所產的咖啡風味獨特，曾多次獲得國際獎項。"},
-    {"q": "南投縣的「水里蛇窯」是台灣最古老的柴燒陶窯，創立於哪個年代？",
-     "options": ["清朝末年（1890年代）", "日治初期（1900年代）", "日治中期（1926年）", "光復後（1950年代）"], "answer": 2,
-     "fact": "水里蛇窯創立於1926年，是台灣保存最完整的柴燒蛇形窯，見證了台灣陶瓷產業的百年歷史。"},
-    {"q": "以下哪個正確描述了「埔里紙業」的特色？",
-     "options": ["以稻草為主原料", "利用埔里優質水源製造高品質宣紙", "使用進口原料製造牛皮紙", "以竹纖維製造紙張，已停產"], "answer": 1,
-     "fact": "埔里水質清甜、水量豐沛，自古以來即是台灣最重要的製紙重鎮，廣興紙寮等老字號延續傳統手工造紙工藝至今。"},
-]
-
-def get_quiz_today():
-    day = datetime.now(timezone(timedelta(hours=8))).timetuple().tm_yday
-    q = QUIZ_QUESTIONS[day % len(QUIZ_QUESTIONS)]
-    return {"question": q["q"], "options": q["options"], "fact": q["fact"], "answer": q["answer"]}
-
-def calc_level_info(xp):
-    result = LEVEL_THRESHOLDS[0]
-    for t in LEVEL_THRESHOLDS:
-        if xp >= t[0]:
-            result = t
-    next_xp = next((t[0] for t in LEVEL_THRESHOLDS if xp < t[0]), None)
-    return {"level": result[1], "title": result[2], "emoji": result[3],
-            "next_xp": next_xp, "current_min": result[0], "xp": xp}
-
-def verify_google_token(id_token):
-    try:
-        resp = requests.get("https://oauth2.googleapis.com/tokeninfo",
-                            params={"id_token": id_token}, timeout=8)
-        if resp.status_code != 200:
-            return None
-        data = resp.json()
-        if GOOGLE_CLIENT_ID and data.get("aud") != GOOGLE_CLIENT_ID:
-            return None
-        return {"google_id": data.get("sub"), "name": data.get("name"),
-                "email": data.get("email"), "avatar_url": data.get("picture")}
-    except Exception as e:
-        print(f"❌ Google token error: {e}")
-        return None
-
-def _supabase_headers(extra=None):
-    h = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
-         "Content-Type": "application/json"}
-    if extra:
-        h.update(extra)
-    return h
-
-def get_or_create_game_user(google_id, name, email, avatar_url):
-    resp = requests.get(f"{SUPABASE_URL}/rest/v1/game_users",
-                        params={"google_id": f"eq.{google_id}", "select": "*"},
-                        headers=_supabase_headers(), timeout=8)
-    if resp.status_code == 200 and resp.json():
-        return resp.json()[0]
-    new_user = {"google_id": google_id, "name": name, "email": email,
-                "avatar_url": avatar_url, "xp": 0, "level": 1,
-                "title": "旅人", "checkin_count": 0}
-    resp = requests.post(f"{SUPABASE_URL}/rest/v1/game_users", json=new_user,
-                         headers=_supabase_headers({"Prefer": "return=representation"}),
-                         timeout=8)
-    return resp.json()[0] if resp.status_code in (200, 201) and resp.json() else new_user
-
-def award_xp_to_user(google_id, xp_delta):
-    resp = requests.get(f"{SUPABASE_URL}/rest/v1/game_users",
-                        params={"google_id": f"eq.{google_id}", "select": "xp"},
-                        headers=_supabase_headers(), timeout=8)
-    if resp.status_code != 200 or not resp.json():
-        return None
-    new_xp = resp.json()[0]["xp"] + xp_delta
-    level_info = calc_level_info(new_xp)
-    requests.patch(f"{SUPABASE_URL}/rest/v1/game_users",
-                   params={"google_id": f"eq.{google_id}"},
-                   json={"xp": new_xp, "level": level_info["level"], "title": level_info["title"]},
-                   headers=_supabase_headers(), timeout=8)
-    return level_info
-
-def verify_photo_has_person(image_b64, mime_type="image/jpeg"):
-    try:
-        image_bytes = base64.b64decode(image_b64)
-        response = client.models.generate_content(
-            model='models/gemini-2.0-flash',
-            contents=types.Content(role='user', parts=[
-                types.Part(inline_data=types.Blob(mime_type=mime_type, data=image_bytes)),
-                types.Part(text='Does this photo clearly show a person (human face or body visible)? Answer only YES or NO.')
-            ])
-        )
-        return (response.text or "").strip().upper().startswith("YES")
-    except Exception as e:
-        print(f"❌ Photo verify error: {e}")
-        return False
-
-@app.route('/game')
-def game_page():
-    return render_template('game.html', google_client_id=GOOGLE_CLIENT_ID,
-                           all_merchants=ALL_MERCHANT_NAMES)
-
-@app.route('/api/game/login', methods=['POST'])
-def game_login():
-    id_token = request.json.get('id_token')
-    if not id_token:
-        return jsonify({"error": "Missing token"}), 400
-    user_info = verify_google_token(id_token)
-    if not user_info:
-        return jsonify({"error": "Invalid token"}), 401
-    user = get_or_create_game_user(**user_info)
-    return jsonify({"user": user, "level_info": calc_level_info(user.get("xp", 0))})
-
-@app.route('/api/game/user/<google_id>')
-def game_get_user(google_id):
-    resp = requests.get(f"{SUPABASE_URL}/rest/v1/game_users",
-                        params={"google_id": f"eq.{google_id}", "select": "*"},
-                        headers=_supabase_headers(), timeout=8)
-    if resp.status_code == 200 and resp.json():
-        user = resp.json()[0]
-        return jsonify({"user": user, "level_info": calc_level_info(user.get("xp", 0))})
-    return jsonify({"error": "User not found"}), 404
-
-@app.route('/api/game/checkin', methods=['POST'])
-def game_checkin():
-    data = request.json
-    google_id = data.get('google_id')
-    merchant_name = data.get('merchant_name')
-    image_b64 = data.get('image')
-    if not all([google_id, merchant_name, image_b64]):
-        return jsonify({"error": "缺少必要欄位"}), 400
-
-    resp = requests.get(f"{SUPABASE_URL}/rest/v1/checkins",
-                        params={"google_id": f"eq.{google_id}",
-                                "merchant_name": f"eq.{merchant_name}", "select": "id"},
-                        headers=_supabase_headers(), timeout=8)
-    if resp.status_code == 200 and resp.json():
-        return jsonify({"error": "已打卡過此商家，每個商家只能打卡一次", "already_done": True}), 400
-
-    if not verify_photo_has_person(image_b64):
-        return jsonify({"error": "照片中未偵測到人臉，請確認您本人出現在照片中 😊"}), 400
-
-    xp_earned = 30
-    requests.post(f"{SUPABASE_URL}/rest/v1/checkins",
-                  json={"google_id": google_id, "merchant_name": merchant_name, "xp_earned": xp_earned},
-                  headers=_supabase_headers(), timeout=8)
-
-    user_resp = requests.get(f"{SUPABASE_URL}/rest/v1/game_users",
-                             params={"google_id": f"eq.{google_id}", "select": "checkin_count"},
-                             headers=_supabase_headers(), timeout=8)
-    if user_resp.status_code == 200 and user_resp.json():
-        count = user_resp.json()[0].get("checkin_count", 0)
-        requests.patch(f"{SUPABASE_URL}/rest/v1/game_users",
-                       params={"google_id": f"eq.{google_id}"},
-                       json={"checkin_count": count + 1},
-                       headers=_supabase_headers(), timeout=8)
-
-    new_stats = award_xp_to_user(google_id, xp_earned)
-    return jsonify({"xp_earned": xp_earned, "new_stats": new_stats, "merchant": merchant_name})
-
-@app.route('/api/game/checkins/<google_id>')
-def game_get_checkins(google_id):
-    resp = requests.get(f"{SUPABASE_URL}/rest/v1/checkins",
-                        params={"google_id": f"eq.{google_id}", "select": "*", "order": "created_at.desc"},
-                        headers=_supabase_headers(), timeout=8)
-    return jsonify(resp.json() if resp.status_code == 200 else [])
-
-@app.route('/api/game/quiz')
-def game_quiz():
-    quiz = get_quiz_today()
-    return jsonify({k: v for k, v in quiz.items() if k != 'answer'})
-
-@app.route('/api/game/quiz/answer', methods=['POST'])
-def game_quiz_answer():
-    data = request.json
-    google_id = data.get('google_id')
-    answer_idx = data.get('answer')
-    if not google_id or answer_idx is None:
-        return jsonify({"error": "缺少必要欄位"}), 400
-
-    quiz = get_quiz_today()
-    today_str = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-%d')
-    resp = requests.get(f"{SUPABASE_URL}/rest/v1/game_users",
-                        params={"google_id": f"eq.{google_id}", "select": "quiz_last_date"},
-                        headers=_supabase_headers(), timeout=8)
-    if resp.status_code == 200 and resp.json():
-        if resp.json()[0].get("quiz_last_date") == today_str:
-            return jsonify({"error": "今日已作答", "already_done": True}), 400
-
-    correct = (answer_idx == quiz["answer"])
-    xp_earned = 20 if correct else 5
-    requests.patch(f"{SUPABASE_URL}/rest/v1/game_users",
-                   params={"google_id": f"eq.{google_id}"},
-                   json={"quiz_last_date": today_str},
-                   headers=_supabase_headers(), timeout=8)
-    new_stats = award_xp_to_user(google_id, xp_earned)
-    return jsonify({"correct": correct, "correct_answer": quiz["answer"],
-                    "fact": quiz["fact"], "xp_earned": xp_earned, "new_stats": new_stats})
-
-@app.route('/api/game/leaderboard')
-def game_leaderboard():
-    resp = requests.get(f"{SUPABASE_URL}/rest/v1/game_users",
-                        params={"select": "name,avatar_url,xp,level,title,checkin_count",
-                                "order": "xp.desc", "limit": "10"},
-                        headers=_supabase_headers(), timeout=8)
-    return jsonify(resp.json() if resp.status_code == 200 else [])
+from game import game_bp
+app.register_blueprint(game_bp)
 
 # ==========================================
 # 5. Chat API

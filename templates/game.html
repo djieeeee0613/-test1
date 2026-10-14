@@ -3,550 +3,1109 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>緣投探索者 — 南投職人旅遊遊戲</title>
-<style>
-  :root {
-    --primary: #2d4a35;
-    --accent: #4A5D4E;
-    --gold: #C8A96E;
-    --gold-light: #f0e0b0;
-    --bg: #F4F1EA;
-    --card: #ffffff;
-    --text: #1a1a1a;
-    --muted: #666;
-    --border: #e8e8e8;
-    --success: #10b981;
-    --error: #ef4444;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Noto Sans TC', 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-
-  nav {
-    background: var(--primary); padding: 0 24px;
-    display: flex; align-items: center; justify-content: space-between;
-    height: 56px; position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  }
-  .nav-logo { color: #fff; font-weight: 700; font-size: 16px; text-decoration: none; display: flex; align-items: center; gap: 8px; }
-  .nav-logo span { color: #a8d5b5; }
-  .nav-back { color: rgba(255,255,255,0.7); text-decoration: none; font-size: 13px; }
-  .nav-back:hover { color: #fff; }
-
-  .hero {
-    background: linear-gradient(135deg, #1a3a22 0%, #2d4a35 55%, #3d6645 100%);
-    color: white; padding: 56px 24px 44px; text-align: center; position: relative; overflow: hidden;
-  }
-  .hero::before {
-    content: ''; position: absolute; inset: 0;
-    background: radial-gradient(circle at 20% 80%, rgba(200,169,110,0.12) 0%, transparent 50%),
-                radial-gradient(circle at 80% 20%, rgba(168,213,181,0.08) 0%, transparent 50%);
-    pointer-events: none;
-  }
-  .hero-badge {
-    display: inline-block; background: rgba(200,169,110,0.2);
-    border: 1px solid rgba(200,169,110,0.4); color: var(--gold-light);
-    padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 700;
-    letter-spacing: 2px; margin-bottom: 18px; text-transform: uppercase;
-  }
-  .hero h1 { font-size: clamp(30px, 7vw, 52px); font-weight: 900; margin-bottom: 10px; }
-  .hero h1 span { color: var(--gold-light); }
-  .hero p { font-size: 14px; opacity: 0.85; max-width: 440px; margin: 0 auto 28px; line-height: 1.8; }
-  .hero-feats { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; }
-  .hero-feat { text-align: center; opacity: 0.9; }
-  .hero-feat .icon { font-size: 26px; display: block; margin-bottom: 3px; }
-  .hero-feat .label { font-size: 11px; opacity: 0.8; }
-
-  #login-section { padding: 44px 16px; max-width: 420px; margin: 0 auto; }
-  .login-card {
-    background: var(--card); border-radius: 24px; padding: 40px 28px;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.1); text-align: center;
-  }
-  .login-mascot {
-    width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
-    border: 3px solid var(--gold); margin-bottom: 18px;
-  }
-  .login-card h2 { font-size: 20px; margin-bottom: 8px; color: var(--primary); }
-  .login-card p { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.7; }
-  .google-btn-wrap { display: flex; justify-content: center; margin-bottom: 12px; }
-  .warn { color: var(--error); font-size: 12px; margin-top: 10px; }
-
-  #dashboard { display: none; max-width: 680px; margin: 0 auto; padding: 20px 14px 80px; }
-
-  .profile-card {
-    background: linear-gradient(135deg, var(--primary) 0%, #3a5e42 100%);
-    color: white; border-radius: 20px; padding: 22px 24px;
-    margin-bottom: 20px; display: flex; align-items: center; gap: 18px;
-  }
-  .profile-avatar {
-    width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
-    border: 2.5px solid rgba(200,169,110,0.6); flex-shrink: 0;
-  }
-  .profile-info { flex: 1; min-width: 0; }
-  .profile-name { font-size: 17px; font-weight: 700; margin-bottom: 3px; }
-  .profile-title-badge {
-    font-size: 12px; background: rgba(200,169,110,0.25);
-    border: 1px solid rgba(200,169,110,0.4); color: var(--gold-light);
-    padding: 2px 10px; border-radius: 12px; display: inline-block; margin-bottom: 10px;
-  }
-  .xp-label { font-size: 11px; opacity: 0.75; margin-bottom: 4px; display: flex; justify-content: space-between; }
-  .xp-bar { height: 7px; background: rgba(255,255,255,0.18); border-radius: 4px; overflow: hidden; }
-  .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold), #e8c87a); border-radius: 4px; transition: width 0.9s ease; }
-  .profile-level { text-align: center; flex-shrink: 0; }
-  .level-num { font-size: 40px; font-weight: 900; color: var(--gold-light); line-height: 1; }
-  .level-lbl { font-size: 10px; opacity: 0.65; letter-spacing: 1px; text-transform: uppercase; }
-
-  .tabs {
-    display: flex; background: var(--card); border-radius: 14px;
-    padding: 5px; gap: 4px; margin-bottom: 18px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  }
-  .tab-btn {
-    flex: 1; padding: 9px 6px; border: none; background: transparent;
-    border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--muted);
-    cursor: pointer; transition: all 0.2s; font-family: inherit;
-  }
-  .tab-btn.active { background: var(--primary); color: white; }
-
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  .section-card {
-    background: var(--card); border-radius: 18px; padding: 24px 22px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 14px;
-  }
-  .section-card h3 { font-size: 16px; margin-bottom: 5px; color: var(--primary); display: flex; align-items: center; gap: 7px; }
-  .section-card .desc { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.65; }
-
-  .form-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; display: block; }
-  .form-group { margin-bottom: 14px; }
-  .form-select {
-    width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
-    border-radius: 12px; font-size: 14px; font-family: inherit; color: var(--text);
-    background: white; outline: none; appearance: none; cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 12px center;
-  }
-  .form-select:focus { border-color: var(--accent); }
-
-  .upload-area {
-    border: 2px dashed var(--border); border-radius: 14px; padding: 28px 20px;
-    text-align: center; cursor: pointer; transition: all 0.2s; position: relative;
-  }
-  .upload-area:hover { border-color: var(--accent); background: #f6faf7; }
-  .upload-area.has-image { padding: 0; overflow: hidden; border-style: solid; border-color: var(--success); }
-  .upload-area img { width: 100%; height: 180px; object-fit: cover; border-radius: 12px; display: none; }
-  .upload-area.has-image img { display: block; }
-  .upload-area.has-image .upload-ph { display: none; }
-  .upload-ph .u-icon { font-size: 36px; margin-bottom: 6px; }
-  .upload-ph p { font-size: 13px; color: var(--muted); }
-  .upload-ph small { font-size: 11px; color: #bbb; }
-
-  .btn-primary {
-    width: 100%; padding: 13px; background: var(--primary); color: white;
-    border: none; border-radius: 13px; font-size: 15px; font-weight: 700;
-    cursor: pointer; transition: opacity 0.2s; font-family: inherit; margin-top: 8px;
-  }
-  .btn-primary:hover:not(:disabled) { opacity: 0.85; }
-  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-
-  .xp-badge {
-    display: inline-block; background: var(--gold); color: white;
-    padding: 2px 9px; border-radius: 12px; font-size: 13px; font-weight: 700; margin-left: 5px;
-  }
-
-  .msg { padding: 14px 18px; border-radius: 12px; font-size: 13px; margin-top: 10px; line-height: 1.65; display: none; }
-  .msg.success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
-  .msg.error   { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
-  .msg.info    { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
-
-  .quiz-question { font-size: 16px; font-weight: 700; line-height: 1.65; margin-bottom: 18px; color: var(--text); }
-  .quiz-opts { display: flex; flex-direction: column; gap: 9px; }
-  .quiz-opt {
-    padding: 13px 16px; border: 2px solid var(--border); border-radius: 12px;
-    background: white; font-size: 14px; font-family: inherit; text-align: left;
-    cursor: pointer; transition: all 0.2s; color: var(--text); font-weight: 500;
-  }
-  .quiz-opt:hover:not(:disabled) { border-color: var(--accent); background: #f0f5f1; }
-  .quiz-opt.correct { border-color: var(--success); background: #ecfdf5; color: #065f46; font-weight: 700; }
-  .quiz-opt.wrong   { border-color: var(--error); background: #fef2f2; color: #991b1b; }
-  .quiz-opt:disabled { cursor: not-allowed; }
-  .quiz-result { margin-top: 18px; padding: 14px 18px; border-radius: 12px; font-size: 13px; display: none; line-height: 1.7; }
-  .quiz-result.ok  { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
-  .quiz-result.ng  { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
-  .quiz-result.done { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
-
-  .lb-row { display: flex; align-items: center; gap: 13px; padding: 11px 0; border-bottom: 1px solid var(--border); }
-  .lb-row:last-child { border-bottom: none; }
-  .lb-rank { font-size: 15px; font-weight: 900; width: 26px; text-align: center; color: var(--muted); flex-shrink: 0; }
-  .lb-rank.g1 { color: #FFD700; } .lb-rank.g2 { color: #C0C0C0; } .lb-rank.g3 { color: #CD7F32; }
-  .lb-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: var(--bg); }
-  .lb-info { flex: 1; min-width: 0; }
-  .lb-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .lb-sub { font-size: 11px; color: var(--muted); }
-  .lb-xp { font-weight: 700; color: var(--accent); font-size: 14px; }
-
-  .history-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
-  .history-row:last-child { border-bottom: none; }
-  .loading { text-align: center; padding: 32px; color: var(--muted); font-size: 14px; }
-
-  @media (max-width: 600px) {
-    .hero { padding: 44px 16px 36px; }
-    .hero-feats { gap: 18px; }
-    .profile-card { flex-direction: column; text-align: center; }
-    .profile-level { order: -1; }
-    #login-section { padding: 32px 12px; }
-  }
-</style>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<title>緣投探索者 — 南投職人旅遊</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async></script>
+<style>
+:root {
+  --green: #2d4a35; --green-2: #3d6645; --green-soft: #eaf1ec;
+  --gold: #C8A96E; --gold-light: #f0e0b0; --gold-soft: #fbf5e8;
+  --bg: #F4F1EA; --card: #fff; --text: #1f2a22; --muted: #6b746d; --line: #e7e3d9;
+  --ok: #10b981; --ng: #ef4444;
+  --sidebar: 272px; --topbar: 60px;
+  --ease: cubic-bezier(.22,1,.36,1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); color: var(--text); font-family: 'Noto Sans TC', 'Helvetica Neue', sans-serif; }
+body { min-height: 100vh; overflow-x: hidden; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+img { display: block; }
+a { color: inherit; }
+
+/* ───────── 共用動畫 ───────── */
+@keyframes bob { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
+@keyframes wiggle { 0%,100% { transform: rotate(0); } 20% { transform: rotate(-12deg); } 40% { transform: rotate(10deg); } 60% { transform: rotate(-6deg); } 80% { transform: rotate(4deg); } }
+@keyframes jump { 0%,100% { transform: translateY(0) scale(1); } 30% { transform: translateY(-18px) scale(1.06, .94); } 50% { transform: translateY(-22px) scale(.96, 1.04); } 80% { transform: translateY(0) scale(1.05, .95); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+@keyframes floatXp { 0% { opacity: 0; transform: translate(-50%, 0) scale(.6); } 15% { opacity: 1; transform: translate(-50%, -10px) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -90px) scale(1); } }
+@keyframes leaf { 0% { transform: translate(0,-10vh) rotate(0); opacity: 0; } 10% { opacity: .8; } 100% { transform: translate(60px, 110vh) rotate(540deg); opacity: 0; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes scan { 0% { top: 0; } 50% { top: calc(100% - 3px); } 100% { top: 0; } }
+@keyframes heart { 0% { transform: scale(1); } 30% { transform: scale(1.5); } 60% { transform: scale(.9); } 100% { transform: scale(1); } }
+@keyframes stamp { 0% { transform: scale(2.4) rotate(-20deg); opacity: 0; } 70% { transform: scale(.9) rotate(-12deg); opacity: 1; } 100% { transform: scale(1) rotate(-12deg); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.reveal { animation: fadeUp .55s var(--ease) both; }
+.reveal:nth-child(2) { animation-delay: .06s; } .reveal:nth-child(3) { animation-delay: .12s; }
+.reveal:nth-child(4) { animation-delay: .18s; } .reveal:nth-child(5) { animation-delay: .24s; }
+
+/* ───────── 登入畫面 ───────── */
+#view-login { min-height: 100vh; position: relative; overflow: hidden;
+  background: radial-gradient(circle at 15% 85%, rgba(200,169,110,.22), transparent 45%),
+              radial-gradient(circle at 85% 15%, rgba(168,213,181,.18), transparent 40%),
+              linear-gradient(150deg, #142d1b 0%, #2d4a35 55%, #3d6645 100%);
+  color: #fff; display: flex; flex-direction: column; }
+.leaf { position: absolute; top: 0; font-size: 22px; pointer-events: none; animation: leaf linear infinite; }
+.login-top { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; position: relative; z-index: 2; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 900; text-decoration: none; color: #fff; }
+.brand img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+.brand span { color: #a8d5b5; }
+.login-main { flex: 1; display: flex; align-items: center; justify-content: center; gap: 56px; padding: 24px; flex-wrap: wrap; position: relative; z-index: 2; }
+.login-hero { max-width: 460px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; background: rgba(200,169,110,.2); border: 1px solid rgba(200,169,110,.45); color: var(--gold-light); }
+.login-hero h1 { font-size: clamp(38px, 8vw, 64px); font-weight: 900; line-height: 1.1; margin: 18px 0 14px; }
+.login-hero h1 span { color: var(--gold-light); }
+.login-hero p { opacity: .85; line-height: 1.9; font-size: 15px; margin-bottom: 26px; }
+.feat-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.feat { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 12px 14px; font-size: 13px; display: flex; gap: 10px; align-items: center; backdrop-filter: blur(6px); transition: transform .3s var(--ease), background .3s; }
+.feat:hover { transform: translateY(-3px); background: rgba(255,255,255,.14); }
+.feat b { display: block; font-size: 14px; }
+.feat small { opacity: .7; }
+.feat .ic { font-size: 22px; }
+.login-card { margin-top: 90px; background: #fff; color: var(--text); border-radius: 28px; padding: 40px 34px 32px; width: 360px; max-width: 100%; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); position: relative; }
+.login-mascot { width: 128px; height: 128px; border-radius: 50%; object-fit: cover; border: 5px solid var(--gold); margin: -100px auto 16px; box-shadow: 0 12px 30px rgba(0,0,0,.25); animation: bob 3.2s ease-in-out infinite; cursor: pointer; }
+.login-mascot.wiggle { animation: wiggle .7s ease; }
+.login-bubble { background: var(--gold-soft); border: 1px solid #ecdcb6; border-radius: 16px; padding: 12px 14px; font-size: 14px; line-height: 1.7; margin-bottom: 22px; position: relative; color: #5a4a26; min-height: 72px; }
+.login-bubble::before { content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 14px; height: 14px; background: var(--gold-soft); border-left: 1px solid #ecdcb6; border-top: 1px solid #ecdcb6; }
+.login-card h2 { font-size: 20px; color: var(--green); margin-bottom: 18px; }
+.gbtn { display: flex; justify-content: center; min-height: 44px; }
+.login-note { font-size: 11px; color: var(--muted); margin-top: 16px; line-height: 1.6; }
+.warn { color: var(--ng); font-size: 12px; margin-top: 10px; }
+
+/* ───────── App 外框 ───────── */
+#view-app { display: none; }
+.topbar { position: fixed; inset: 0 0 auto 0; height: var(--topbar); z-index: 60; background: rgba(244,241,234,.86); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 14px; padding: 0 18px; }
+.burger { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; transition: background .2s; }
+.burger:hover { background: rgba(0,0,0,.05); }
+.burger i { display: block; width: 20px; height: 2px; background: var(--green); border-radius: 2px; position: relative; transition: .3s var(--ease); }
+.burger i::before, .burger i::after { content: ''; position: absolute; left: 0; width: 20px; height: 2px; background: var(--green); border-radius: 2px; transition: .3s var(--ease); }
+.burger i::before { top: -6px; } .burger i::after { top: 6px; }
+body.menu-open .burger i { background: transparent; }
+body.menu-open .burger i::before { top: 0; transform: rotate(45deg); }
+body.menu-open .burger i::after { top: 0; transform: rotate(-45deg); }
+.topbar .brand { color: var(--green); }
+.topbar .brand span { color: var(--gold); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.xp-chip { display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 5px 12px 5px 6px; font-size: 13px; font-weight: 700; color: var(--green); }
+.xp-chip .lv { background: var(--green); color: var(--gold-light); border-radius: 12px; padding: 2px 8px; font-size: 11px; }
+.xp-chip.bump { animation: pop .5s var(--ease); }
+.top-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+
+.sidebar { position: fixed; top: var(--topbar); bottom: 0; left: 0; width: var(--sidebar); z-index: 50; background: var(--card); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow-y: auto; transform: translateX(-100%); transition: transform .45s var(--ease); }
+body.menu-open .sidebar { transform: none; }
+.scrim { position: fixed; inset: var(--topbar) 0 0 0; background: rgba(20,30,22,.35); z-index: 45; opacity: 0; pointer-events: none; transition: opacity .35s; }
+.app-main { padding: calc(var(--topbar) + 26px) 28px 90px; transition: margin-left .45s var(--ease); max-width: 1100px; }
+@media (min-width: 1000px) {
+  body.menu-open .app-main { margin-left: var(--sidebar); }
+}
+@media (max-width: 999px) {
+  body.menu-open .scrim { opacity: 1; pointer-events: auto; }
+  .app-main { padding: calc(var(--topbar) + 18px) 14px 90px; }
+}
+
+.side-mascot { padding: 22px 20px 16px; text-align: center; background: linear-gradient(180deg, var(--green-soft), transparent); position: relative; }
+.side-mascot .m-img { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; margin: 0 auto; border: 4px solid #fff; box-shadow: 0 8px 22px rgba(45,74,53,.25); cursor: pointer; animation: bob 3.6s ease-in-out infinite; }
+.side-mascot .m-img.jump { animation: jump .7s var(--ease); }
+.side-bubble { margin-top: 12px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 13px; line-height: 1.6; color: #44513f; position: relative; min-height: 44px; transition: opacity .25s; }
+.side-bubble::before { content: ''; position: absolute; top: -7px; left: 50%; width: 12px; height: 12px; background: #fff; border-left: 1px solid var(--line); border-top: 1px solid var(--line); transform: translateX(-50%) rotate(45deg); }
+.side-profile { margin: 4px 16px 14px; padding: 14px; border-radius: 18px; background: linear-gradient(135deg, var(--green), var(--green-2)); color: #fff; display: flex; gap: 12px; align-items: center; }
+.side-profile img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); flex-shrink: 0; }
+.side-profile .nm { font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.side-profile .tt { font-size: 12px; color: var(--gold-light); }
+.side-profile .info { min-width: 0; flex: 1; }
+.mini-bar { height: 6px; background: rgba(255,255,255,.2); border-radius: 4px; overflow: hidden; margin-top: 7px; }
+.mini-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), #f5d58e); border-radius: 4px; transition: width 1s var(--ease); }
+.menu { padding: 4px 12px; display: flex; flex-direction: column; gap: 3px; }
+.menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; font-size: 15px; font-weight: 500; color: #3c463e; text-align: left; position: relative; transition: background .2s, color .2s, transform .2s var(--ease); }
+.menu-item .ic { font-size: 20px; width: 26px; text-align: center; transition: transform .3s var(--ease); }
+.menu-item:hover { background: var(--green-soft); transform: translateX(3px); }
+.menu-item:hover .ic { transform: scale(1.2) rotate(-8deg); }
+.menu-item.active { background: var(--green); color: #fff; font-weight: 700; }
+.menu-item .badge { margin-left: auto; font-size: 11px; background: var(--gold); color: #fff; padding: 2px 8px; border-radius: 10px; }
+.side-foot { margin-top: auto; padding: 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; }
+.side-foot a, .side-foot button { flex: 1; text-align: center; padding: 10px; border-radius: 12px; font-size: 13px; color: var(--muted); text-decoration: none; border: 1px solid var(--line); transition: background .2s; }
+.side-foot a:hover, .side-foot button:hover { background: var(--bg); }
+
+/* ───────── 頁面切換 ───────── */
+.view { display: none; }
+.view.active { display: block; animation: fadeUp .5s var(--ease); }
+.page-head { margin-bottom: 20px; }
+.page-head h1 { font-size: 26px; font-weight: 900; color: var(--green); display: flex; align-items: center; gap: 10px; }
+.page-head p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+.card { background: var(--card); border-radius: 22px; padding: 22px; box-shadow: 0 2px 14px rgba(40,50,40,.06); border: 1px solid #efece4; }
+.card + .card { margin-top: 16px; }
+.grid > .card + .card { margin-top: 0; }
+.card h3 { font-size: 16px; color: var(--green); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.grid { display: grid; gap: 16px; }
+.g2 { grid-template-columns: repeat(2, 1fr); } .g3 { grid-template-columns: repeat(3, 1fr); } .g4 { grid-template-columns: repeat(4, 1fr); }
+@media (max-width: 760px) { .g2, .g3 { grid-template-columns: 1fr; } .g4 { grid-template-columns: repeat(2, 1fr); } }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 22px; border-radius: 14px; font-weight: 700; font-size: 15px; transition: transform .2s var(--ease), box-shadow .2s, opacity .2s; }
+.btn:active { transform: scale(.97); }
+.btn-green { background: var(--green); color: #fff; box-shadow: 0 6px 16px rgba(45,74,53,.25); }
+.btn-gold { background: var(--gold); color: #fff; box-shadow: 0 6px 16px rgba(200,169,110,.35); }
+.btn-ghost { background: var(--bg); color: var(--green); }
+.btn:hover:not(:disabled) { transform: translateY(-2px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+.btn.block { width: 100%; }
+.muted { color: var(--muted); font-size: 13px; }
+.xp-tag { display: inline-block; background: var(--gold); color: #fff; font-weight: 700; font-size: 12px; padding: 2px 9px; border-radius: 10px; }
+.empty { text-align: center; padding: 28px 12px; color: var(--muted); font-size: 14px; }
+.empty img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; margin: 0 auto 10px; opacity: .9; animation: bob 3s ease-in-out infinite; }
+.skeleton { background: linear-gradient(90deg, #eee 25%, #f6f6f6 50%, #eee 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 12px; height: 72px; margin-bottom: 10px; }
+
+/* ───────── 主頁 ───────── */
+.hello { background: linear-gradient(135deg, var(--green) 0%, var(--green-2) 100%); color: #fff; border-radius: 26px; padding: 28px; display: flex; align-items: center; gap: 24px; position: relative; overflow: hidden; }
+.hello::after { content: '🍃'; position: absolute; right: -10px; bottom: -30px; font-size: 140px; opacity: .08; transform: rotate(-20deg); }
+.ring { width: 132px; height: 132px; flex-shrink: 0; position: relative; }
+.ring svg { transform: rotate(-90deg); }
+.ring .bg { stroke: rgba(255,255,255,.15); }
+.ring .fg { stroke: var(--gold); stroke-linecap: round; transition: stroke-dashoffset 1.4s var(--ease); }
+.ring .center { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+.ring .center b { font-size: 36px; color: var(--gold-light); line-height: 1; display: block; }
+.ring .center small { font-size: 11px; opacity: .7; letter-spacing: 2px; }
+.hello h2 { font-size: 22px; margin-bottom: 6px; }
+.hello .sub { opacity: .85; font-size: 14px; line-height: 1.7; }
+.hello .next { margin-top: 12px; display: inline-block; background: rgba(255,255,255,.12); padding: 6px 12px; border-radius: 12px; font-size: 13px; }
+.stat { text-align: center; padding: 18px 10px; }
+.stat .num { font-size: 30px; font-weight: 900; color: var(--green); }
+.stat .lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.stat .ic { font-size: 24px; margin-bottom: 4px; }
+.roadmap { display: flex; justify-content: space-between; position: relative; padding: 8px 0 0; }
+.roadmap::before { content: ''; position: absolute; top: 34px; left: 8%; right: 8%; height: 4px; background: var(--line); border-radius: 4px; }
+.roadmap .fill { position: absolute; top: 34px; left: 8%; height: 4px; background: linear-gradient(90deg, var(--green), var(--gold)); border-radius: 4px; transition: width 1.2s var(--ease); }
+.step { position: relative; z-index: 1; text-align: center; flex: 1; }
+.step .dot { width: 54px; height: 54px; margin: 0 auto 8px; border-radius: 50%; background: #fff; border: 3px solid var(--line); display: grid; place-items: center; font-size: 22px; filter: grayscale(1); opacity: .55; transition: .4s var(--ease); }
+.step.done .dot { border-color: var(--green); filter: none; opacity: 1; }
+.step.now .dot { border-color: var(--gold); filter: none; opacity: 1; box-shadow: 0 0 0 6px rgba(200,169,110,.2); transform: scale(1.1); }
+.step .t { font-size: 12px; font-weight: 700; }
+.step .x { font-size: 11px; color: var(--muted); }
+.quick { display: flex; align-items: center; gap: 14px; padding: 18px; border-radius: 20px; background: #fff; border: 1px solid #efece4; text-align: left; transition: transform .3s var(--ease), box-shadow .3s; }
+.quick:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(40,50,40,.1); }
+.quick .ic { width: 50px; height: 50px; border-radius: 16px; display: grid; place-items: center; font-size: 24px; flex-shrink: 0; }
+.quick b { display: block; font-size: 15px; color: var(--text); }
+.quick small { color: var(--muted); font-size: 12px; }
+.tip { display: flex; gap: 14px; align-items: flex-start; }
+.tip img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.tip .t { background: var(--gold-soft); border-radius: 4px 16px 16px 16px; padding: 12px 14px; font-size: 14px; line-height: 1.75; color: #5a4a26; }
+
+/* ───────── 打卡 ───────── */
+.field { margin-bottom: 14px; }
+.field label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+select, textarea, input[type=text] { width: 100%; font-family: inherit; font-size: 14px; color: var(--text); border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 14px; background: #fff; outline: none; transition: border-color .2s, box-shadow .2s; }
+select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green); box-shadow: 0 0 0 4px rgba(45,74,53,.08); }
+.drop { border: 2px dashed var(--line); border-radius: 18px; min-height: 200px; display: grid; place-items: center; text-align: center; cursor: pointer; position: relative; overflow: hidden; transition: border-color .2s, background .2s; }
+.drop:hover { border-color: var(--green); background: #f8fbf8; }
+.drop .ph .ic { font-size: 40px; margin-bottom: 6px; transition: transform .3s var(--ease); }
+.drop:hover .ph .ic { transform: scale(1.15) rotate(-8deg); }
+.drop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: none; }
+.drop.has img { display: block; }
+.drop.has { border-style: solid; border-color: var(--green); }
+.scanline { position: absolute; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, transparent, #7dffb1, transparent); box-shadow: 0 0 18px #7dffb1; display: none; z-index: 2; }
+.drop.scanning .scanline { display: block; animation: scan 1.6s ease-in-out infinite; }
+.drop.scanning::after { content: '緣投正在找你…'; position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.6); color: #fff; font-size: 12px; padding: 5px 12px; border-radius: 12px; z-index: 2; }
+.result { margin-top: 14px; padding: 14px 16px; border-radius: 14px; font-size: 14px; line-height: 1.7; display: none; animation: pop .45s var(--ease); }
+.result.ok { display: block; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; }
+.result.ng { display: block; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; animation: shake .45s; }
+.collection-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.progress-pill { flex: 1; max-width: 260px; height: 10px; background: var(--bg); border-radius: 10px; overflow: hidden; }
+.progress-pill i { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--gold)); transition: width 1s var(--ease); }
+.cat-block { margin-top: 16px; }
+.cat-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.stamps { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.stamp { position: relative; border-radius: 14px; padding: 12px 10px; font-size: 12px; line-height: 1.4; min-height: 64px; background: #f6f5f1; color: #a3a69f; border: 1px dashed #ddd9cf; transition: transform .25s var(--ease); cursor: pointer; }
+.stamp:hover { transform: translateY(-2px); }
+.stamp.got { background: #fff; color: var(--text); border: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+.stamp.got::after { content: '✓'; position: absolute; right: 6px; bottom: 4px; width: 26px; height: 26px; border: 2px solid var(--ng); color: var(--ng); border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 14px; transform: rotate(-12deg); }
+.stamp.new::after { animation: stamp .6s var(--ease) both; }
+
+/* ───────── 問答 ───────── */
+.quiz-start { text-align: center; padding: 34px 20px; }
+.quiz-start img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; margin: 0 auto 14px; border: 4px solid var(--gold); animation: bob 3s ease-in-out infinite; }
+.quiz-start h2 { color: var(--green); font-size: 24px; margin-bottom: 8px; }
+.rules { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 18px 0 24px; }
+.rules span { background: var(--bg); padding: 7px 12px; border-radius: 12px; font-size: 13px; }
+.q-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.q-dots { display: flex; gap: 6px; }
+.q-dots i { width: 28px; height: 8px; border-radius: 6px; background: var(--line); transition: background .3s; }
+.q-dots i.cur { background: var(--gold); }
+.q-dots i.ok { background: var(--ok); }
+.q-dots i.ng { background: var(--ng); }
+.combo { margin-left: auto; font-weight: 900; color: #e8590c; font-size: 14px; opacity: 0; transition: opacity .3s; }
+.combo.on { opacity: 1; animation: pop .4s var(--ease); }
+.timer { height: 6px; background: var(--bg); border-radius: 6px; overflow: hidden; margin-bottom: 18px; }
+.timer i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, var(--ok), var(--gold), var(--ng)); background-size: 300% 100%; transform-origin: left; }
+.q-host { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 18px; }
+.q-host img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.q-host .q { background: var(--green-soft); border-radius: 4px 18px 18px 18px; padding: 14px 16px; font-size: 17px; font-weight: 700; line-height: 1.6; flex: 1; }
+.opts { display: grid; gap: 10px; }
+.opt { text-align: left; padding: 14px 16px; border-radius: 14px; background: #fff; border: 2px solid var(--line); font-size: 15px; display: flex; gap: 12px; align-items: center; transition: border-color .2s, transform .2s var(--ease), background .2s; animation: fadeUp .4s var(--ease) both; }
+.opt:nth-child(2) { animation-delay: .05s; } .opt:nth-child(3) { animation-delay: .1s; } .opt:nth-child(4) { animation-delay: .15s; }
+.opt .k { width: 28px; height: 28px; border-radius: 8px; background: var(--bg); display: grid; place-items: center; font-weight: 900; font-size: 13px; flex-shrink: 0; }
+.opt:hover:not(:disabled) { border-color: var(--green); transform: translateX(4px); }
+.opt.ok { border-color: var(--ok); background: #ecfdf5; animation: pop .4s var(--ease); }
+.opt.ok .k { background: var(--ok); color: #fff; }
+.opt.ng { border-color: var(--ng); background: #fef2f2; animation: shake .4s; }
+.opt.ng .k { background: var(--ng); color: #fff; }
+.opt:disabled { cursor: default; }
+.fact { margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: var(--gold-soft); font-size: 14px; line-height: 1.75; color: #5a4a26; display: none; }
+.fact.show { display: block; animation: fadeUp .4s var(--ease); }
+.summary { text-align: center; padding: 22px 10px; }
+.summary .stars { font-size: 42px; letter-spacing: 6px; margin: 8px 0; }
+.summary .stars span { display: inline-block; animation: pop .5s var(--ease) both; }
+.summary .big { font-size: 46px; font-weight: 900; color: var(--gold); }
+
+/* ───────── 動態 ───────── */
+.feed { max-width: 640px; }
+.composer { display: flex; gap: 12px; }
+.composer > img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.composer textarea { resize: none; min-height: 84px; border-radius: 16px; }
+.composer-tools { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.composer-tools select { width: auto; flex: 1; min-width: 150px; padding: 8px 12px; font-size: 13px; }
+.tool-btn { padding: 8px 12px; border-radius: 12px; background: var(--bg); font-size: 13px; transition: background .2s; }
+.tool-btn:hover { background: var(--green-soft); }
+.attach-preview { margin-top: 10px; position: relative; display: none; }
+.attach-preview img { width: 100%; max-height: 260px; object-fit: cover; border-radius: 14px; }
+.attach-preview button { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; }
+.post { background: #fff; border-radius: 22px; border: 1px solid #efece4; margin-top: 16px; overflow: hidden; animation: fadeUp .5s var(--ease) both; }
+.post-head { display: flex; gap: 12px; align-items: center; padding: 16px 18px 10px; }
+.post-head img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
+.post-head .nm { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.lv-badge { font-size: 10px; background: var(--green); color: var(--gold-light); padding: 1px 7px; border-radius: 8px; font-weight: 700; }
+.post-head .meta { font-size: 12px; color: var(--muted); }
+.post-del { margin-left: auto; color: var(--muted); font-size: 13px; padding: 6px 8px; border-radius: 8px; }
+.post-del:hover { background: var(--bg); }
+.post-tag { display: inline-block; margin: 0 18px 8px; background: var(--green-soft); color: var(--green); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 10px; }
+.post-body { padding: 0 18px 12px; font-size: 15px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+.post-img { width: 100%; max-height: 460px; object-fit: cover; cursor: zoom-in; }
+.post-actions { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid #f1eee7; }
+.act { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px; border-radius: 12px; font-size: 14px; color: var(--muted); transition: background .2s; }
+.act:hover { background: var(--bg); }
+.act.liked { color: #e11d48; font-weight: 700; }
+.act .h { display: inline-block; }
+.act.liked .h.anim { animation: heart .5s var(--ease); }
+.comments { background: #faf9f6; padding: 10px 18px 14px; display: none; }
+.comments.open { display: block; animation: fadeUp .3s var(--ease); }
+.cmt { display: flex; gap: 8px; margin-top: 10px; font-size: 13px; }
+.cmt img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.cmt .b { background: #fff; border-radius: 4px 14px 14px 14px; padding: 7px 12px; line-height: 1.6; border: 1px solid #efece4; }
+.cmt .b b { font-size: 12px; display: block; }
+.cmt-input { display: flex; gap: 8px; margin-top: 12px; }
+.cmt-input input { padding: 8px 12px; border-radius: 20px; font-size: 13px; }
+.cmt-input button { padding: 0 14px; border-radius: 20px; background: var(--green); color: #fff; font-size: 13px; font-weight: 700; }
+
+/* ───────── 排行榜 ───────── */
+.podium { display: flex; justify-content: center; align-items: flex-end; gap: 14px; padding: 18px 0 8px; }
+.pod { text-align: center; width: 120px; animation: fadeUp .6s var(--ease) both; }
+.pod img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; margin: 0 auto 6px; border: 3px solid #fff; box-shadow: 0 6px 16px rgba(0,0,0,.12); }
+.pod.p1 img { width: 84px; height: 84px; border-color: #FFD700; }
+.pod .nm { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pod .x { font-size: 12px; color: var(--muted); }
+.pod .block { margin-top: 8px; border-radius: 14px 14px 0 0; color: #fff; font-size: 26px; font-weight: 900; display: grid; place-items: center; }
+.pod.p1 { animation-delay: .2s; } .pod.p1 .block { height: 110px; background: linear-gradient(180deg, #f5c542, #d4a017); }
+.pod.p2 .block { height: 82px; background: linear-gradient(180deg, #cfd4da, #9aa3ad); }
+.pod.p3 { animation-delay: .1s; } .pod.p3 .block { height: 62px; background: linear-gradient(180deg, #e0a372, #b8723d); }
+.rank-row { display: flex; align-items: center; gap: 12px; padding: 11px 8px; border-bottom: 1px solid #f1eee7; border-radius: 12px; animation: fadeUp .4s var(--ease) both; }
+.rank-row.me { background: var(--gold-soft); border-bottom-color: transparent; }
+.rank-row .r { width: 26px; text-align: center; font-weight: 900; color: var(--muted); }
+.rank-row img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
+.rank-row .nm { font-weight: 700; font-size: 14px; }
+.rank-row .sub { font-size: 12px; color: var(--muted); }
+.rank-row .x { margin-left: auto; font-weight: 900; color: var(--green); }
+
+/* ───────── 證書 ───────── */
+.cert-frame { width: 100%; height: 900px; border: none; border-radius: 22px; background: #fff; }
+.locked { text-align: center; padding: 36px 20px; }
+.locked .lock { font-size: 54px; margin-bottom: 8px; animation: wiggle 2.4s ease-in-out infinite; }
+
+/* ───────── 浮動吉祥物 / 特效 ───────── */
+.buddy { position: fixed; right: 18px; bottom: 18px; z-index: 70; display: flex; align-items: flex-end; gap: 10px; pointer-events: none; }
+.buddy img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 8px 22px rgba(0,0,0,.2); pointer-events: auto; cursor: pointer; animation: bob 3.4s ease-in-out infinite; }
+.buddy img.jump { animation: jump .7s var(--ease); }
+.buddy .say { max-width: 240px; background: #fff; border-radius: 18px 18px 4px 18px; padding: 10px 14px; font-size: 13px; line-height: 1.6; box-shadow: 0 10px 28px rgba(0,0,0,.14); opacity: 0; transform: translateY(10px) scale(.9); transform-origin: bottom right; transition: .35s var(--ease); pointer-events: auto; }
+.buddy .say.show { opacity: 1; transform: none; }
+.xp-float { position: fixed; z-index: 200; font-weight: 900; font-size: 22px; color: var(--gold); text-shadow: 0 2px 0 #fff, 0 4px 14px rgba(0,0,0,.2); pointer-events: none; animation: floatXp 1.4s var(--ease) forwards; }
+.toast { position: fixed; top: calc(var(--topbar) + 12px); left: 50%; transform: translate(-50%, -20px); background: var(--green); color: #fff; padding: 10px 18px; border-radius: 14px; font-size: 14px; z-index: 210; opacity: 0; transition: .35s var(--ease); pointer-events: none; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+#levelup { position: fixed; inset: 0; z-index: 300; background: rgba(15,28,19,.78); backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; }
+#levelup.show { display: flex; }
+#confetti { position: absolute; inset: 0; pointer-events: none; }
+.lu-card { position: relative; text-align: center; color: #fff; animation: pop .7s var(--ease); padding: 20px; }
+.lu-card img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 6px solid var(--gold); margin: 0 auto 18px; animation: jump 1s var(--ease) .4s 2; box-shadow: 0 0 0 14px rgba(200,169,110,.18), 0 0 60px rgba(200,169,110,.5); }
+.lu-card .lbl { letter-spacing: 6px; font-size: 13px; color: var(--gold-light); }
+.lu-card .lv { font-size: 70px; font-weight: 900; line-height: 1.1; background: linear-gradient(90deg, #f5d58e, #fff, #f5d58e); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 2s linear infinite; }
+.lu-card .tt { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+.lu-card p { opacity: .85; margin-bottom: 22px; line-height: 1.7; }
+#lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 250; display: none; align-items: center; justify-content: center; padding: 20px; cursor: zoom-out; }
+#lightbox img { max-width: 100%; max-height: 100%; border-radius: 12px; }
+.xp-chip, .brand { white-space: nowrap; }
+@media (max-width: 600px) {
+  .topbar { gap: 8px; padding: 0 12px; }
+  .topbar .brand div { display: none; }
+  .hello { flex-direction: column; text-align: center; padding: 24px 18px; gap: 14px; }
+  .ring { width: 112px; height: 112px; }
+  .ring svg { width: 112px; height: 112px; }
+  .step .dot { width: 40px; height: 40px; font-size: 17px; }
+  .roadmap::before, .roadmap .fill { top: 20px; }
+  .step .t { font-size: 10px; } .step .x { font-size: 9px; }
+  .page-head h1 { font-size: 22px; }
+  .buddy img { width: 54px; height: 54px; }
+  .buddy .say { max-width: 200px; }
+  .cert-frame { height: 1100px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
 </head>
 <body>
 
-<nav>
-  <a href="/" class="nav-logo">
-    <img src="/static/images/mascot.jpg" alt="緣投" style="width:26px;height:26px;border-radius:50%;object-fit:cover;">
-    <span>南投</span>職人旅遊
-  </a>
-  <a href="/" class="nav-back">← 回首頁</a>
-</nav>
-
-<div class="hero">
-  <div class="hero-badge">🎮 探索遊戲</div>
-  <h1>緣投<span>探索者</span></h1>
-  <p>走訪南投在地職人，打卡解鎖成就，挑戰每日問答，累積 XP 晉升等級，成為真正的南投職人！</p>
-  <div class="hero-feats">
-    <div class="hero-feat"><span class="icon">📸</span><span class="label">職人打卡</span></div>
-    <div class="hero-feat"><span class="icon">🧠</span><span class="label">每日問答</span></div>
-    <div class="hero-feat"><span class="icon">🏆</span><span class="label">排行榜</span></div>
-    <div class="hero-feat"><span class="icon">⬆️</span><span class="label">等級晉升</span></div>
+<!-- ═════════════ 登入 ═════════════ -->
+<section id="view-login">
+  <div id="leaves"></div>
+  <div class="login-top">
+    <a href="/" class="brand"><img src="/static/images/mascot.jpg" alt="緣投"><div><span>南投</span>職人旅遊</div></a>
+    <a href="/" style="color:rgba(255,255,255,.75);text-decoration:none;font-size:14px">← 回首頁</a>
   </div>
-</div>
-
-<!-- LOGIN -->
-<div id="login-section">
-  <div class="login-card">
-    <img src="/static/images/mascot.jpg" alt="緣投" class="login-mascot">
-    <h2>加入緣投探索者</h2>
-    <p>用 Google 帳號登入，記錄您的南投職人探索之旅，與其他旅客一較高下！</p>
-    <div class="google-btn-wrap">
-      <div id="g_id_onload"
-           data-client_id="{{ google_client_id }}"
-           data-callback="handleGoogleLogin"
-           data-auto_prompt="false">
-      </div>
-      <div class="g_id_signin"
-           data-type="standard"
-           data-size="large"
-           data-theme="filled_blue"
-           data-text="signin_with"
-           data-shape="rectangular"
-           data-locale="zh-TW"
-           data-width="260">
+  <div class="login-main">
+    <div class="login-hero reveal">
+      <span class="chip">🎮 緣投探索遊戲</span>
+      <h1>緣投<span>探索者</span></h1>
+      <p>和吉祥物緣投一起走訪南投 {{ total_merchants }} 間在地職人，打卡收集印章、挑戰問答、分享旅程，從「旅人」一路升級成「永續達人」，領取專屬認證證書！</p>
+      <div class="feat-row">
+        <div class="feat"><span class="ic">📸</span><div><b>職人打卡</b><small>AI 驗證 · +80 XP</small></div></div>
+        <div class="feat"><span class="ic">🧠</span><div><b>問答大挑戰</b><small>無限挑戰 · 連擊加分</small></div></div>
+        <div class="feat"><span class="ic">💬</span><div><b>旅人動態</b><small>分享、按讚、留言</small></div></div>
+        <div class="feat"><span class="ic">📜</span><div><b>永續達人證書</b><small>Lv.5 自動寄送</small></div></div>
       </div>
     </div>
-    {% if not google_client_id %}
-    <p class="warn">⚠️ 尚未設定 GOOGLE_CLIENT_ID 環境變數</p>
-    {% endif %}
-  </div>
-</div>
-
-<!-- DASHBOARD -->
-<div id="dashboard">
-
-  <!-- Profile -->
-  <div class="profile-card">
-    <img src="" alt="" class="profile-avatar" id="profile-avatar">
-    <div class="profile-info">
-      <div class="profile-name" id="profile-name">—</div>
-      <div class="profile-title-badge" id="profile-title">旅人 🧳</div>
-      <div class="xp-label">
-        <span id="xp-cur">0 XP</span>
-        <span id="xp-next">下一級：100 XP</span>
+    <div class="login-card reveal">
+      <img src="/static/images/mascot.jpg" alt="緣投" class="login-mascot" id="login-mascot">
+      <div class="login-bubble" id="login-bubble">嗨！我是緣投 🌿<br>登入後我就能幫你記錄冒險囉！</div>
+      <h2>開始你的南投冒險</h2>
+      <div class="gbtn">
+        <div id="g_id_onload" data-client_id="{{ google_client_id }}" data-callback="handleGoogleLogin" data-auto_prompt="false"></div>
+        <div class="g_id_signin" data-type="standard" data-size="large" data-theme="filled_blue" data-text="signin_with" data-shape="pill" data-locale="zh-TW" data-width="280"></div>
       </div>
-      <div class="xp-bar"><div class="xp-bar-fill" id="xp-fill" style="width:0%"></div></div>
-    </div>
-    <div class="profile-level">
-      <div class="level-num" id="level-num">1</div>
-      <div class="level-lbl">LEVEL</div>
+      {% if not google_client_id %}<p class="warn">⚠️ 尚未設定 GOOGLE_CLIENT_ID 環境變數</p>{% endif %}
+      <p class="login-note">使用 Google 登入僅取得你的名稱、頭像與 Email（用於寄送證書）。</p>
     </div>
   </div>
+</section>
 
-  <!-- Tabs -->
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('checkin',this)">📸 打卡</button>
-    <button class="tab-btn" onclick="switchTab('quiz',this)">🧠 問答</button>
-    <button class="tab-btn" onclick="switchTab('leaderboard',this)">🏆 排行</button>
-  </div>
+<!-- ═════════════ App ═════════════ -->
+<section id="view-app">
+  <header class="topbar">
+    <button class="burger" onclick="toggleMenu()" aria-label="開關選單"><i></i></button>
+    <a href="/" class="brand"><img src="/static/images/mascot.jpg" alt="緣投"><div><span>緣投</span>探索者</div></a>
+    <div class="topbar-right">
+      <div class="xp-chip" id="xp-chip"><span class="lv" id="chip-lv">Lv.1</span><span id="chip-xp">0 XP</span></div>
+      <img class="top-avatar" id="top-avatar" src="/static/images/mascot.jpg" alt="">
+    </div>
+  </header>
 
-  <!-- CHECKIN -->
-  <div class="tab-panel active" id="tab-checkin">
-    <div class="section-card">
-      <h3>📸 職人打卡簽到</h3>
-      <p class="desc">選擇您正在造訪的職人商家，拍一張含有您本人的照片上傳。AI 自動驗證人臉後記錄打卡！每個商家限打卡一次，每次獲得 <strong>+30 XP</strong>。</p>
-      <div class="form-group">
-        <label class="form-label">選擇商家</label>
-        <select class="form-select" id="merchant-select" onchange="updateCheckinBtn()">
-          <option value="">-- 請選擇您正在造訪的商家 --</option>
-          {% for m in all_merchants %}
-          <option value="{{ m }}">{{ m }}</option>
-          {% endfor %}
-        </select>
+  <aside class="sidebar">
+    <div class="side-mascot">
+      <img src="/static/images/mascot.jpg" alt="緣投" class="m-img" id="side-mascot" onclick="pokeMascot()">
+      <div class="side-bubble" id="side-bubble">今天想去哪裡探險呢？</div>
+    </div>
+    <div class="side-profile">
+      <img id="side-avatar" src="/static/images/mascot.jpg" alt="">
+      <div class="info">
+        <div class="nm" id="side-name">—</div>
+        <div class="tt" id="side-title">Lv.1 旅人 🧳</div>
+        <div class="mini-bar"><i id="side-bar" style="width:0"></i></div>
       </div>
-      <div class="form-group">
-        <label class="form-label">上傳打卡照片（需含本人）</label>
-        <div class="upload-area" id="upload-area" onclick="document.getElementById('photo-input').click()">
-          <input type="file" id="photo-input" accept="image/*" style="display:none"
-                 onclick="event.stopPropagation()" onchange="previewPhoto(this)">
-          <img src="" alt="預覽" id="photo-preview">
-          <div class="upload-ph">
-            <div class="u-icon">📷</div>
-            <p>點擊上傳照片</p>
-            <small>JPG · PNG · WEBP（最大 5MB）</small>
-          </div>
+    </div>
+    <nav class="menu">
+      <button class="menu-item" data-view="home"><span class="ic">🏠</span>探索主頁</button>
+      <button class="menu-item" data-view="checkin"><span class="ic">📸</span>職人打卡<span class="badge" id="badge-checkin">0/{{ total_merchants }}</span></button>
+      <button class="menu-item" data-view="quiz"><span class="ic">🧠</span>問答大挑戰</button>
+      <button class="menu-item" data-view="feed"><span class="ic">💬</span>旅人動態</button>
+      <button class="menu-item" data-view="rank"><span class="ic">🏆</span>排行榜</button>
+      <button class="menu-item" data-view="cert"><span class="ic">📜</span>永續達人證書</button>
+    </nav>
+    <div class="side-foot">
+      <a href="/">回首頁</a>
+      <button onclick="logout()">登出</button>
+    </div>
+  </aside>
+  <div class="scrim" onclick="toggleMenu(false)"></div>
+
+  <main class="app-main">
+
+    <!-- 主頁 -->
+    <div class="view" id="v-home">
+      <div class="hello reveal">
+        <div class="ring">
+          <svg width="132" height="132" viewBox="0 0 132 132"><circle class="bg" cx="66" cy="66" r="56" fill="none" stroke-width="10"/><circle class="fg" id="ring-fg" cx="66" cy="66" r="56" fill="none" stroke-width="10" stroke-dasharray="351.86" stroke-dashoffset="351.86"/></svg>
+          <div class="center"><div><b id="ring-lv">1</b><small>LEVEL</small></div></div>
+        </div>
+        <div>
+          <h2 id="hello-title">歡迎回來！</h2>
+          <div class="sub" id="hello-sub">—</div>
+          <div class="next" id="hello-next">—</div>
         </div>
       </div>
-      <button class="btn-primary" id="checkin-btn" onclick="submitCheckin()" disabled>驗證並打卡 ✓</button>
-      <div class="msg success" id="checkin-ok"></div>
-      <div class="msg error" id="checkin-err"></div>
-    </div>
-    <div class="section-card">
-      <h3>🗺️ 我的打卡記錄</h3>
-      <div id="checkin-history"><div class="loading">載入中...</div></div>
-    </div>
-  </div>
 
-  <!-- QUIZ -->
-  <div class="tab-panel" id="tab-quiz">
-    <div class="section-card">
-      <h3>🧠 每日問答</h3>
-      <p class="desc">每天一題南投文化知識——答對得 <strong>+20 XP</strong>，參與就有 <strong>+5 XP</strong>，每日限一次！</p>
-      <div id="quiz-content"><div class="loading">載入題目中...</div></div>
-    </div>
-  </div>
+      <div class="grid g4" style="margin-top:16px">
+        <div class="card stat reveal"><div class="ic">📍</div><div class="num" id="st-checkin">0</div><div class="lbl">走訪職人</div></div>
+        <div class="card stat reveal"><div class="ic">🧠</div><div class="num" id="st-quiz">0</div><div class="lbl">答對題數</div></div>
+        <div class="card stat reveal"><div class="ic">💬</div><div class="num" id="st-post">0</div><div class="lbl">分享貼文</div></div>
+        <div class="card stat reveal"><div class="ic">⭐</div><div class="num" id="st-xp">0</div><div class="lbl">累積 XP</div></div>
+      </div>
 
-  <!-- LEADERBOARD -->
-  <div class="tab-panel" id="tab-leaderboard">
-    <div class="section-card">
-      <h3>🏆 探索者排行榜</h3>
-      <p class="desc">XP 最高的南投探索者前 10 名！</p>
-      <div id="lb-content"><div class="loading">載入中...</div></div>
-    </div>
-  </div>
+      <div class="card reveal" style="margin-top:16px">
+        <h3>🗺️ 升級之路</h3>
+        <div class="roadmap" id="roadmap">
+          <div class="fill" id="road-fill" style="width:0"></div>
+          {% for lv in levels %}
+          <div class="step" data-lv="{{ lv[1] }}"><div class="dot">{{ lv[3] }}</div><div class="t">Lv.{{ lv[1] }} {{ lv[2] }}</div><div class="x">{{ lv[0] }} XP</div></div>
+          {% endfor %}
+        </div>
+      </div>
 
-</div><!-- /dashboard -->
+      <div class="grid g3" style="margin-top:16px">
+        <button class="quick reveal" onclick="go('checkin')"><span class="ic" style="background:#eaf1ec">📸</span><div><b>去打卡</b><small>每家職人 +80 XP</small></div></button>
+        <button class="quick reveal" onclick="go('quiz')"><span class="ic" style="background:#fbf5e8">🧠</span><div><b>挑戰問答</b><small>連擊越多分越高</small></div></button>
+        <button class="quick reveal" onclick="go('feed')"><span class="ic" style="background:#fdeef2">💬</span><div><b>看看大家</b><small>每日前 3 篇 +20 XP</small></div></button>
+      </div>
+
+      <div class="card reveal" style="margin-top:16px">
+        <div class="tip"><img src="/static/images/mascot.jpg" alt="緣投"><div class="t" id="daily-tip">—</div></div>
+      </div>
+    </div>
+
+    <!-- 打卡 -->
+    <div class="view" id="v-checkin">
+      <div class="page-head"><h1>📸 職人打卡</h1><p>到職人工坊拍一張有你入鏡的照片，緣投確認後就幫你蓋章！</p></div>
+      <div class="grid g2">
+        <div class="card">
+          <h3>📍 我在這裡</h3>
+          <div class="field">
+            <label>選擇職人商家</label>
+            <select id="ck-merchant" onchange="refreshCheckinBtn()">
+              <option value="">— 請選擇 —</option>
+              {% for g in merchant_groups %}
+              <optgroup label="{{ g.emoji }} {{ g.name }}">
+                {% for m in g.merchants %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+              </optgroup>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>打卡照片（需要你本人入鏡）</label>
+            <div class="drop" id="ck-drop" onclick="document.getElementById('ck-file').click()">
+              <div class="scanline"></div>
+              <img id="ck-preview" alt="">
+              <div class="ph"><div class="ic">📷</div><div style="font-size:14px">點擊拍照或上傳</div><div class="muted" style="font-size:11px">JPG / PNG · 10MB 以內</div></div>
+            </div>
+            <input type="file" id="ck-file" accept="image/*" capture="environment" hidden onchange="pickImage(this, 'ck')">
+          </div>
+          <button class="btn btn-green block" id="ck-btn" onclick="submitCheckin()" disabled>✨ 請緣投驗證並蓋章</button>
+          <div class="result" id="ck-result"></div>
+        </div>
+        <div class="card">
+          <div class="collection-head">
+            <h3 style="margin:0">📖 職人圖鑑</h3>
+            <div class="progress-pill"><i id="col-bar" style="width:0"></i></div>
+            <b id="col-count" style="color:var(--green)">0/{{ total_merchants }}</b>
+          </div>
+          <div id="collection"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 問答 -->
+    <div class="view" id="v-quiz">
+      <div class="page-head"><h1>🧠 問答大挑戰</h1><p>每局 5 題，想玩幾局就玩幾局！連續答對有連擊加分，全對再送 +100 XP。</p></div>
+      <div class="card" id="quiz-box" style="max-width:720px"></div>
+    </div>
+
+    <!-- 動態 -->
+    <div class="view" id="v-feed">
+      <div class="page-head"><h1>💬 旅人動態</h1><p>分享你在南投遇見的人、味道和風景。</p></div>
+      <div class="feed">
+        <div class="card">
+          <div class="composer">
+            <img id="cp-avatar" src="/static/images/mascot.jpg" alt="">
+            <div style="flex:1">
+              <textarea id="cp-text" maxlength="500" placeholder="今天在南投發生了什麼好事？"></textarea>
+              <div class="attach-preview" id="cp-attach"><img id="cp-preview" alt=""><button onclick="clearAttach()">✕</button></div>
+              <div class="composer-tools">
+                <button class="tool-btn" onclick="document.getElementById('cp-file').click()">🖼️ 照片</button>
+                <select id="cp-merchant">
+                  <option value="">📍 標記職人（選填）</option>
+                  {% for g in merchant_groups %}<optgroup label="{{ g.emoji }} {{ g.name }}">{% for m in g.merchants %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</optgroup>{% endfor %}
+                </select>
+                <button class="btn btn-green" style="padding:9px 18px;font-size:14px" id="cp-btn" onclick="submitPost()">發佈</button>
+              </div>
+              <input type="file" id="cp-file" accept="image/*" hidden onchange="pickImage(this, 'cp')">
+            </div>
+          </div>
+        </div>
+        <div id="feed-list"></div>
+        <div style="text-align:center;margin-top:16px"><button class="btn btn-ghost" id="feed-more" onclick="loadFeed(true)" style="display:none">載入更多</button></div>
+      </div>
+    </div>
+
+    <!-- 排行榜 -->
+    <div class="view" id="v-rank">
+      <div class="page-head"><h1>🏆 探索者排行榜</h1><p>看看誰是最認真的南投探索者！</p></div>
+      <div class="card" style="max-width:720px"><div id="rank-box"></div></div>
+    </div>
+
+    <!-- 證書 -->
+    <div class="view" id="v-cert">
+      <div class="page-head"><h1>📜 永續達人證書</h1><p>達到 Lv.5「永續達人」後，緣投會把證書寄到你的 Gmail。</p></div>
+      <div id="cert-box" style="max-width:720px"></div>
+    </div>
+  </main>
+
+  <div class="buddy" id="buddy">
+    <div class="say" id="buddy-say"></div>
+    <img src="/static/images/mascot.jpg" alt="緣投" id="buddy-img" onclick="pokeMascot()">
+  </div>
+</section>
+
+<div id="levelup">
+  <canvas id="confetti"></canvas>
+  <div class="lu-card">
+    <img src="/static/images/mascot.jpg" alt="緣投">
+    <div class="lbl">LEVEL UP</div>
+    <div class="lv" id="lu-lv">Lv.2</div>
+    <div class="tt" id="lu-title">探索者 🗺️</div>
+    <p id="lu-msg">緣投替你開心得跳起來了！</p>
+    <button class="btn btn-gold" onclick="closeLevelUp()">繼續冒險 →</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div id="lightbox" onclick="this.style.display='none'"><img id="lightbox-img" alt=""></div>
 
 <script>
-let currentUser = null;
-let photoData   = null;
+const MERCHANT_GROUPS = {{ merchant_groups|tojson }};
+const TOTAL = {{ total_merchants }};
+const MASCOT = '/static/images/mascot.jpg';
+let me = null, lvl = null, checkins = [], images = { ck: null, cp: null }, shareUrl = null;
+let feedCursor = null, quiz = null, timerId = null;
 
-// ─── Google Login ───────────────────────────────
-function handleGoogleLogin(resp) {
-  fetch('/api/game/login', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({id_token: resp.credential})
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.error) { alert('登入失敗：' + d.error); return; }
-    currentUser = d.user;
-    applyProfile(d.user, d.level_info);
-    document.getElementById('login-section').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    loadCheckinHistory();
-    loadQuiz();
-  })
-  .catch(e => alert('登入錯誤：' + e.message));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = id => document.getElementById(id);
+async function api(url, opts = {}) {
+  const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', ...opts,
+                               body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const d = await r.json().catch(() => ({}));
+  if (r.status === 401 && me) { toast('登入已過期，請重新登入'); setTimeout(() => location.reload(), 1200); }
+  if (Array.isArray(d)) { d.ok = r.ok; return d; }
+  return { ok: r.ok, ...d };
+}
+function timeAgo(iso) {
+  const s = (Date.now() - new Date(iso)) / 1000;
+  if (s < 60) return '剛剛';
+  if (s < 3600) return Math.floor(s / 60) + ' 分鐘前';
+  if (s < 86400) return Math.floor(s / 3600) + ' 小時前';
+  if (s < 604800) return Math.floor(s / 86400) + ' 天前';
+  return new Date(iso).toLocaleDateString('zh-TW');
 }
 
-// ─── Profile ────────────────────────────────────
-function applyProfile(user, li) {
-  document.getElementById('profile-avatar').src = user.avatar_url || '/static/images/mascot.jpg';
-  document.getElementById('profile-name').textContent = user.name;
-  document.getElementById('profile-title').textContent = li.title + ' ' + li.emoji;
-  document.getElementById('level-num').textContent = li.level;
-  const xp = li.xp;
-  document.getElementById('xp-cur').textContent = xp + ' XP';
-  if (li.next_xp) {
-    const pct = Math.min(100, ((xp - li.current_min) / (li.next_xp - li.current_min) * 100)).toFixed(1);
-    document.getElementById('xp-fill').style.width = pct + '%';
-    document.getElementById('xp-next').textContent = '下一級：' + li.next_xp + ' XP';
-  } else {
-    document.getElementById('xp-fill').style.width = '100%';
-    document.getElementById('xp-next').textContent = '🏆 已達最高等級！';
+// ═══════ 緣投台詞 ═══════
+const LINES = {
+  poke: ['嘿嘿，好癢！', '你知道嗎？南投是台灣唯一不靠海的縣喔！', '要不要去喝杯國姓咖啡？☕', '我最喜歡竹山的竹子了 🎋', '今天也要慢慢走、深深玩！', '戳我也不會掉 XP 啦 😆', '日月潭的拉魯島是邵族的聖地喔～'],
+  home: ['今天想去哪裡探險呢？', '還有好多職人在等你喔！', '答幾題問答暖暖身吧？'],
+  checkin: ['拍照記得笑一個 📸', '每家職人都有一枚專屬印章喔！', '收集越多，離永續達人越近！'],
+  quiz: ['準備好了嗎？我要出題囉！', '連續答對會有連擊加分喔 🔥'],
+  feed: ['看看大家都去了哪裡～', '分享你的故事，我想看！'],
+  rank: ['你的名字也能上榜的！', '加油加油，衝刺第一名！'],
+  cert: ['證書上會有你的名字喔 ✨', '永續達人，是我們最高的榮譽！'],
+  correct: ['答對了！你好懂南投！', '太聰明了吧 🤩', '完全正確！', '漂亮！繼續保持！'],
+  wrong: ['差一點點！沒關係～', '學到新知識也很棒！', '下一題一定可以！'],
+  combo: n => `${n} 連擊！你停不下來了 🔥`,
+  checkinOk: m => `蓋章成功！歡迎來到「${m}」🎉`,
+  posted: ['謝謝你的分享，我看到了！', '好棒的故事 💚'],
+};
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const TIPS = [
+  '帶上自己的環保杯和餐具，在職人咖啡館可以少用一個紙杯喔！',
+  '走訪部落前，可以先預約在地導覽，才能真正聽到部落的故事。',
+  '搭乘集集支線小火車去車埕，是最慢也最美的南投旅行方式。',
+  '買伴手禮時選擇在地職人作品，錢會直接留在南投的土地上。',
+  '登山健行記得「無痕山林」：帶進去的東西，全部帶出來！',
+  '想不到要去哪？點右下角的我，或回首頁問 AI 嚮導也可以喔～',
+];
+
+function say(text, ms = 3600) {
+  const b = $('buddy-say'), img = $('buddy-img');
+  b.textContent = text; b.classList.add('show');
+  img.classList.remove('jump'); void img.offsetWidth; img.classList.add('jump');
+  $('side-bubble').textContent = text;
+  clearTimeout(say._t); say._t = setTimeout(() => b.classList.remove('show'), ms);
+}
+function pokeMascot() {
+  say(pick(LINES.poke));
+  const m = $('side-mascot'); m.classList.remove('jump'); void m.offsetWidth; m.classList.add('jump');
+}
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2400); }
+function floatXp(amount, anchor) {
+  if (!amount) return;
+  const r = (anchor || $('xp-chip')).getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'xp-float'; el.textContent = `+${amount} XP`;
+  el.style.left = (r.left + r.width / 2) + 'px'; el.style.top = (r.top - 4) + 'px';
+  document.body.appendChild(el); setTimeout(() => el.remove(), 1500);
+}
+
+// ═══════ 登入畫面 ═══════
+(function initLogin() {
+  const box = $('leaves'), icons = ['🍃', '🌿', '🍂', '🌱'];
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement('span');
+    s.className = 'leaf'; s.textContent = icons[i % 4];
+    s.style.left = Math.random() * 100 + '%';
+    s.style.animationDuration = (9 + Math.random() * 10) + 's';
+    s.style.animationDelay = (-Math.random() * 15) + 's';
+    s.style.fontSize = (14 + Math.random() * 16) + 'px';
+    box.appendChild(s);
   }
+  const lines = ['嗨！我是緣投 🌿<br>登入後我就能幫你記錄冒險囉！', '南投有 {{ total_merchants }} 間職人<br>你能全部蓋到章嗎？', '升到 Lv.5 我會寄證書給你喔 📜', '點我幹嘛啦～快登入 😆'];
+  let i = 0;
+  $('login-mascot').onclick = () => {
+    const m = $('login-mascot'); m.classList.remove('wiggle'); void m.offsetWidth; m.classList.add('wiggle');
+    i = (i + 1) % lines.length; $('login-bubble').innerHTML = lines[i];
+  };
+})();
+
+async function handleGoogleLogin(resp) {
+  $('login-bubble').innerHTML = '登入中…緣投正在幫你開門 🚪';
+  const d = await api('/api/game/login', { method: 'POST', body: { id_token: resp.credential } });
+  if (!d.ok) { $('login-bubble').innerHTML = '咦？登入失敗了：' + esc(d.error || '請再試一次'); return; }
+  enterApp(d.user, d.level_info, true);
+}
+async function logout() {
+  await api('/api/game/logout', { method: 'POST' });
+  if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
+  location.reload();
 }
 
-// ─── Tabs ────────────────────────────────────────
-function switchTab(tab, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'leaderboard') loadLeaderboard();
+// ═══════ App ═══════
+function enterApp(user, li, fresh) {
+  me = user; lvl = li;
+  $('view-login').style.display = 'none';
+  $('view-app').style.display = 'block';
+  toggleMenu(window.innerWidth >= 1000);
+  renderProfile();
+  loadCheckins();
+  const v = (location.hash || '#home').slice(1);
+  go(['home','checkin','quiz','feed','rank','cert'].includes(v) ? v : 'home', true);
+  setTimeout(() => say(fresh ? `歡迎你，${user.name || '探索者'}！一起出發吧 🌿` : `歡迎回來，${user.name || '探索者'}！`), 500);
 }
 
-// ─── Photo Upload ────────────────────────────────
-function previewPhoto(input) {
-  const file = input.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { alert('照片大小不能超過 5MB'); return; }
+function toggleMenu(force) {
+  const open = typeof force === 'boolean' ? force : !document.body.classList.contains('menu-open');
+  document.body.classList.toggle('menu-open', open);
+}
+
+function go(view, silent) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  $('v-' + view).classList.add('active');
+  document.querySelectorAll('.menu-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  history.replaceState(null, '', '#' + view);
+  if (window.innerWidth < 1000) toggleMenu(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (view === 'home') renderHome();
+  if (view === 'quiz' && !quiz) renderQuizStart();
+  if (view === 'feed') loadFeed();
+  if (view === 'rank') loadRank();
+  if (view === 'cert') renderCert();
+  if (!silent && LINES[view]) say(pick(LINES[view]));
+}
+document.querySelectorAll('.menu-item').forEach(b => b.onclick = () => go(b.dataset.view));
+
+function renderProfile() {
+  const avatar = me.avatar_url || MASCOT;
+  ['top-avatar', 'side-avatar', 'cp-avatar'].forEach(id => $(id).src = avatar);
+  $('side-name').textContent = me.name || '探索者';
+  $('side-title').textContent = `Lv.${lvl.level} ${lvl.title} ${lvl.emoji}`;
+  $('chip-lv').textContent = 'Lv.' + lvl.level;
+  $('chip-xp').textContent = lvl.xp.toLocaleString() + ' XP';
+  $('side-bar').style.width = levelPct() + '%';
+  $('badge-checkin').textContent = `${me.checkin_count || 0}/${TOTAL}`;
+}
+function levelPct() {
+  if (!lvl.next_xp) return 100;
+  return Math.min(100, (lvl.xp - lvl.current_min) / (lvl.next_xp - lvl.current_min) * 100);
+}
+
+function applyStats(stats, anchor, inc = {}) {
+  if (!stats) return;
+  const gained = stats.xp - lvl.xp;
+  lvl = stats; me.xp = stats.xp;
+  for (const k in inc) me[k] = (me[k] || 0) + inc[k];
+  renderProfile();
+  floatXp(gained, anchor);
+  const chip = $('xp-chip'); chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump');
+  if (stats.level_up) setTimeout(() => showLevelUp(stats), 700);
+  if ($('v-home').classList.contains('active')) renderHome();
+}
+
+// ═══════ 主頁 ═══════
+function renderHome() {
+  const hour = new Date().getHours();
+  const greet = hour < 11 ? '早安' : hour < 18 ? '午安' : '晚安';
+  $('hello-title').textContent = `${greet}，${me.name || '探索者'}！`;
+  $('hello-sub').innerHTML = `目前等級 <b>Lv.${lvl.level} ${esc(lvl.title)} ${lvl.emoji}</b>，累積 <b>${lvl.xp.toLocaleString()} XP</b>`;
+  $('hello-next').textContent = lvl.next_xp
+    ? `再 ${(lvl.next_xp - lvl.xp).toLocaleString()} XP 就能升到「${lvl.next_title}」`
+    : '🏆 你已經是最高等級的永續達人！';
+  $('ring-lv').textContent = lvl.level;
+  requestAnimationFrame(() => $('ring-fg').style.strokeDashoffset = 351.86 * (1 - levelPct() / 100));
+  countUp('st-checkin', me.checkin_count || 0);
+  countUp('st-quiz', me.quiz_correct || 0);
+  countUp('st-post', me.post_count || 0);
+  countUp('st-xp', lvl.xp);
+  const steps = [...document.querySelectorAll('.step')];
+  steps.forEach(s => {
+    const n = +s.dataset.lv;
+    s.classList.toggle('done', n < lvl.level);
+    s.classList.toggle('now', n === lvl.level);
+  });
+  const segs = steps.length - 1;
+  const partial = (lvl.level - 1 + (lvl.next_xp ? levelPct() / 100 : 0)) / segs;
+  requestAnimationFrame(() => $('road-fill').style.width = (84 * Math.min(1, partial)) + '%');
+  $('daily-tip').textContent = TIPS[new Date().getDate() % TIPS.length];
+}
+function countUp(id, target) {
+  const el = $(id), start = +el.dataset.v || 0, t0 = performance.now();
+  el.dataset.v = target;
+  (function step(t) {
+    const p = Math.min(1, (t - t0) / 800), e = 1 - Math.pow(1 - p, 3);
+    el.textContent = Math.round(start + (target - start) * e).toLocaleString();
+    if (p < 1) requestAnimationFrame(step);
+  })(t0);
+}
+
+// ═══════ 圖片 ═══════
+function pickImage(input, slot) {
+  const f = input.files[0]; input.value = '';
+  if (!f) return;
+  if (f.size > 10 * 1024 * 1024) return toast('照片太大了，請小於 10MB');
   const reader = new FileReader();
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const max = 1200;
-      let w = img.width, h = img.height;
-      if (w > max || h > max) {
-        if (w > h) { h = h * max / w; w = max; }
-        else { w = w * max / h; h = max; }
-      }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      photoData = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-      document.getElementById('photo-preview').src = e.target.result;
-      document.getElementById('upload-area').classList.add('has-image');
-      updateCheckinBtn();
+      const max = 1280, s = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = img.width * s; c.height = img.height * s;
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const url = c.toDataURL('image/jpeg', 0.85);
+      images[slot] = url.split(',')[1];
+      if (slot === 'ck') { $('ck-preview').src = url; $('ck-drop').classList.add('has'); refreshCheckinBtn(); }
+      else { shareUrl = null; $('cp-preview').src = url; $('cp-attach').style.display = 'block'; }
     };
     img.src = e.target.result;
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(f);
+}
+function clearAttach() { images.cp = null; shareUrl = null; $('cp-attach').style.display = 'none'; }
+
+// ═══════ 打卡 ═══════
+async function loadCheckins() {
+  const d = await api('/api/game/checkins');
+  checkins = Array.isArray(d) ? d : Object.values(d).filter(x => x && x.merchant_name);
+  renderCollection();
+}
+function renderCollection(newOne) {
+  const got = new Set(checkins.map(c => c.merchant_name));
+  $('col-count').textContent = `${got.size}/${TOTAL}`;
+  $('col-bar').style.width = (got.size / TOTAL * 100) + '%';
+  $('collection').innerHTML = MERCHANT_GROUPS.map(g => {
+    const n = g.merchants.filter(m => got.has(m)).length;
+    return `<div class="cat-block"><div class="cat-title" style="color:${g.color}">${g.emoji} ${esc(g.name)} <span class="muted">${n}/${g.merchants.length}</span></div>
+      <div class="stamps">${g.merchants.map(m => `<div class="stamp ${got.has(m) ? 'got' : ''} ${m === newOne ? 'new' : ''}" onclick="selectMerchant(this.dataset.m)" data-m="${esc(m)}">${esc(m)}</div>`).join('')}</div></div>`;
+  }).join('');
+}
+function selectMerchant(m) {
+  if (checkins.some(c => c.merchant_name === m)) return say(`「${m}」已經蓋過章囉！`);
+  $('ck-merchant').value = m; refreshCheckinBtn();
+  say(`要去「${m}」嗎？拍張照給我看！`);
+  $('ck-merchant').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function refreshCheckinBtn() { $('ck-btn').disabled = !($('ck-merchant').value && images.ck); }
+
+async function submitCheckin() {
+  const merchant = $('ck-merchant').value, btn = $('ck-btn'), res = $('ck-result');
+  btn.disabled = true; btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite">🌀</span> 緣投驗證中…';
+  res.className = 'result'; $('ck-drop').classList.add('scanning');
+  say('讓我仔細看看照片… 🔍', 6000);
+  const d = await api('/api/game/checkin', { method: 'POST', body: { merchant_name: merchant, image: images.ck } });
+  $('ck-drop').classList.remove('scanning');
+  btn.innerHTML = '✨ 請緣投驗證並蓋章';
+  if (!d.ok) {
+    res.className = 'result ng'; res.textContent = '❌ ' + (d.error || '打卡失敗，請再試一次');
+    say(pick(LINES.wrong)); refreshCheckinBtn(); return;
+  }
+  res.className = 'result ok';
+  res.innerHTML = `🎉 蓋章成功！<b>${esc(merchant)}</b> <span class="xp-tag">+${d.xp_earned} XP</span>
+    <div style="margin-top:10px"><button class="btn btn-gold" style="padding:9px 16px;font-size:13px" onclick="shareCheckin()">💬 分享到旅人動態</button></div>`;
+  shareUrl = d.photo_url; shareCheckin.merchant = merchant;
+  checkins.unshift({ merchant_name: merchant });
+  renderCollection(merchant);
+  applyStats(d.new_stats, btn, { checkin_count: 1 });
+  say(LINES.checkinOk(merchant));
+  images.ck = null; $('ck-drop').classList.remove('has'); $('ck-merchant').value = '';
+  refreshCheckinBtn();
+}
+function shareCheckin() {
+  go('feed', true);
+  images.cp = null;
+  if (shareUrl) { $('cp-preview').src = shareUrl; $('cp-attach').style.display = 'block'; }
+  $('cp-merchant').value = shareCheckin.merchant || '';
+  $('cp-text').value = `我在「${shareCheckin.merchant}」打卡啦！`;
+  $('cp-text').focus();
+  say('寫點心得吧，大家都想知道！');
 }
 
-function updateCheckinBtn() {
-  const ok = document.getElementById('merchant-select').value && photoData;
-  document.getElementById('checkin-btn').disabled = !ok;
+// ═══════ 問答 ═══════
+function renderQuizStart(prev) {
+  quiz = null; clearInterval(timerId);
+  $('quiz-box').innerHTML = `<div class="quiz-start">
+    <img src="${MASCOT}" alt="緣投">
+    <h2>${prev ? '再來一局？' : '緣投出題時間！'}</h2>
+    <p class="muted">南投的地理、歷史、職人與永續旅行，你懂多少？</p>
+    <div class="rules"><span>⏱️ 每題 20 秒</span><span>✅ 答對 +50</span><span>🔥 連擊每題 +10</span><span>💯 全對 +100</span><span>📚 答錯也有 +10</span></div>
+    <button class="btn btn-gold" onclick="startQuiz()">🎯 開始挑戰</button></div>`;
+}
+async function startQuiz() {
+  const d = await api('/api/game/quiz/start', { method: 'POST' });
+  if (!d.ok) return toast(d.error || '無法開始挑戰');
+  quiz = { sid: d.session_id, qs: d.questions, i: 0, marks: [], streak: 0 };
+  say(pick(LINES.quiz));
+  renderQuestion();
+}
+function renderQuestion() {
+  const q = quiz.qs[quiz.i];
+  $('quiz-box').innerHTML = `
+    <div class="q-top">
+      <b style="color:var(--green)">第 ${quiz.i + 1} / ${quiz.qs.length} 題</b>
+      <div class="q-dots">${quiz.qs.map((_, i) => `<i class="${quiz.marks[i] || (i === quiz.i ? 'cur' : '')}"></i>`).join('')}</div>
+      <div class="combo ${quiz.streak > 1 ? 'on' : ''}" id="combo">🔥 ${quiz.streak} 連擊</div>
+    </div>
+    <div class="timer"><i id="timer-bar"></i></div>
+    <div class="q-host"><img src="${MASCOT}" alt=""><div class="q">${esc(q.q)}</div></div>
+    <div class="opts">${q.options.map((o, i) => `<button class="opt" onclick="answer(${i})"><span class="k">${'ABCD'[i]}</span>${esc(o)}</button>`).join('')}</div>
+    <div class="fact" id="fact"></div>
+    <div id="next-wrap" style="margin-top:16px;text-align:right"></div>`;
+  const bar = $('timer-bar'), total = 20000, t0 = Date.now();
+  clearInterval(timerId);
+  timerId = setInterval(() => {
+    const p = Math.max(0, 1 - (Date.now() - t0) / total);
+    bar.style.transform = `scaleX(${p})`; bar.style.backgroundPosition = `${(1 - p) * 100}% 0`;
+    if (p <= 0) { clearInterval(timerId); answer(-1); }
+  }, 100);
+}
+async function answer(idx) {
+  clearInterval(timerId);
+  const btns = [...document.querySelectorAll('.opt')];
+  if (btns[0]?.disabled) return;
+  btns.forEach(b => b.disabled = true);
+  const d = await api('/api/game/quiz/answer', { method: 'POST', body: { session_id: quiz.sid, answer: idx } });
+  if (!d.ok) { toast(d.error); return renderQuizStart(); }
+  btns[d.correct_answer].classList.add('ok');
+  if (!d.correct && idx >= 0) btns[idx].classList.add('ng');
+  quiz.marks[quiz.i] = d.correct ? 'ok' : 'ng';
+  quiz.streak = d.streak;
+  const dots = document.querySelectorAll('.q-dots i'); dots[quiz.i].className = quiz.marks[quiz.i];
+  const combo = $('combo');
+  combo.textContent = `🔥 ${d.streak} 連擊`; combo.classList.toggle('on', d.streak > 1);
+  const f = $('fact');
+  f.innerHTML = `${d.correct ? '✅ 答對了！' : idx < 0 ? '⏰ 時間到！' : '❌ 可惜！'} <span class="xp-tag">+${d.xp_earned} XP</span><br>💡 ${esc(d.fact)}`;
+  f.classList.add('show');
+  say(d.correct ? (d.streak > 1 ? LINES.combo(d.streak) : pick(LINES.correct)) : pick(LINES.wrong));
+  applyStats(d.new_stats, btns[d.correct_answer], d.correct ? { quiz_correct: 1 } : {});
+  quiz.i++;
+  if (d.done) {
+    $('next-wrap').innerHTML = `<button class="btn btn-gold" onclick='showSummary(${JSON.stringify({ c: d.round_correct, xp: d.round_xp, perfect: d.perfect })})'>查看成績 →</button>`;
+  } else {
+    $('next-wrap').innerHTML = `<button class="btn btn-green" onclick="renderQuestion()">下一題 →</button>`;
+  }
+}
+function showSummary(r) {
+  const total = quiz.qs.length;
+  const msg = r.perfect ? '全對！你根本是南投百科 🏆' : r.c >= 4 ? '超厲害！差一點就全對了！' : r.c >= 2 ? '不錯喔！再挑戰一次會更好！' : '多玩幾局，你會越來越懂南投的！';
+  $('quiz-box').innerHTML = `<div class="summary">
+    <img src="${MASCOT}" alt="" style="width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto;animation:jump .8s var(--ease) 2">
+    <div class="stars">${Array.from({ length: total }, (_, i) => `<span style="animation-delay:${i * .12}s">${i < r.c ? '⭐' : '☆'}</span>`).join('')}</div>
+    <h2 style="color:var(--green)">${r.c} / ${total} 題答對</h2>
+    <p class="muted" style="margin:6px 0 14px">${msg}</p>
+    <div class="big">+${r.xp} XP</div>
+    ${r.perfect ? '<div class="xp-tag" style="margin-top:8px">💯 全對加碼 +100 XP 已包含</div>' : ''}
+    <div style="margin-top:22px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-gold" onclick="startQuiz()">🔁 再來一局</button>
+      <button class="btn btn-ghost" onclick="go('rank')">🏆 看排行榜</button>
+    </div></div>`;
+  say(msg, 5000);
+  quiz = { done: true };
 }
 
-// ─── Checkin Submit ──────────────────────────────
-function submitCheckin() {
-  const merchant = document.getElementById('merchant-select').value;
-  if (!merchant || !photoData || !currentUser) return;
-  const btn = document.getElementById('checkin-btn');
-  const okEl = document.getElementById('checkin-ok');
-  const errEl = document.getElementById('checkin-err');
-  btn.disabled = true; btn.textContent = 'AI 驗證中... ⏳';
-  okEl.style.display = errEl.style.display = 'none';
+// ═══════ 動態 ═══════
+async function loadFeed(more) {
+  if (!more) { feedCursor = null; $('feed-list').innerHTML = '<div class="skeleton" style="margin-top:16px;height:140px"></div><div class="skeleton" style="height:140px"></div>'; }
+  const d = await api('/api/game/posts' + (more && feedCursor ? `?before=${feedCursor}` : ''));
+  const posts = Array.isArray(d) ? d : Object.values(d).filter(p => p && p.id);
+  const html = posts.map(postHtml).join('');
+  if (more) $('feed-list').insertAdjacentHTML('beforeend', html);
+  else $('feed-list').innerHTML = html || `<div class="card empty" style="margin-top:16px"><img src="${MASCOT}" alt="">還沒有人發文，來當第一個吧！</div>`;
+  if (posts.length) feedCursor = posts[posts.length - 1].id;
+  $('feed-more').style.display = posts.length === 15 ? 'inline-flex' : 'none';
+}
+function postHtml(p) {
+  return `<article class="post" id="post-${p.id}">
+    <div class="post-head">
+      <img src="${esc(p.user_avatar || MASCOT)}" alt="" onerror="this.src='${MASCOT}'">
+      <div><div class="nm">${esc(p.user_name || '探索者')} <span class="lv-badge">Lv.${p.user_level || 1}</span></div><div class="meta">${timeAgo(p.created_at)}</div></div>
+      ${p.mine ? `<button class="post-del" onclick="deletePost(${p.id})">刪除</button>` : ''}
+    </div>
+    ${p.merchant_name ? `<span class="post-tag">📍 ${esc(p.merchant_name)}</span>` : ''}
+    <div class="post-body">${esc(p.content)}</div>
+    ${p.image_url ? `<img class="post-img" src="${esc(p.image_url)}" alt="" loading="lazy" onclick="openImg(this.src)">` : ''}
+    <div class="post-actions">
+      <button class="act ${p.liked ? 'liked' : ''}" id="like-${p.id}" onclick="toggleLike(${p.id})"><span class="h">${p.liked ? '❤️' : '🤍'}</span><span class="n">${p.likes || 0}</span></button>
+      <button class="act" onclick="toggleComments(${p.id})">💬 <span id="cc-${p.id}">${p.comment_count || 0}</span></button>
+    </div>
+    <div class="comments" id="cm-${p.id}"></div>
+  </article>`;
+}
+function openImg(src) { $('lightbox-img').src = src; $('lightbox').style.display = 'flex'; }
 
-  fetch('/api/game/checkin', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({google_id: currentUser.google_id, merchant_name: merchant, image: photoData})
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.error) {
-      errEl.textContent = '❌ ' + d.error;
-      errEl.style.display = 'block';
-      btn.textContent = '驗證並打卡 ✓'; btn.disabled = false;
-    } else {
-      okEl.innerHTML = `🎉 打卡成功！<strong>${merchant}</strong> 已記錄！ <span class="xp-badge">+${d.xp_earned} XP</span>`;
-      okEl.style.display = 'block';
-      btn.textContent = '✓ 打卡成功';
-      photoData = null;
-      document.getElementById('photo-preview').src = '';
-      document.getElementById('upload-area').classList.remove('has-image');
-      document.getElementById('merchant-select').value = '';
-      if (d.new_stats) { currentUser.xp = d.new_stats.xp; applyProfile(currentUser, d.new_stats); }
-      loadCheckinHistory();
-    }
-  })
-  .catch(() => {
-    errEl.textContent = '❌ 網路錯誤，請重試';
-    errEl.style.display = 'block';
-    btn.textContent = '驗證並打卡 ✓'; btn.disabled = false;
-  });
+async function submitPost() {
+  const content = $('cp-text').value.trim();
+  if (!content) return toast('寫點什麼吧！');
+  const btn = $('cp-btn'); btn.disabled = true; btn.textContent = '發佈中…';
+  const d = await api('/api/game/posts', { method: 'POST', body: {
+    content, merchant_name: $('cp-merchant').value, image: images.cp, image_url: images.cp ? null : shareUrl } });
+  btn.disabled = false; btn.textContent = '發佈';
+  if (!d.ok) return toast(d.error || '發佈失敗');
+  $('cp-text').value = ''; $('cp-merchant').value = ''; clearAttach();
+  const empty = $('feed-list').querySelector('.empty'); if (empty) empty.remove();
+  $('feed-list').insertAdjacentHTML('afterbegin', postHtml(d.post));
+  applyStats(d.new_stats, btn, { post_count: 1 });
+  say(pick(LINES.posted));
+  if (!d.xp_earned) toast('今天的發文 XP 已領滿，明天再來！');
+}
+async function deletePost(id) {
+  if (!confirm('確定要刪除這篇貼文嗎？')) return;
+  await api('/api/game/posts/' + id, { method: 'DELETE' });
+  const el = $('post-' + id); el.style.transition = '.3s'; el.style.opacity = 0; el.style.transform = 'scale(.96)';
+  setTimeout(() => el.remove(), 300);
+}
+async function toggleLike(id) {
+  const b = $('like-' + id), wasLiked = b.classList.contains('liked'), n = b.querySelector('.n'), h = b.querySelector('.h');
+  b.classList.toggle('liked', !wasLiked); h.textContent = wasLiked ? '🤍' : '❤️';
+  n.textContent = Math.max(0, +n.textContent + (wasLiked ? -1 : 1));
+  if (!wasLiked) { h.classList.remove('anim'); void h.offsetWidth; h.classList.add('anim'); }
+  const d = await api(`/api/game/posts/${id}/like`, { method: 'POST' });
+  if (d.ok) { b.classList.toggle('liked', d.liked); h.textContent = d.liked ? '❤️' : '🤍'; n.textContent = d.likes; }
+}
+async function toggleComments(id) {
+  const box = $('cm-' + id);
+  if (box.classList.toggle('open')) {
+    box.innerHTML = '<div class="muted" style="padding:6px 0">載入中…</div>';
+    const d = await api(`/api/game/posts/${id}/comments`);
+    const list = Array.isArray(d) ? d : Object.values(d).filter(c => c && c.id);
+    box.innerHTML = `<div id="cl-${id}">${list.map(cmtHtml).join('') || '<div class="muted" style="padding:6px 0">還沒有留言</div>'}</div>
+      <div class="cmt-input"><input type="text" id="ci-${id}" maxlength="200" placeholder="留個言吧…" onkeydown="if(event.key==='Enter')addComment(${id})"><button onclick="addComment(${id})">送出</button></div>`;
+  }
+}
+function cmtHtml(c) {
+  return `<div class="cmt"><img src="${esc(c.user_avatar || MASCOT)}" alt="" onerror="this.src='${MASCOT}'"><div class="b"><b>${esc(c.user_name || '探索者')}</b>${esc(c.content)}</div></div>`;
+}
+async function addComment(id) {
+  const inp = $('ci-' + id), content = inp.value.trim();
+  if (!content) return;
+  inp.value = '';
+  const d = await api(`/api/game/posts/${id}/comments`, { method: 'POST', body: { content } });
+  if (!d.ok) return toast(d.error || '留言失敗');
+  const list = $('cl-' + id); const muted = list.querySelector('.muted'); if (muted) muted.remove();
+  list.insertAdjacentHTML('beforeend', cmtHtml(d));
+  $('cc-' + id).textContent = +$('cc-' + id).textContent + 1;
 }
 
-// ─── Checkin History ─────────────────────────────
-function loadCheckinHistory() {
-  if (!currentUser) return;
-  fetch('/api/game/checkins/' + currentUser.google_id)
-    .then(r => r.json())
-    .then(data => {
-      const el = document.getElementById('checkin-history');
-      if (!data.length) {
-        el.innerHTML = '<p style="color:var(--muted);font-size:13px;text-align:center;padding:18px 0">尚未打卡，快去拜訪南投職人吧！🌿</p>';
-        return;
-      }
-      el.innerHTML = data.map(c => `
-        <div class="history-row">
-          <div>
-            <div style="font-weight:600;font-size:14px">📍 ${c.merchant_name}</div>
-            <div style="font-size:11px;color:var(--muted)">${new Date(c.created_at).toLocaleDateString('zh-TW', {year:'numeric',month:'long',day:'numeric'})}</div>
-          </div>
-          <span class="xp-badge">+${c.xp_earned} XP</span>
-        </div>`).join('');
+// ═══════ 排行榜 ═══════
+async function loadRank() {
+  $('rank-box').innerHTML = '<div class="skeleton"></div><div class="skeleton"></div>';
+  const d = await api('/api/game/leaderboard');
+  const rows = Array.isArray(d) ? d : Object.values(d).filter(r => r && r.name !== undefined);
+  if (!rows.length) { $('rank-box').innerHTML = `<div class="empty"><img src="${MASCOT}" alt="">還沒有人上榜，快去搶第一！</div>`; return; }
+  const pod = (u, cls, n) => u ? `<div class="pod ${cls}"><img src="${esc(u.avatar_url || MASCOT)}" alt="" onerror="this.src='${MASCOT}'"><div class="nm">${esc(u.name || '探索者')}</div><div class="x">${u.xp.toLocaleString()} XP</div><div class="block">${n}</div></div>` : '';
+  $('rank-box').innerHTML = `<div class="podium">${pod(rows[1], 'p2', 2)}${pod(rows[0], 'p1', '👑')}${pod(rows[2], 'p3', 3)}</div>
+    <div style="margin-top:14px">${rows.map((u, i) => `<div class="rank-row ${u.me ? 'me' : ''}" style="animation-delay:${i * .04}s">
+      <div class="r">${['🥇','🥈','🥉'][i] || i + 1}</div>
+      <img src="${esc(u.avatar_url || MASCOT)}" alt="" onerror="this.src='${MASCOT}'">
+      <div><div class="nm">${esc(u.name || '探索者')}${u.me ? ' （你）' : ''}</div><div class="sub">Lv.${u.level} ${esc(u.title)} ${u.emoji} · 走訪 ${u.checkin_count || 0} 家</div></div>
+      <div class="x">${u.xp.toLocaleString()}</div></div>`).join('')}</div>`;
+}
+
+// ═══════ 證書 ═══════
+function renderCert() {
+  if (lvl.level >= 5) {
+    $('cert-box').innerHTML = `<div class="card" style="margin-bottom:16px;display:flex;gap:14px;align-items:center">
+        <img src="${MASCOT}" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover">
+        <div><b style="color:var(--green)">恭喜你成為永續達人！</b><div class="muted">證書已寄到你的 Gmail，也可以在這裡隨時查看、截圖分享。</div></div>
+        <a class="btn btn-gold" style="margin-left:auto;padding:9px 14px;font-size:13px;text-decoration:none" href="/game/certificate/${encodeURIComponent(me.google_id)}" target="_blank">開新分頁</a></div>
+      <iframe class="cert-frame" src="/game/certificate/${encodeURIComponent(me.google_id)}" title="永續達人證書"></iframe>`;
+  } else {
+    const need = 4000 - lvl.xp;
+    $('cert-box').innerHTML = `<div class="card locked">
+      <div class="lock">🔒</div>
+      <h2 style="color:var(--green);margin-bottom:6px">證書還沒解鎖</h2>
+      <p class="muted">升到 <b>Lv.5 永續達人</b>（4,000 XP）就能解鎖，緣投會自動寄到你的 Gmail！</p>
+      <div class="progress-pill" style="max-width:360px;margin:18px auto 8px;height:12px"><i style="width:${Math.min(100, lvl.xp / 40)}%"></i></div>
+      <div class="muted">${lvl.xp.toLocaleString()} / 4,000 XP · 還差 <b style="color:var(--gold)">${need.toLocaleString()} XP</b></div>
+      <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-green" onclick="go('checkin')">📸 去打卡</button>
+        <button class="btn btn-gold" onclick="go('quiz')">🧠 去答題</button>
+      </div></div>`;
+  }
+}
+
+// ═══════ 升級動畫 ═══════
+const LEVEL_MSG = {
+  2: '你已經不只是過客了，開始真正認識南投！',
+  3: '在地人都要叫你一聲「內行的」！',
+  4: '職人們都記得你了，你是他們的知音 ⭐',
+  5: '你是真正的永續達人！證書已經寄到你的 Gmail 囉 📜',
+};
+function showLevelUp(s) {
+  $('lu-lv').textContent = 'Lv.' + s.level;
+  $('lu-title').textContent = `${s.title} ${s.emoji}`;
+  $('lu-msg').textContent = LEVEL_MSG[s.level] || '緣投替你開心得跳起來了！';
+  $('levelup').classList.add('show');
+  confetti();
+  say(`升級啦！你現在是「${s.title}」！`, 5000);
+}
+function closeLevelUp() { $('levelup').classList.remove('show'); if (lvl.level >= 5) go('cert', true); }
+function confetti() {
+  const c = $('confetti'), ctx = c.getContext('2d');
+  c.width = innerWidth; c.height = innerHeight;
+  const colors = ['#C8A96E', '#f0e0b0', '#2d4a35', '#a8d5b5', '#e8590c', '#fff'];
+  const ps = Array.from({ length: 160 }, () => ({
+    x: c.width / 2, y: c.height / 2, vx: (Math.random() - .5) * 16, vy: Math.random() * -16 - 4,
+    r: 4 + Math.random() * 6, rot: Math.random() * 6, vr: (Math.random() - .5) * .3, color: colors[Math.random() * colors.length | 0] }));
+  let frames = 0;
+  (function tick() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    ps.forEach(p => {
+      p.vy += .35; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.color;
+      ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); ctx.restore();
     });
+    if (++frames < 220 && $('levelup').classList.contains('show')) requestAnimationFrame(tick);
+    else ctx.clearRect(0, 0, c.width, c.height);
+  })();
 }
 
-// ─── Quiz ────────────────────────────────────────
-function loadQuiz() {
-  fetch('/api/game/quiz')
-    .then(r => r.json())
-    .then(quiz => {
-      const el = document.getElementById('quiz-content');
-      el.innerHTML = `
-        <div class="quiz-question">${quiz.question}</div>
-        <div class="quiz-opts">
-          ${quiz.options.map((opt, i) => `
-            <button class="quiz-opt" data-idx="${i}" onclick="answerQuiz(${i})">${opt}</button>
-          `).join('')}
-        </div>
-        <div class="quiz-result" id="quiz-result"></div>`;
-    });
-}
-
-function answerQuiz(idx) {
-  if (!currentUser) return;
-  document.querySelectorAll('.quiz-opt').forEach(b => b.disabled = true);
-  fetch('/api/game/quiz/answer', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({google_id: currentUser.google_id, answer: idx})
-  })
-  .then(r => r.json())
-  .then(d => {
-    const res = document.getElementById('quiz-result');
-    if (d.already_done) {
-      res.className = 'quiz-result done'; res.innerHTML = '📅 今日已作答，明天再來挑戰！'; res.style.display = 'block';
-      return;
-    }
-    document.querySelectorAll('.quiz-opt').forEach((b, i) => {
-      if (i === d.correct_answer) b.classList.add('correct');
-      else if (i === idx && !d.correct) b.classList.add('wrong');
-    });
-    if (d.correct) {
-      res.className = 'quiz-result ok';
-      res.innerHTML = `✅ 答對了！<span class="xp-badge">+${d.xp_earned} XP</span><br><small style="opacity:.85">${d.fact}</small>`;
-    } else {
-      res.className = 'quiz-result ng';
-      res.innerHTML = `❌ 答錯了，但仍獲得<span class="xp-badge">+${d.xp_earned} XP</span><br><small style="opacity:.85">💡 ${d.fact}</small>`;
-    }
-    res.style.display = 'block';
-    if (d.new_stats) { currentUser.xp = d.new_stats.xp; applyProfile(currentUser, d.new_stats); }
-  });
-}
-
-// ─── Leaderboard ─────────────────────────────────
-function loadLeaderboard() {
-  fetch('/api/game/leaderboard')
-    .then(r => r.json())
-    .then(data => {
-      const el = document.getElementById('lb-content');
-      if (!data.length) { el.innerHTML = '<p style="text-align:center;color:var(--muted);padding:24px">暫無記錄，快來登入搶頭名！</p>'; return; }
-      const medals = ['🥇','🥈','🥉'];
-      const rankClass = ['g1','g2','g3'];
-      el.innerHTML = data.map((u, i) => `
-        <div class="lb-row">
-          <div class="lb-rank ${rankClass[i]||''}">${medals[i] || (i+1)}</div>
-          <img src="${u.avatar_url||'/static/images/mascot.jpg'}" alt="" class="lb-avatar" onerror="this.src='/static/images/mascot.jpg'">
-          <div class="lb-info">
-            <div class="lb-name">${u.name || '匿名探索者'}</div>
-            <div class="lb-sub">${u.title||'旅人'} · 打卡 ${u.checkin_count||0} 個商家</div>
-          </div>
-          <div class="lb-xp">${u.xp} XP</div>
-        </div>`).join('');
-    });
-}
+// ═══════ 啟動：檢查既有登入 ═══════
+(async () => {
+  const d = await api('/api/game/me');
+  if (d.user) enterApp(d.user, d.level_info, false);
+})();
 </script>
 </body>
 </html>
