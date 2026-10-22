@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Supabase 並推播 LINE 通知給商家。商家確認或婉拒後，系統自動寄 email 通知旅客。商家可透過 LINE Bot 登錄活動、上傳活動照片，照片自動顯示在網站輪播。吉祥物「緣投」圓形頭像用於 nav logo、FAB 按鈕、聊天視窗標頭（圖檔：`static/images/mascot.jpg`）。
 
+另有兩個子系統：
+- **緣投探索者遊戲**（`/game`）：Google 登入，打卡（AI 驗人臉）、問答大挑戰、旅人動態、排行榜、升到最高等級寄永續達人證書
+- **管理後台**（`/admin`）：Google 登入 + email 白名單，營運與遊戲數據儀表板，以及預約、LINE 綁定、首頁輪播、公告、遊戲設定、題庫、動態、玩家、限時活動的編輯
+
 ## 雲端部署架構
 
 | 服務 | 平台 | URL |
@@ -23,9 +27,12 @@ cd "C:\Users\user\Desktop\dj\黑客松"
 python app.py
 ```
 
-- Flask：`http://127.0.0.1:5001`（debug 模式，存檔自動重載）
+- Flask：`http://127.0.0.1:5001`（`debug=False`，**模板有快取，改了 `templates/` 或 `.py` 都要重啟伺服器**才看得到）
 - n8n.cloud 常駐，不需本機啟動
 - Supabase 常駐，不需本機啟動
+- 本機 `.env` 預設只有 `GEMINI_API_KEY`：沒有 `SUPABASE_KEY` 時，遊戲、後台、輪播讀不到資料（API 回空陣列，不會報錯）；要用真實資料請在 `.env` 補上 `SUPABASE_KEY`
+- 本機要測 Google 登入，需要 `GOOGLE_CLIENT_ID`，且 Google Cloud Console 的 Authorized JavaScript origins 要加 `http://localhost:5001`
+- 後台登入還需要 `ADMIN_EMAILS`
 
 ## 環境設定
 
@@ -46,6 +53,19 @@ Render 環境變數（在 Render dashboard 設定）：
 - `N8N_API_KEY`（後台讀取 n8n 工作流狀態，選填）
 
 ## 架構
+
+### 檔案結構
+
+| 檔案 | 用途 |
+|------|------|
+| `app.py` | Flask 主程式：首頁、AI 嚮導 `/api/chat`、預約工具、行程分享、評價頁；最後註冊 `game_bp`、`admin_bp` |
+| `game.py` | 遊戲 Blueprint：`/game`、`/api/game/*`；也提供共用工具（Supabase 讀寫 `sb_*`、`settings()`、`site_settings()`、`send_email()`、`upload_image()`） |
+| `admin.py` | 後台 Blueprint：`/admin`、`/admin/api/*`（統計、編輯、稽核） |
+| `game_quiz.py` | 內建 40 題問答 |
+| `merchants_data.py` | 46 家商家的正式名錄（名稱、地址、電話、介紹、標籤、9 大類別），分類頁、遊戲、後台都以它為準 |
+| `static/js/locations.js` | 46 家商家的地圖座標（首頁地圖與後台地圖共用） |
+| `templates/index.html` / `category.html` / `game.html` / `admin.html` | 首頁、分類頁、遊戲頁、後台 |
+| `n8n_*.json` | n8n 工作流匯出檔（含 token，不進 git） |
 
 ### 資料流
 
@@ -74,15 +94,24 @@ Render 環境變數（在 Render dashboard 設定）：
                                          → Gmail OAuth2 寄信給旅客
                              → 陌生訊息：回覆介紹文案
 
+遊戲玩家
+  → GET /game → Google 登入 → /api/game/*（打卡、問答、動態、檢舉、排行、限時活動）→ Supabase game_* 表
+     打卡照片 → Gemini Vision 驗人臉；貼文與留言 → 禁用詞 + Gemini 內容審核
+     升到最高等級 → POST n8n.cloud/webhook/nantou-certificate → Gmail 寄證書
+
 管理後台
   → GET /admin → Google 登入（ADMIN_EMAILS / MODERATOR_EMAILS）→ 從 Supabase 統計預約、商家、遊戲資料 + n8n API 狀態
+     編輯操作 → 寫入對應的 Supabase 表 + admin_audit_log
 ```
 
 ### `app.py` 關鍵細節
 
 - **資料來源**：啟動時從 `南投深度游資源 (1).docx` 以 zipfile 解 XML 取純文字，存入 `MERCHANT_DATA`
 - **隨機推薦**：`search_local_merchants` 每次呼叫用 `re.split` 切段後 `random.shuffle`，避免 AI 永遠推薦相同商家
-- **Agent 循環**：`/api/chat` 內 `while True` 跑 `generate_content` → 有 `function_call` 就執行並回送結果 → 無 `function_call` 才 return 文字
+- **Agent 循環**：`/api/chat` 只做速率限制與記錄，實際對話在 `run_chat(user_message, history, lang, state)`：`while True` 跑 `generate_content` → 有 `function_call` 就執行並回送結果 → 無 `function_call` 才回傳文字；回傳 `(回覆, 是否錯誤)`，`state` 記下呼叫過的工具與是否完成預約
+- **使用紀錄**：每次回覆後背景寫入 `chat_logs`（`session_id`、語言、`chat_category()` 解析出的類別、工具、是否預約、耗時），**不存對話內容**
+- **AI 補充指示**：`run_chat()` 會把後台設定的 `site_settings()["ai_extra"]` 接在系統指示最後
+- **首頁公告**：`index()` 把後台設定的公告（開啟且有內容時）以 `announcement` 傳給模板
 - **容錯**：`candidate.parts` 可能為 `None`（Gemini 偶發），已加 guard；503 自動指數退避重試，fallback 到 `gemini-2.0-flash`
 - **對話記憶**：前端維護 `conversationHistory[]`，每次請求帶 `history` 陣列（最多 20 輪），後端 rebuild `contents`
 - **速率限制**：`check_rate(ip, limit=20, window=60)`，超過 20 req/min 回傳 429
@@ -102,12 +131,17 @@ Render 環境變數（在 Render dashboard 設定）：
 - **手機優化**：hamburger 選單、聊天視窗全螢幕（88vh）、各 breakpoint（900px / 768px / 480px）響應式
 - **聊天 UI**：開啟時顯示 6 個類別 inline chip（`pickCategory()` 送出並消失）；AI 回覆中的 `[選項: A | B | C]` 解析為 `.opt-chip` 按鈕（`selectOpt()` 點擊後消失並送出）
 - **語言切換**：繁中 / EN / 日本語，切換後通知 AI 改換語言回覆
+- **聊天 session**：每次開頁產生 `chatSessionId`，隨 `/api/chat` 送出，用於後台 AI 嚮導分析
+- **遊戲入口**：導覽列流光按鈕 `.glow-btn.nav-game`（手機顯示「玩遊戲」）、CTA 前的滿版 `.game-banner`；文字裡的 XP、等級數字來自 `game_cfg`，不要寫死
+- **公告列**：`announcement` 存在時顯示浮動 `.site-ann`，訪客關閉後以 sessionStorage 記住（公告文字改變會重新顯示）
+- **頁尾**：「🔒 管理員登入」連到 `/admin`
 - **活動輪播**（`#ad-carousel`）：
   - `_loadAds()` 在 DOMContentLoaded 呼叫 `GET /api/events`
   - `_buildSlide()` 判斷 `ev.image_url`：有圖則顯示全版照片 + 半透明漸層文字列；無圖則顯示色塊卡片
   - 不足 3 張時補 placeholder 卡片（待推廣廣告位）
 - **Leaflet 互動地圖**（`#map` section）：
   - CDN：`cdnjs.cloudflare.com/leaflet/1.9.4`（CSS + JS）
+  - 商家座標陣列 `LOCATIONS` 在 `static/js/locations.js`（後台地圖也用同一份）
   - 底圖：OpenStreetMap（免 API key）
   - **46 個商家 markers**，9 大類別色碼：
     - ☕ 咖啡職人 `#4A5D4E`、🍃 茶&酒莊 `#2D6A4F`、🎨 工藝手作 `#D85A30`
@@ -211,14 +245,18 @@ Render 環境變數（在 Render dashboard 設定）：
 **game_reports** / **game_events** / **xp_adjustments**（RLS disabled）：檢舉、限時活動、XP 手動調整紀錄；`game_users.muted` 為暫停發言
 
 **Supabase Storage**：
-- bucket `event-image`（public）：商家透過 LINE Bot 上傳的活動照片
+- bucket `event-image`（public）：根目錄是商家透過 LINE Bot 上傳的活動照片；`checkins/` 打卡照片、`posts/` 貼文照片、`carousel/` 後台上傳的輪播照片
 
 ## 安全性注意事項
 
 - `.env` 不進 git（含 `GEMINI_API_KEY`）
 - `n8n_*.json` 含 LINE Channel Access Token，已加入 `.gitignore`
 - 速率限制保護 `/api/chat`（20 req/min per IP）
-- `/admin` 管理後台以 Google 登入 + email 白名單保護（舊的 `/merchant` 共用密碼後台已移除）
+- `/admin` 管理後台以 Google 登入 + email 白名單保護（舊的 `/merchant` 共用密碼後台已移除）；所有修改寫入 `admin_audit_log`
+- 遊戲與後台 API 一律從 Flask session 取得身分，不信任前端傳來的使用者 ID
+- 使用者產生的內容（貼文、留言、公告、通知信）在前端用 `esc()`、在 Jinja 用自動轉義、在 Python 用 `html.escape` 處理；公告連結只接受 `https://` 或 `/` 開頭
+- `chat_logs` 不存對話內容；內容審核員看不到玩家 Email
+- `FLASK_SECRET_KEY`、`N8N_API_KEY` 只放 Render 環境變數，不進程式碼
 
 ## 資料庫商家清單（46 筆）
 
