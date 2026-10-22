@@ -4,6 +4,7 @@ import json
 import uuid
 import zipfile
 import re
+import threading
 import time
 import random
 import traceback
@@ -570,10 +571,39 @@ def chat():
     if not check_rate(ip):
         return jsonify({"reply": "請求過於頻繁，請稍後再試 🙏"}), 429
 
-    user_message = request.json.get('message', '')
-    history = request.json.get('history', [])
-    lang = request.json.get('lang', 'zh-TW')
+    data = request.json or {}
+    user_message = data.get('message', '')
+    lang = data.get('lang', 'zh-TW')
+    t0 = time.time()
+    state = {"tools": [], "booked": False}
+    reply, error = run_chat(user_message, data.get('history', []), lang, state)
+    threading.Thread(target=log_chat, daemon=True, args=({
+        "session_id": re.sub(r"[^A-Za-z0-9-]", "", str(data.get('session_id') or ""))[:64] or None,
+        "lang": lang, "category": chat_category(user_message), "tools": state["tools"],
+        "booked": state["booked"], "error": error, "ms": int((time.time() - t0) * 1000)},)).start()
+    return jsonify({"reply": reply})
 
+def chat_category(msg):
+    """只記錄旅客點了哪個類別按鈕，不記錄對話內容"""
+    if msg.startswith("【分類探索】"):
+        rest = msg[len("【分類探索】"):]
+        m = re.search(r"「(.+?)」", rest)
+        label = re.sub(r"^[^\w]+", "", (m.group(1) if m else rest).strip())
+        return label[:20] or "分類探索"
+    if "規劃" in msg and "行程" in msg:
+        return "行程規劃"
+    return None
+
+def log_chat(row):
+    try:
+        requests.post(f"{SUPABASE_URL}/rest/v1/chat_logs", json=row,
+                      headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+                               "Content-Type": "application/json"}, timeout=5)
+    except Exception as e:
+        print(f"⚠️ chat log failed: {e}")
+
+def run_chat(user_message, history, lang, state):
+    """回傳 (回覆文字, 是否發生錯誤)；state 會記下呼叫過的工具"""
     lang_note = {
         'en': "\n[LANGUAGE OVERRIDE]: Respond entirely in English for this conversation.",
         'ja': "\n[LANGUAGE OVERRIDE]: この会話はすべて日本語でお答えください。",
@@ -602,14 +632,16 @@ def chat():
                     function_calls = [p.function_call for p in parts if p.function_call]
 
                     if not function_calls:
-                        reply_text = response.text if response.text else "抱歉，我無法生成回應，請再試一次。"
-                        return jsonify({"reply": reply_text})
+                        return (response.text or "抱歉，我無法生成回應，請再試一次。"), False
 
                     tool_results = []
                     for fc in function_calls:
                         func = TOOL_MAP.get(fc.name)
                         result = func(**dict(fc.args)) if func else f"找不到工具：{fc.name}"
                         print(f"🔧 工具呼叫 [{fc.name}]：{dict(fc.args)}")
+                        state["tools"].append(fc.name)
+                        if fc.name == "book_experience" and not str(result).startswith("❌"):
+                            state["booked"] = True
                         tool_results.append(types.Part(function_response=types.FunctionResponse(
                             name=fc.name, response={"result": result}
                         )))
@@ -626,10 +658,10 @@ def chat():
                     continue
                 traceback.print_exc()
                 print(f"❌ 錯誤：{e}")
-                return jsonify({"reply": f"系統發生錯誤：{str(e)[:200]}"})
+                return f"系統發生錯誤：{str(e)[:200]}", True
             break
 
-    return jsonify({"reply": "目前 AI 服務需求量很大，請稍等片刻再試一次 🙏"})
+    return "目前 AI 服務需求量很大，請稍等片刻再試一次 🙏", True
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5001))

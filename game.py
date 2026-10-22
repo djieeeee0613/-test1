@@ -34,31 +34,47 @@ def _gemini_client():
         _gemini = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
     return _gemini
 
-# ───────── 等級與 XP ─────────
-LEVELS = [
-    (0,   1, "旅人",     "🧳"),
-    (300, 2, "探索者",   "🗺️"),
-    (900, 3, "永續達人", "🏆"),
-]
-MAX_LEVEL = LEVELS[-1][1]
-MAX_LEVEL_XP = LEVELS[-1][0]
-
-XP_CHECKIN = 240
-XP_QUIZ_CORRECT = 150
-XP_QUIZ_WRONG = 30
-XP_QUIZ_COMBO = 30        # 連續答對，每多一題 +30
-XP_QUIZ_PERFECT = 300     # 一局全對
-XP_POST = 60
-POST_XP_DAILY_LIMIT = 3
-QUIZ_ROUND_SIZE = 10
-QUIZ_SECONDS = 20
-
-GAME_CFG = {
-    "max_level": MAX_LEVEL, "max_level_xp": MAX_LEVEL_XP, "max_title": LEVELS[-1][2],
-    "xp_checkin": XP_CHECKIN, "xp_quiz_correct": XP_QUIZ_CORRECT, "xp_quiz_wrong": XP_QUIZ_WRONG,
-    "xp_quiz_combo": XP_QUIZ_COMBO, "xp_quiz_perfect": XP_QUIZ_PERFECT, "xp_post": XP_POST,
-    "post_daily_limit": POST_XP_DAILY_LIMIT, "quiz_round_size": QUIZ_ROUND_SIZE, "quiz_seconds": QUIZ_SECONDS,
+# ───────── 等級與 XP（後台可改，存在 game_settings 表）─────────
+DEFAULT_SETTINGS = {
+    "levels": [{"xp": 0, "title": "旅人", "emoji": "🧳"},
+               {"xp": 300, "title": "探索者", "emoji": "🗺️"},
+               {"xp": 900, "title": "永續達人", "emoji": "🏆"}],
+    "xp_checkin": 240,
+    "xp_quiz_correct": 150,
+    "xp_quiz_wrong": 30,
+    "xp_quiz_combo": 30,       # 連續答對，每多一題 +N
+    "xp_quiz_perfect": 300,    # 一局全對
+    "xp_post": 60,
+    "post_daily_limit": 3,
+    "quiz_round_size": 10,
+    "quiz_seconds": 20,
 }
+SETTINGS_TTL = 60
+_settings_cache = {"at": 0, "value": None}
+
+def settings():
+    if _settings_cache["value"] and time.time() - _settings_cache["at"] < SETTINGS_TTL:
+        return _settings_cache["value"]
+    stored = {}
+    try:
+        rows = sb_get("game_settings", {"key": "eq.game", "select": "value"})
+        stored = rows[0]["value"] if rows else {}
+    except Exception as e:
+        print(f"⚠️ 讀取遊戲設定失敗，改用預設值：{e}")
+    _settings_cache.update(at=time.time(), value={**DEFAULT_SETTINGS, **stored})
+    return _settings_cache["value"]
+
+def invalidate_settings():
+    _settings_cache["at"] = 0
+
+def levels(s=None):
+    return [(l["xp"], i + 1, l["title"], l["emoji"]) for i, l in enumerate((s or settings())["levels"])]
+
+def public_cfg(s=None):
+    s = s or settings()
+    top = levels(s)[-1]
+    return {**{k: v for k, v in s.items() if k != "levels"},
+            "max_level": top[1], "max_level_xp": top[0], "max_title": top[2]}
 
 MERCHANT_GROUPS = [
     {"slug": s, "name": CATEGORIES[s]['name'], "emoji": CATEGORIES[s]['emoji'],
@@ -69,17 +85,42 @@ ALL_MERCHANTS = {m for g in MERCHANT_GROUPS for m in g['merchants']}
 
 @game_bp.app_context_processor
 def _inject_game_cfg():
-    return {"game_cfg": GAME_CFG}
+    return {"game_cfg": public_cfg()}
 
-def level_info(xp):
-    cur = LEVELS[0]
-    for t in LEVELS:
+def level_info(xp, s=None):
+    lv = levels(s)
+    cur = lv[0]
+    for t in lv:
         if xp >= t[0]:
             cur = t
-    nxt = next((t for t in LEVELS if xp < t[0]), None)
+    nxt = next((t for t in lv if xp < t[0]), None)
     return {"xp": xp, "level": cur[1], "title": cur[2], "emoji": cur[3],
             "current_min": cur[0], "next_xp": nxt[0] if nxt else None,
-            "next_title": nxt[2] if nxt else None}
+            "next_title": nxt[2] if nxt else None, "max_level": lv[-1][1]}
+
+# ───────── 題庫（後台可改，存在 game_questions 表；表是空的就用內建題目）─────────
+_questions_cache = {"at": 0, "value": None}
+
+def question_bank():
+    if _questions_cache["value"] is not None and time.time() - _questions_cache["at"] < SETTINGS_TTL:
+        return _questions_cache["value"]
+    try:
+        rows = sb_get("game_questions", {"enabled": "is.true", "select": "id,question,options,answer,fact"})
+        if rows:
+            bank = [{"id": r["id"], "q": r["question"], "options": r["options"],
+                     "answer": r["answer"], "fact": r.get("fact") or ""} for r in rows]
+        elif sb_get("game_questions", {"select": "id", "limit": "1"}):
+            bank = []
+        else:
+            bank = [{"id": None, **q} for q in QUIZ_QUESTIONS]
+    except Exception as e:
+        print(f"⚠️ 讀取題庫失敗，改用內建題目：{e}")
+        bank = [{"id": None, **q} for q in QUIZ_QUESTIONS]
+    _questions_cache.update(at=time.time(), value=bank)
+    return bank
+
+def invalidate_questions():
+    _questions_cache["at"] = 0
 
 # ───────── Supabase ─────────
 def _h(extra=None):
@@ -135,7 +176,7 @@ def award_xp(gid, delta, inc=None):
     for col, n in (inc or {}).items():
         patch[col] = (user.get(col) or 0) + n
 
-    if new["level"] == MAX_LEVEL and not user.get("certificate_sent"):
+    if new["level"] == new["max_level"] and not user.get("certificate_sent"):
         patch["certificate_sent"] = True
         threading.Thread(target=send_certificate,
                          args=(user.get("email"), user.get("name"), new_xp,
@@ -178,7 +219,7 @@ def certificate_html(name, xp, checkins, date_str):
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f7f5f0;border-radius:14px;"><tr>
     <td align="center" style="padding:18px 6px;"><div style="font-size:26px;font-weight:900;color:#C8A96E;">{xp:,}</div><div style="font-size:11px;color:#999;">累積 XP</div></td>
     <td align="center" style="padding:18px 6px;"><div style="font-size:26px;font-weight:900;color:#2d4a35;">{checkins}</div><div style="font-size:11px;color:#999;">走訪職人</div></td>
-    <td align="center" style="padding:18px 6px;"><div style="font-size:26px;font-weight:900;color:#2d4a35;">Lv.{MAX_LEVEL}</div><div style="font-size:11px;color:#999;">最高等級</div></td>
+    <td align="center" style="padding:18px 6px;"><div style="font-size:26px;font-weight:900;color:#2d4a35;">Lv.{levels()[-1][1]}</div><div style="font-size:11px;color:#999;">最高等級</div></td>
   </tr></table>
 </td></tr>
 <tr><td style="padding:0 40px 8px;">
@@ -259,14 +300,18 @@ def _unauth(_):
 # ───────── 頁面 ─────────
 @game_bp.route('/game')
 def game_page():
+    s = settings()
     return render_template('game.html', google_client_id=GOOGLE_CLIENT_ID,
-                           merchant_groups=MERCHANT_GROUPS, levels=LEVELS,
-                           total_merchants=len(ALL_MERCHANTS), cfg=GAME_CFG)
+                           merchant_groups=MERCHANT_GROUPS, levels=levels(s),
+                           total_merchants=len(ALL_MERCHANTS), cfg=public_cfg(s))
 
 @game_bp.route('/game/certificate/<gid>')
 def certificate_page(gid):
     user = get_user(gid)
-    if not user or level_info(user.get("xp") or 0)["level"] < MAX_LEVEL:
+    if not user:
+        abort(404)
+    li = level_info(user.get("xp") or 0)
+    if li["level"] < li["max_level"]:
         abort(404)
     return certificate_html(user.get("name"), user.get("xp") or 0, user.get("checkin_count") or 0,
                             datetime.now(TW).strftime('%Y 年 %m 月 %d 日'))
@@ -323,11 +368,12 @@ def checkin():
     if not photo_has_person(image):
         return jsonify({"error": "緣投在照片裡沒看到你耶！請拍一張有你本人入鏡的照片 📸"}), 400
 
+    xp = settings()["xp_checkin"]
     photo_url = upload_image(image, "checkins", gid)
     sb_insert("checkins", {"google_id": gid, "merchant_name": merchant,
-                           "xp_earned": XP_CHECKIN, "photo_url": photo_url})
-    stats = award_xp(gid, XP_CHECKIN, {"checkin_count": 1})
-    return jsonify({"xp_earned": XP_CHECKIN, "photo_url": photo_url, "new_stats": stats})
+                           "xp_earned": xp, "photo_url": photo_url})
+    stats = award_xp(gid, xp, {"checkin_count": 1})
+    return jsonify({"xp_earned": xp, "photo_url": photo_url, "new_stats": stats})
 
 # ───────── 問答大挑戰 ─────────
 QUIZ_SESSIONS = {}
@@ -338,12 +384,24 @@ def quiz_start():
     now = time.time()
     for k in [k for k, v in QUIZ_SESSIONS.items() if v["expires"] < now]:
         QUIZ_SESSIONS.pop(k, None)
+    bank = question_bank()
+    if not bank:
+        return jsonify({"error": "題庫目前沒有啟用的題目，請稍後再來"}), 503
+    s = settings()
+    qs = random.sample(bank, min(s["quiz_round_size"], len(bank)))
     sid = uuid.uuid4().hex
-    qs = random.sample(QUIZ_QUESTIONS, QUIZ_ROUND_SIZE)
-    QUIZ_SESSIONS[sid] = {"gid": gid, "qs": qs, "idx": 0, "streak": 0,
-                          "correct": 0, "xp": 0, "expires": now + 900}
-    return jsonify({"session_id": sid, "total": QUIZ_ROUND_SIZE,
+    QUIZ_SESSIONS[sid] = {"gid": gid, "qs": qs, "idx": 0, "streak": 0, "correct": 0, "xp": 0,
+                          "expires": now + 900, "cfg": {k: s[k] for k in s if k.startswith("xp_quiz")}}
+    return jsonify({"session_id": sid, "total": len(qs), "seconds": s["quiz_seconds"],
                     "questions": [{"q": q["q"], "options": q["options"]} for q in qs]})
+
+def _log_answer(question_id, gid, chosen, correct):
+    try:
+        requests.post(f"{SUPABASE_URL}/rest/v1/quiz_answers",
+                      json={"question_id": question_id, "google_id": gid, "chosen": chosen, "correct": correct},
+                      headers=_h(), timeout=5)
+    except Exception as e:
+        print(f"⚠️ 作答紀錄失敗：{e}")
 
 @game_bp.route('/api/game/quiz/answer', methods=['POST'])
 def quiz_answer():
@@ -353,20 +411,24 @@ def quiz_answer():
     if not s or s["gid"] != gid or s["idx"] >= len(s["qs"]):
         return jsonify({"error": "這局挑戰已結束，請重新開始"}), 400
 
-    q = s["qs"][s["idx"]]
-    correct = data.get("answer") == q["answer"]
+    q, cfg = s["qs"][s["idx"]], s["cfg"]
+    chosen = data.get("answer")
+    correct = chosen == q["answer"]
+    if q.get("id"):
+        threading.Thread(target=_log_answer, args=(q["id"], gid, chosen if isinstance(chosen, int) else -1, correct),
+                         daemon=True).start()
     if correct:
         s["streak"] += 1
         s["correct"] += 1
-        xp = XP_QUIZ_CORRECT + XP_QUIZ_COMBO * (s["streak"] - 1)
+        xp = cfg["xp_quiz_correct"] + cfg["xp_quiz_combo"] * (s["streak"] - 1)
     else:
         s["streak"] = 0
-        xp = XP_QUIZ_WRONG
+        xp = cfg["xp_quiz_wrong"]
     s["idx"] += 1
     done = s["idx"] >= len(s["qs"])
     perfect = done and s["correct"] == len(s["qs"])
     if perfect:
-        xp += XP_QUIZ_PERFECT
+        xp += cfg["xp_quiz_perfect"]
     s["xp"] += xp
 
     inc = {"quiz_correct": 1} if correct else {}
@@ -381,11 +443,14 @@ def quiz_answer():
 # ───────── 旅人動態 ─────────
 @game_bp.route('/api/game/posts')
 def list_posts():
-    params = {"select": "*", "order": "id.desc", "limit": "15"}
+    params = {"select": "*", "order": "id.desc", "limit": "15", "hidden": "not.is.true", "pinned": "not.is.true"}
     before = request.args.get("before", type=int)
     if before:
         params["id"] = f"lt.{before}"
     posts = sb_get("game_posts", params)
+    if not before:
+        pinned = sb_get("game_posts", {"select": "*", "order": "id.desc", "hidden": "not.is.true", "pinned": "is.true"})
+        posts = pinned + posts
     gid = session.get("gid")
     if gid and posts:
         ids = ",".join(str(p["id"]) for p in posts)
@@ -426,7 +491,8 @@ def create_post():
 
     today = datetime.now(TW).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     posted_today = sb_get("game_posts", {"google_id": f"eq.{gid}", "created_at": f"gte.{today}", "select": "id"})
-    xp = XP_POST if len(posted_today) <= POST_XP_DAILY_LIMIT else 0
+    s = settings()
+    xp = s["xp_post"] if len(posted_today) <= s["post_daily_limit"] else 0
     stats = award_xp(gid, xp, {"post_count": 1})
     post.pop("google_id", None)
     post.update({"liked": False, "mine": True})
@@ -435,8 +501,15 @@ def create_post():
 @game_bp.route('/api/game/posts/<int:pid>', methods=['DELETE'])
 def delete_post(pid):
     gid = current_gid()
-    sb_delete("game_posts", {"id": f"eq.{pid}", "google_id": f"eq.{gid}"})
+    if not sb_get("game_posts", {"id": f"eq.{pid}", "google_id": f"eq.{gid}", "select": "id"}):
+        return jsonify({"error": "找不到這篇貼文"}), 404
+    delete_post_cascade(pid)
     return jsonify({"ok": True})
+
+def delete_post_cascade(pid):
+    sb_delete("game_comments", {"post_id": f"eq.{pid}"})
+    sb_delete("game_likes", {"post_id": f"eq.{pid}"})
+    sb_delete("game_posts", {"id": f"eq.{pid}"})
 
 @game_bp.route('/api/game/posts/<int:pid>/like', methods=['POST'])
 def toggle_like(pid):
@@ -460,7 +533,7 @@ def toggle_like(pid):
 @game_bp.route('/api/game/posts/<int:pid>/comments')
 def list_comments(pid):
     rows = sb_get("game_comments", {"post_id": f"eq.{pid}", "select": "id,user_name,user_avatar,content,created_at",
-                                    "order": "id.asc", "limit": "50"})
+                                    "hidden": "not.is.true", "order": "id.asc", "limit": "50"})
     return jsonify(rows)
 
 @game_bp.route('/api/game/posts/<int:pid>/comments', methods=['POST'])

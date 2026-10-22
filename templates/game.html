@@ -276,6 +276,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 .post-head .nm { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px; }
 .lv-badge { font-size: 10px; background: var(--green); color: var(--gold-light); padding: 1px 7px; border-radius: 8px; font-weight: 700; }
 .post-head .meta { font-size: 12px; color: var(--muted); }
+.pin-badge { font-size: 11px; background: var(--gold-soft); color: #8a6a2a; padding: 1px 8px; border-radius: 8px; font-weight: 700; }
 .post-del { margin-left: auto; color: var(--muted); font-size: 13px; padding: 6px 8px; border-radius: 8px; }
 .post-del:hover { background: var(--bg); }
 .post-tag { display: inline-block; margin: 0 18px 8px; background: var(--green-soft); color: var(--green); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 10px; }
@@ -880,6 +881,7 @@ function renderQuizStart(prev) {
 async function startQuiz() {
   const d = await api('/api/game/quiz/start', { method: 'POST' });
   if (!d.ok) return toast(d.error || '無法開始挑戰');
+  if (d.seconds) CFG.quiz_seconds = d.seconds;
   quiz = { sid: d.session_id, qs: d.questions, i: 0, marks: [], streak: 0 };
   say(pick(LINES.quiz));
   renderQuestion();
@@ -964,7 +966,7 @@ function postHtml(p) {
   return `<article class="post" id="post-${p.id}">
     <div class="post-head">
       <img src="${esc(p.user_avatar || MASCOT)}" alt="" onerror="this.src='${MASCOT}'">
-      <div><div class="nm">${esc(p.user_name || '探索者')} <span class="lv-badge">Lv.${p.user_level || 1}</span></div><div class="meta">${timeAgo(p.created_at)}</div></div>
+      <div><div class="nm">${esc(p.user_name || '探索者')} <span class="lv-badge">Lv.${p.user_level || 1}</span>${p.pinned ? ' <span class="pin-badge">📌 置頂</span>' : ''}</div><div class="meta">${timeAgo(p.created_at)}</div></div>
       ${p.mine ? `<button class="post-del" onclick="deletePost(${p.id})">刪除</button>` : ''}
     </div>
     ${p.merchant_name ? `<span class="post-tag">📍 ${esc(p.merchant_name)}</span>` : ''}

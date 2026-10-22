@@ -158,6 +158,66 @@ tr:hover td { background: #fafbf9; }
 .post-mini img { width: 54px; height: 54px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
 .post-mini .c { font-size: 13px; line-height: 1.6; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+
+/* 表單與按鈕 */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; border: 1px solid var(--line); background: #fff; transition: background .15s, opacity .15s; white-space: nowrap; }
+.btn:hover:not(:disabled) { background: var(--bg); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-green { background: var(--green); color: #fff; border-color: var(--green); }
+.btn-green:hover:not(:disabled) { background: var(--green-2); }
+.btn-danger { color: var(--bad); border-color: #fecaca; }
+.btn-danger:hover:not(:disabled) { background: #fef2f2; }
+.btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 12px; font-weight: 700; color: var(--text); }
+.field small { font-size: 11px; color: var(--muted); }
+.field input, .field select, .field textarea, .lv-row input { font-family: inherit; font-size: 14px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 9px; background: #fff; width: 100%; }
+.field input:focus, .field textarea:focus, .lv-row input:focus { outline: 2px solid var(--green-soft); border-color: var(--green-2); }
+.lv-row { display: grid; grid-template-columns: 58px 64px minmax(0,1fr) 130px 34px; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--line); }
+.lv-row b { font-size: 13px; color: var(--green); }
+.lv-row.top b::after { content: ' 🏆'; }
+.errors { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 10px; padding: 10px 14px; font-size: 13px; line-height: 1.8; }
+.warns { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 10px; padding: 10px 14px; font-size: 13px; line-height: 1.8; }
+.okbox { background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; border-radius: 10px; padding: 10px 14px; font-size: 13px; }
+.sim-big { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 14px; }
+.sim-big div { background: var(--bg); border-radius: 12px; padding: 10px 12px; }
+.sim-big b { display: block; font-size: 22px; color: var(--green); }
+.sim-big small { font-size: 11px; color: var(--muted); }
+.switch { position: relative; width: 38px; height: 22px; display: inline-block; flex-shrink: 0; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch span { position: absolute; inset: 0; background: #d4d8d1; border-radius: 22px; transition: .2s; cursor: pointer; }
+.switch span::before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+.switch input:checked + span { background: var(--ok); }
+.switch input:checked + span::before { transform: translateX(16px); }
+.banner { display: flex; gap: 14px; align-items: center; background: var(--gold-soft); border: 1px solid #ecdcb6; border-radius: 14px; padding: 14px 18px; margin-bottom: 14px; flex-wrap: wrap; }
+.banner .grow { flex: 1; min-width: 220px; font-size: 13px; line-height: 1.7; }
+.q-text { white-space: normal; min-width: 260px; max-width: 420px; line-height: 1.5; }
+.rate-bar { width: 70px; height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 6px; }
+.rate-bar i { display: block; height: 100%; }
+#modal { position: fixed; inset: 0; background: rgba(20,30,22,.45); z-index: 200; display: none; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow: auto; }
+#modal.show { display: flex; }
+.modal-box { background: #fff; border-radius: 18px; width: 900px; max-width: 100%; padding: 22px; animation: fadeUp .25s ease; }
+.modal-box h2 { font-size: 18px; color: var(--green); margin-bottom: 14px; }
+.opt-row { display: flex; gap: 8px; align-items: center; }
+.opt-row input[type=radio] { width: auto; accent-color: var(--ok); transform: scale(1.2); }
+.preview-q { background: var(--green-soft); border-radius: 4px 14px 14px 14px; padding: 12px 14px; font-weight: 700; line-height: 1.6; margin-bottom: 10px; }
+.preview-opt { border: 2px solid var(--line); border-radius: 10px; padding: 9px 12px; margin-bottom: 7px; font-size: 13px; display: flex; gap: 8px; }
+.preview-opt.ok { border-color: var(--ok); background: #ecfdf5; }
+.choice-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 5px; }
+.choice-bar i { display: block; height: 10px; border-radius: 5px; }
+.post-admin { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f0f1ee; }
+.post-admin.is-hidden { opacity: .6; }
+.post-admin > img.av { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.post-admin .body { flex: 1; min-width: 0; }
+.post-admin .content { font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; margin: 4px 0 8px; }
+.post-admin .thumb { width: 160px; max-height: 160px; object-fit: cover; border-radius: 10px; display: block; margin-bottom: 8px; cursor: zoom-in; }
+.post-admin .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.cmt-admin { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; padding: 7px 0; border-top: 1px dashed var(--line); }
+.cmt-admin.is-hidden { opacity: .55; }
+#toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 20px); background: var(--text); color: #fff; padding: 10px 18px; border-radius: 12px; font-size: 13px; z-index: 300; opacity: 0; transition: .3s; pointer-events: none; }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+#toast.bad { background: var(--bad); }
+@media (max-width: 900px) { .lv-row { grid-template-columns: 46px 52px minmax(0,1fr) 90px 30px; gap: 5px; } }
 </style>
 </head>
 <body>
@@ -193,8 +253,12 @@ tr:hover td { background: #fafbf9; }
     <button class="nav-item" data-view="merchants" data-role="admin"><span class="ic">🏪</span>商家表現</button>
     <button class="nav-item" data-view="map" data-role="admin"><span class="ic">🗺️</span>地圖視角</button>
     <button class="nav-item" data-view="impact" data-role="admin"><span class="ic">🌱</span>永續影響力</button>
+    <button class="nav-item" data-view="ai" data-role="admin"><span class="ic">🤖</span>AI 嚮導</button>
     <div class="nav-sep">遊戲</div>
     <button class="nav-item" data-view="game" data-role="admin moderator"><span class="ic">🎮</span>遊戲分析</button>
+    <button class="nav-item" data-view="settings" data-role="admin"><span class="ic">⚙️</span>遊戲設定</button>
+    <button class="nav-item" data-view="questions" data-role="admin moderator"><span class="ic">🧠</span>題目管理</button>
+    <button class="nav-item" data-view="feed" data-role="admin moderator"><span class="ic">💬</span>動態管理</button>
     <div class="nav-sep" data-role="admin">系統</div>
     <button class="nav-item" data-view="system" data-role="admin"><span class="ic">🩺</span>系統健康</button>
     <div class="side-foot">
@@ -232,6 +296,22 @@ tr:hover td { background: #fafbf9; }
       <div class="page-head"><div><h1>🎮 遊戲分析</h1><p>緣投探索者的玩家成長與互動</p></div></div>
       <div id="gm"></div>
     </div>
+    <div class="view" id="v-ai">
+      <div class="page-head"><div><h1>🤖 AI 嚮導分析</h1><p>旅客怎麼使用 AI 嚮導、在哪一步離開</p></div></div>
+      <div id="ai"></div>
+    </div>
+    <div class="view" id="v-settings">
+      <div class="page-head"><div><h1>⚙️ 遊戲設定</h1><p>調整等級門檻與經驗值，右側即時試算平衡性</p></div></div>
+      <div id="st"></div>
+    </div>
+    <div class="view" id="v-questions">
+      <div class="page-head"><div><h1>🧠 題目管理</h1><p>問答大挑戰的題庫，依作答數據找出需要修正的題目</p></div></div>
+      <div id="qs"></div>
+    </div>
+    <div class="view" id="v-feed">
+      <div class="page-head"><div><h1>💬 動態管理</h1><p>隱藏、置頂或刪除旅人動態與留言</p></div></div>
+      <div id="fd"></div>
+    </div>
     <div class="view" id="v-system">
       <div class="page-head"><div><h1>🩺 系統健康</h1><p>資料庫、n8n 工作流與環境設定狀態</p></div></div>
       <div id="sy"></div>
@@ -239,6 +319,8 @@ tr:hover td { background: #fafbf9; }
   </main>
 </section>
 <div id="tip"></div>
+<div id="modal" onclick="if(event.target===this)closeModal()"><div class="modal-box" id="modal-box"></div></div>
+<div id="toast"></div>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -329,7 +411,22 @@ async function refresh() {
   fresh = true; Object.keys(loaded).forEach(k => delete loaded[k]);
   try { await render(current); } finally { fresh = false; b.classList.remove('loading'); }
 }
-const RENDER = { overview: renderOverview, bookings: renderBookings, merchants: renderMerchants, map: renderMap, impact: renderImpact, game: renderGame, system: renderSystem };
+const RENDER = { overview: renderOverview, bookings: renderBookings, merchants: renderMerchants, map: renderMap, impact: renderImpact,
+                 ai: renderAI, game: renderGame, settings: renderSettings, questions: renderQuestions, feed: renderFeed, system: renderSystem };
+
+// ═══════ 共用：寫入、提示、彈窗 ═══════
+async function send(method, path, data) {
+  const r = await fetch(path, { method, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+                                body: data === undefined ? undefined : JSON.stringify(data) });
+  if (r.status === 401) { location.reload(); throw new Error('請重新登入'); }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || (d.errors || []).join('、') || '操作失敗（' + r.status + '）');
+  return d;
+}
+function toast(msg, bad) { const t = $('toast'); t.textContent = msg; t.className = 'show' + (bad ? ' bad' : ''); clearTimeout(toast._t); toast._t = setTimeout(() => t.className = '', 2600); }
+function openModal(html) { $('modal-box').innerHTML = html; $('modal').classList.add('show'); }
+function closeModal() { $('modal').classList.remove('show'); }
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 async function render(view) { loaded[view] = true; await RENDER[view](); }
 
 // ═══════ 總覽 ═══════
@@ -651,6 +748,365 @@ async function renderGame() {
       { label: '打卡', data: d.checkin_vs_booking.map(m => m.checkins), backgroundColor: C.gold, borderRadius: 5 },
       { label: '預約', data: d.checkin_vs_booking.map(m => m.bookings), backgroundColor: C.green, borderRadius: 5 }] },
     options: { indexAxis: 'y', scales: { x: softGrid, y: gridless } } });
+}
+
+// ═══════ AI 嚮導分析 ═══════
+async function renderAI() {
+  loading('ai');
+  let d; try { d = await api('/admin/api/ai'); } catch (e) { return fail('ai', e); }
+  if (!d.messages.total) {
+    $('ai').innerHTML = `<div class="card empty" style="padding:50px 20px">還沒有任何 AI 嚮導的使用紀錄。<br>部署後旅客開始在首頁和緣投聊天，這裡就會出現數據。</div>`;
+    return;
+  }
+  $('ai').innerHTML = `
+    <div class="grid g4">
+      <div class="card kpi"><div class="lbl">💬 本週對話數</div><div class="val">${fmt(d.sessions.value)}</div><div class="sub">${deltaBadge(d.sessions.value, d.sessions.prev)}</div></div>
+      <div class="card kpi"><div class="lbl">✉️ 本週訊息數</div><div class="val">${fmt(d.messages.value)}</div><div class="sub">${deltaBadge(d.messages.value, d.messages.prev)}</div></div>
+      <div class="card kpi"><div class="lbl">🎯 對話→預約轉換率</div><div class="val">${d.conversion == null ? '—' : d.conversion + '%'}</div><div class="sub">全部 ${fmt(d.sessions.total)} 次對話</div></div>
+      <div class="card kpi ${d.error_rate > 5 ? 'alert' : ''}"><div class="lbl">⏱️ 平均回應 / 錯誤率</div><div class="val">${d.avg_seconds ?? '—'}<small style="font-size:14px;color:var(--muted)"> 秒</small></div><div class="sub">錯誤率 ${d.error_rate ?? 0}%</div></div>
+    </div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><h3>🪜 轉換漏斗</h3><div class="q">旅客在哪一步離開？（以對話為單位）</div><div class="chart-box"><canvas id="ch-funnel-ai"></canvas></div></div>
+      <div class="card"><h3>📈 過去 30 天</h3><div class="q">每日對話數與訊息數</div><div class="chart-box"><canvas id="ch-ai-trend"></canvas></div></div>
+    </div>
+    <div class="grid g3" style="margin-top:14px">
+      <div class="card"><h3>🌐 使用語言</h3><div class="chart-box short"><canvas id="ch-ai-lang"></canvas></div></div>
+      <div class="card"><h3>🏷️ 旅客點的類別</h3><div class="q">「自由提問」代表旅客直接打字</div><div class="chart-box short"><canvas id="ch-ai-cat"></canvas></div></div>
+      <div class="card"><h3>🔧 AI 呼叫的工具</h3><div class="chart-box short"><canvas id="ch-ai-tools"></canvas></div></div>
+    </div>
+    <div class="note">🔒 為保護旅客隱私，系統只記錄語言、點選的類別、呼叫的工具與是否完成預約，<b>不儲存對話內容</b>（對話中常有姓名與電話）。</div>`;
+  const base = d.funnel[0][1] || 1;
+  chart('ch-funnel-ai', { type: 'bar', data: { labels: d.funnel.map(f => f[0]), datasets: [{ data: d.funnel.map(f => f[1]), backgroundColor: [C.mute, C.green2, C.gold, C.green], borderRadius: 8 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.raw} 次（${Math.round(c.raw / base * 100)}%）` } } }, scales: { x: softGrid, y: gridless } } });
+  chart('ch-ai-trend', { type: 'line', data: { labels: d.trend.labels, datasets: [
+      { label: '對話', data: d.trend.sessions, borderColor: C.green, backgroundColor: C.green + '22', fill: true, tension: .3, pointRadius: 0 },
+      { label: '訊息', data: d.trend.messages, borderColor: C.gold, tension: .3, pointRadius: 0 }] },
+    options: { interaction: { mode: 'index', intersect: false }, scales: { x: { ...gridless, ticks: { maxTicksLimit: 8 } }, y: softGrid } } });
+  chart('ch-ai-lang', { type: 'doughnut', data: { labels: d.langs.map(x => x[0]), datasets: [{ data: d.langs.map(x => x[1]), backgroundColor: [C.green, C.gold, C.info, C.mute] }] },
+    options: { cutout: '58%', plugins: { legend: { position: 'bottom' } } } });
+  chart('ch-ai-cat', { type: 'bar', data: { labels: d.categories.map(x => x[0]), datasets: [{ data: d.categories.map(x => x[1]), backgroundColor: C.green2, borderRadius: 6 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: softGrid, y: gridless } } });
+  const toolName = { search_local_merchants: '搜尋商家', check_availability: '查詢空檔', book_experience: '完成預約', get_nantou_weather: '查天氣' };
+  chart('ch-ai-tools', { type: 'bar', data: { labels: d.tools.map(x => toolName[x[0]] || x[0]), datasets: [{ data: d.tools.map(x => x[1]), backgroundColor: C.gold, borderRadius: 6 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: softGrid, y: gridless } } });
+}
+
+// ═══════ 遊戲設定 ═══════
+let SET = null, draft = null;
+const XP_HINT = { xp_checkin: '每家職人只能打卡一次', xp_quiz_correct: '每題答對', xp_quiz_wrong: '答錯的鼓勵分',
+  xp_quiz_combo: '連續答對時，第 2 題起每題再加', xp_quiz_perfect: '一局全對額外加碼', xp_post: '每篇貼文',
+  post_daily_limit: '每天前幾篇貼文有 XP', quiz_round_size: '', quiz_seconds: '超過時間算答錯' };
+async function renderSettings() {
+  loading('st');
+  try { SET = await api('/admin/api/game/settings'); } catch (e) { return fail('st', e); }
+  draft = JSON.parse(JSON.stringify(SET.settings));
+  $('st').innerHTML = `
+    <div class="grid" style="grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start" id="st-grid">
+      <div>
+        <div class="card"><h3>🪜 等級門檻</h3><div class="q">最高等級就是發證書的等級（🏆）。Lv.1 固定從 0 XP 開始。</div>
+          <div class="lv-row" style="border:none;font-size:11px;color:var(--muted);font-weight:700"><span>等級</span><span>圖示</span><span>名稱</span><span>所需 XP</span><span></span></div>
+          <div id="lv-rows"></div>
+          <button class="btn btn-sm" style="margin-top:10px" onclick="addLevel()">＋ 新增等級</button></div>
+        <div class="card" style="margin-top:14px"><h3>⭐ 經驗值與問答規則</h3><div class="q">修改後右側會即時試算</div><div class="grid g3" id="xp-fields"></div></div>
+        <div class="card" style="margin-top:14px"><h3>🕘 變更紀錄</h3><div class="q">可載入舊版本到編輯器，確認後再儲存</div><div id="st-hist"></div></div>
+      </div>
+      <div class="card" style="position:sticky;top:${76}px"><h3>⚖️ 平衡試算</h3><div class="q">依照目前編輯中的數值計算</div>
+        <div id="sim"><div class="skeleton" style="height:200px"></div></div>
+        <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:14px 0;line-height:1.6"><input type="checkbox" id="send-certs" style="margin-top:4px">
+          <span>儲存後，<b>立即補寄證書</b>給已達最高級但還沒收到的玩家（<b id="pending-n">0</b> 人）。不勾選的話，他們下次得到 XP 時才會收到。</span></label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-green" id="st-save" onclick="saveSettings()">💾 儲存變更</button>
+          <button class="btn" onclick="loadDraft(SET.settings)">↩ 還原目前設定</button>
+          <button class="btn" onclick="loadDraft(SET.defaults)">載入預設值</button>
+        </div>
+      </div>
+    </div>`;
+  if (innerWidth < 900) $('st-grid').style.gridTemplateColumns = '1fr';
+  drawSettingsForm(); drawHistory(); previewSettings();
+}
+function loadDraft(v) { draft = JSON.parse(JSON.stringify(v)); drawSettingsForm(); previewSettings(); }
+function drawSettingsForm() {
+  $('lv-rows').innerHTML = draft.levels.map((l, i) => `<div class="lv-row ${i === draft.levels.length - 1 ? 'top' : ''}">
+    <b>Lv.${i + 1}</b>
+    <input value="${esc(l.emoji)}" maxlength="4" oninput="draft.levels[${i}].emoji=this.value;previewSettings()">
+    <input value="${esc(l.title)}" maxlength="12" oninput="draft.levels[${i}].title=this.value;previewSettings()">
+    <input type="number" min="0" value="${l.xp}" ${i === 0 ? 'disabled' : ''} oninput="draft.levels[${i}].xp=+this.value;previewSettings()">
+    ${i > 0 && draft.levels.length > 2 ? `<button class="btn btn-sm btn-danger" title="刪除" onclick="draft.levels.splice(${i},1);drawSettingsForm();previewSettings()">✕</button>` : '<span></span>'}
+  </div>`).join('');
+  $('xp-fields').innerHTML = SET.fields.map(([k, label]) => `<div class="field"><label>${esc(label)}</label>
+    <input type="number" min="0" value="${draft[k]}" oninput="draft['${k}']=+this.value;previewSettings()">
+    <small>${k === 'quiz_round_size' ? `目前啟用 ${SET.enabled_questions} 題` : XP_HINT[k] || ''}</small></div>`).join('');
+}
+function addLevel() {
+  const last = draft.levels[draft.levels.length - 1];
+  draft.levels.push({ xp: last.xp + Math.max(300, Math.round(last.xp * .8)), title: '新等級', emoji: '⭐' });
+  drawSettingsForm(); previewSettings();
+}
+function drawHistory() {
+  $('st-hist').innerHTML = SET.history.length ? SET.history.map((h, i) => `<div class="list-row">
+      <span class="grow">${new Date(h.created_at).toLocaleString('zh-TW')} · ${esc(h.updated_by || '')}<br>
+      <small style="color:var(--muted)">${h.value.levels.map(l => esc(l.title) + ' ' + l.xp).join(' → ')} · 打卡 ${h.value.xp_checkin} · 每局 ${h.value.quiz_round_size} 題</small></span>
+      <button class="btn btn-sm" onclick="loadDraft(SET.history[${i}].value);toast('已載入，確認後按儲存')">載入</button></div>`).join('')
+    : '<div class="empty">還沒有修改紀錄，目前使用預設值</div>';
+}
+const previewSettings = debounce(async () => {
+  let d; try { d = await send('POST', '/admin/api/game/settings/preview', { settings: draft }); } catch (e) { $('sim').innerHTML = `<div class="errors">${esc(e.message)}</div>`; return; }
+  $('st-save').disabled = !!d.errors.length;
+  if (d.errors.length) { $('sim').innerHTML = `<div class="errors">${d.errors.map(esc).join('<br>')}</div>`; return; }
+  const s = d.sim, dist = d.dist;
+  $('pending-n').textContent = dist.pending_certificates;
+  const n = v => v == null ? '—' : v;
+  $('sim').innerHTML = `
+    <div class="sim-big"><div><small>一局全對</small><b>+${fmt(s.perfect_round)}</b></div><div><small>一局全錯</small><b>+${fmt(s.worst_round)}</b></div></div>
+    <table><tr><th>升到</th><th>要打卡幾家</th><th>全對幾局</th><th>全錯幾局</th></tr>
+      ${s.per_level.map(l => `<tr><td>${esc(l.emoji)} ${esc(l.title)}<br><small style="color:var(--muted)">${fmt(l.xp)} XP</small></td><td>${n(l.checkins)}${l.checkins > s.total_merchants ? ' ⚠️' : ''}</td><td>${n(l.perfect_rounds)}</td><td>${n(l.worst_rounds)}</td></tr>`).join('')}</table>
+    <div style="margin-top:12px">${s.warnings.length ? `<div class="warns">⚠️ ${s.warnings.map(esc).join('<br>⚠️ ')}</div>` : '<div class="okbox">✅ 數值看起來合理：需要同時打卡和答題才能拿到證書</div>'}</div>
+    <div style="font-weight:700;font-size:13px;margin:16px 0 6px">套用後玩家等級分布（共 ${dist.players} 人）</div>
+    <div class="chart-box short"><canvas id="ch-dist"></canvas></div>`;
+  chart('ch-dist', { type: 'bar', data: { labels: dist.rows.map(r => `Lv.${r.level} ${r.title}`), datasets: [
+      { label: '目前', data: dist.rows.map(r => r.old), backgroundColor: C.mute, borderRadius: 5 },
+      { label: '套用後', data: dist.rows.map(r => r.new), backgroundColor: C.green, borderRadius: 5 }] },
+    options: { scales: { x: gridless, y: softGrid } } });
+}, 350);
+async function saveSettings() {
+  const send_certificates = $('send-certs').checked;
+  if (!confirm('確定要套用新的遊戲設定嗎？所有玩家的等級會立即依新門檻重新計算。' + (send_certificates ? `\n\n並會立即寄出 ${$('pending-n').textContent} 張證書。` : ''))) return;
+  try {
+    const d = await send('POST', '/admin/api/game/settings', { settings: draft, send_certificates });
+    toast('已儲存' + (d.certificates_sent ? `，正在寄出 ${d.certificates_sent} 張證書` : ''));
+    delete loaded.game; delete loaded.overview;
+    await renderSettings();
+  } catch (e) { toast(e.message, true); }
+}
+
+// ═══════ 題目管理 ═══════
+let QS = null;
+const FLAG = { too_easy: ['太簡單', 't-mute'], too_hard: ['太難', 't-warn'], suspect_answer: ['答案可能有誤', 't-bad'] };
+async function renderQuestions() {
+  loading('qs');
+  try { QS = await api('/admin/api/questions'); } catch (e) { return fail('qs', e); }
+  const builtin = QS.source === 'builtin';
+  const enabled = QS.rows.filter(r => r.enabled).length;
+  const answered = QS.rows.reduce((s, r) => s + r.stats.n, 0);
+  const correct = QS.rows.reduce((s, r) => s + r.stats.correct, 0);
+  const flagged = QS.rows.filter(r => r.flags.length).length;
+  $('qs').innerHTML = `
+    ${builtin ? `<div class="banner"><span style="font-size:26px">📦</span><div class="grow"><b>題庫還沒匯入資料庫</b><br>遊戲目前使用程式內建的 ${QS.rows.length} 題。匯入後才能新增、編輯題目，也才會開始統計每題答對率。</div>
+      <button class="btn btn-green" onclick="importBuiltin()">匯入內建題庫</button></div>` : ''}
+    <div class="grid g4">
+      <div class="card kpi"><div class="lbl">啟用中題目</div><div class="val">${enabled} <small style="font-size:14px;color:var(--muted)">/ ${QS.rows.length}</small></div><div class="sub">每局出 ${QS.round_size} 題</div></div>
+      <div class="card kpi"><div class="lbl">累積作答</div><div class="val">${fmt(answered)}</div></div>
+      <div class="card kpi"><div class="lbl">平均答對率</div><div class="val">${answered ? Math.round(correct / answered * 100) + '%' : '—'}</div></div>
+      <div class="card kpi ${flagged ? 'alert' : ''}"><div class="lbl">需要檢查</div><div class="val">${flagged}</div><div class="sub">作答 ${QS.min_answers} 次以上才判斷</div></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="filters">
+        <input id="q-q" placeholder="🔍 搜尋題目或選項" oninput="drawQuestions()" style="min-width:220px">
+        <select id="q-cat" onchange="drawQuestions()"><option value="">全部分類</option>${QS.categories.map(c => `<option>${esc(c)}</option>`).join('')}</select>
+        <select id="q-st" onchange="drawQuestions()"><option value="">全部狀態</option><option value="on">啟用中</option><option value="off">已停用</option></select>
+        <select id="q-flag" onchange="drawQuestions()"><option value="">全部題目</option><option value="any">需要檢查</option><option value="suspect_answer">答案可能有誤</option><option value="too_hard">太難</option><option value="too_easy">太簡單</option><option value="nodata">作答數不足</option></select>
+        <span style="flex:1"></span>
+        ${builtin ? '' : `<button class="btn" onclick="downloadTemplate()">⬇ CSV 範本</button>
+          <button class="btn" onclick="$('csv-file').click()">⬆ 匯入 CSV</button><input type="file" id="csv-file" accept=".csv,text/csv" hidden onchange="importCsv(this)">
+          <button class="btn btn-green" onclick="editQuestion()">＋ 新增題目</button>`}
+      </div>
+      <div class="table-wrap" id="q-table"></div>
+    </div>`;
+  drawQuestions();
+}
+function drawQuestions() {
+  const q = $('q-q').value.trim().toLowerCase(), cat = $('q-cat').value, st = $('q-st').value, fl = $('q-flag').value;
+  const builtin = QS.source === 'builtin';
+  const rows = QS.rows.map((r, i) => ({ ...r, _i: i })).filter(r => (!cat || r.category === cat)
+    && (!st || (st === 'on') === !!r.enabled)
+    && (!fl || (fl === 'any' ? r.flags.length : fl === 'nodata' ? r.stats.n < QS.min_answers : r.flags.includes(fl)))
+    && (!q || [r.question, ...r.options].some(x => String(x).toLowerCase().includes(q))));
+  $('q-table').innerHTML = `<table><tr><th>#</th><th>題目</th><th>分類</th><th>正解</th><th>作答</th><th>答對率</th><th>狀態</th><th>啟用</th><th></th></tr>
+    ${rows.map(r => { const rate = r.stats.rate; const col = rate == null ? C.mute : rate < 20 ? C.bad : rate > 95 ? C.info : C.ok;
+      return `<tr>
+      <td style="color:var(--muted)">${r.id ?? r._i + 1}</td>
+      <td class="q-text">${esc(r.question)}</td><td><span class="chip">${esc(r.category)}</span></td>
+      <td class="q-text" style="min-width:120px;max-width:180px">${'ABCD'[r.answer]}. ${esc(r.options[r.answer])}</td>
+      <td>${r.stats.n}</td>
+      <td>${rate == null ? '<span style="color:var(--muted)">—</span>' : `<span class="rate-bar"><i style="width:${rate}%;background:${col}"></i></span>${rate}%`}</td>
+      <td>${r.flags.map(f => `<span class="tag ${FLAG[f][1]}">${FLAG[f][0]}</span>`).join(' ') || ''}</td>
+      <td>${builtin ? '—' : `<label class="switch"><input type="checkbox" ${r.enabled ? 'checked' : ''} onchange="toggleQuestion(${r.id}, this)"><span></span></label>`}</td>
+      <td>${builtin ? '' : `<button class="btn btn-sm" onclick="editQuestion(${r._i})">編輯</button> <button class="btn btn-sm btn-danger" onclick="deleteQuestion(${r.id})">刪除</button>`}</td></tr>`; }).join('')
+      || '<tr><td colspan="9" class="empty">沒有符合的題目</td></tr>'}</table>`;
+}
+async function importBuiltin() {
+  if (!confirm('要把內建的題目匯入資料庫嗎？匯入後就能在這裡編輯。')) return;
+  try { const d = await send('POST', '/admin/api/questions/import-builtin'); toast(`已匯入 ${d.count} 題`); renderQuestions(); }
+  catch (e) { toast(e.message, true); }
+}
+async function toggleQuestion(id, el) {
+  try { await send('POST', `/admin/api/questions/${id}/toggle`, { enabled: el.checked }); toast(el.checked ? '已啟用' : '已停用');
+        QS.rows.find(r => r.id === id).enabled = el.checked; }
+  catch (e) { el.checked = !el.checked; toast(e.message, true); }
+}
+async function deleteQuestion(id) {
+  if (!confirm('確定要刪除這題嗎？這題的作答紀錄也會一起刪除，無法復原。\n（只是暫時不想出這題的話，可以改用「停用」）')) return;
+  try { await send('DELETE', `/admin/api/questions/${id}`); toast('已刪除'); renderQuestions(); } catch (e) { toast(e.message, true); }
+}
+function editQuestion(i) {
+  const r = i == null ? { question: '', options: ['', '', '', ''], answer: 0, fact: '', category: '一般', enabled: true, stats: { n: 0, choices: [0, 0, 0, 0] } } : QS.rows[i];
+  const total = r.stats.n || 0;
+  openModal(`<h2>${i == null ? '＋ 新增題目' : '✏️ 編輯題目 #' + r.id}</h2>
+    <div class="grid" style="grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)" id="qe-grid">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="field"><label>題目</label><textarea id="qe-q" rows="3" maxlength="200" oninput="qePreview()">${esc(r.question)}</textarea></div>
+        <div class="field"><label>選項（點左邊圓圈設定正解）</label>
+          ${[0, 1, 2, 3].map(k => `<div class="opt-row"><input type="radio" name="qe-ans" value="${k}" ${r.answer === k ? 'checked' : ''} onchange="qePreview()"><b style="width:16px">${'ABCD'[k]}</b><input id="qe-o${k}" maxlength="60" value="${esc(r.options[k])}" oninput="qePreview()" style="flex:1"></div>`).join('')}</div>
+        <div class="field"><label>答完後的補充說明</label><textarea id="qe-f" rows="3" maxlength="300" oninput="qePreview()">${esc(r.fact)}</textarea><small>讓玩家學到東西的小知識，最多 300 字</small></div>
+        <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+          <div class="field" style="min-width:150px"><label>分類</label><select id="qe-c">${QS.categories.map(c => `<option ${c === r.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+          <label style="display:flex;gap:8px;align-items:center;font-size:13px;padding-bottom:8px"><label class="switch"><input type="checkbox" id="qe-en" ${r.enabled ? 'checked' : ''}><span></span></label>啟用</label>
+        </div>
+        <div id="qe-err"></div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px">👀 玩家看到的樣子</div>
+        <div id="qe-prev"></div>
+        ${total ? `<div style="font-size:12px;font-weight:700;color:var(--muted);margin:16px 0 8px">📊 玩家選了什麼（共 ${total} 次）</div>
+          ${[0, 1, 2, 3].map(k => { const p = Math.round(r.stats.choices[k] / total * 100); return `<div class="choice-bar"><b style="width:14px">${'ABCD'[k]}</b><div style="flex:1;background:var(--bg);border-radius:5px"><i style="width:${p}%;background:${k === r.answer ? C.ok : C.mute}"></i></div><span style="width:36px;text-align:right">${p}%</span></div>`; }).join('')}
+          ${r.flags.includes('suspect_answer') ? '<div class="warns" style="margin-top:8px">多數玩家選了同一個「錯誤」選項，請確認正解有沒有設錯。</div>' : ''}` : ''}
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-green" onclick="saveQuestion(${i == null ? 'null' : r.id})">💾 儲存</button>
+    </div>`);
+  if (innerWidth < 900) $('qe-grid').style.gridTemplateColumns = '1fr';
+  qePreview();
+}
+function qeValue() {
+  return { question: $('qe-q').value, options: [0, 1, 2, 3].map(k => $('qe-o' + k).value),
+           answer: +(document.querySelector('input[name=qe-ans]:checked') || {}).value, fact: $('qe-f').value,
+           category: $('qe-c').value, enabled: $('qe-en').checked };
+}
+function qePreview() {
+  const v = qeValue();
+  $('qe-prev').innerHTML = `<div class="preview-q">${esc(v.question) || '<span style="color:var(--muted)">（題目）</span>'}</div>
+    ${v.options.map((o, k) => `<div class="preview-opt ${k === v.answer ? 'ok' : ''}"><b>${'ABCD'[k]}</b>${esc(o) || '<span style="color:var(--muted)">（選項）</span>'}</div>`).join('')}
+    ${v.fact ? `<div class="note" style="margin-top:8px">💡 ${esc(v.fact)}</div>` : ''}`;
+}
+async function saveQuestion(id) {
+  try {
+    await send(id ? 'PUT' : 'POST', '/admin/api/questions' + (id ? '/' + id : ''), qeValue());
+    closeModal(); toast(id ? '已更新' : '已新增'); renderQuestions();
+  } catch (e) { $('qe-err').innerHTML = `<div class="errors">${esc(e.message)}</div>`; }
+}
+const CSV_COLS = ['題目', '選項A', '選項B', '選項C', '選項D', '正解', '說明', '分類'];
+function downloadTemplate() {
+  const csv = '﻿' + CSV_COLS.join(',') + '\r\n"南投縣唯一不靠海的特色是什麼？","最北的縣","唯一不靠海的縣","面積最小","人口最多","B","南投是台灣唯一不臨海的縣。","地理"\r\n';
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = '題目匯入範本.csv'; a.click(); URL.revokeObjectURL(a.href);
+}
+function parseCsv(text) {
+  const rows = []; let row = [], cell = '', q = false;
+  text = text.replace(/^﻿/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()));
+}
+async function importCsv(input) {
+  const f = input.files[0]; input.value = '';
+  if (!f) return;
+  const rows = parseCsv(await f.text());
+  const header = rows.shift() || [];
+  const idx = CSV_COLS.map(c => header.findIndex(h => h.trim() === c));
+  if (idx.slice(0, 6).some(i => i < 0)) return toast('CSV 欄位不符，請使用範本：' + CSV_COLS.join('、'), true);
+  const data = rows.map(r => { const a = (r[idx[5]] || '').trim().toUpperCase();
+    return { question: r[idx[0]], options: [1, 2, 3, 4].map(k => r[idx[k]]), answer: 'ABCD'.includes(a) && a ? 'ABCD'.indexOf(a) : +a - 1,
+             fact: idx[6] >= 0 ? r[idx[6]] : '', category: idx[7] >= 0 ? (r[idx[7]] || '').trim() : '一般', enabled: true }; });
+  if (!data.length) return toast('CSV 沒有資料', true);
+  if (!confirm(`要匯入 ${data.length} 題嗎？`)) return;
+  try {
+    const d = await send('POST', '/admin/api/questions/bulk', { rows: data });
+    toast(`已匯入 ${d.inserted} 題` + (d.errors.length ? `，${d.errors.length} 題有錯誤` : ''), !!d.errors.length);
+    if (d.errors.length) alert('以下資料列沒有匯入：\n\n' + d.errors.map(e => `第 ${e.row} 題：${e.errors.join('、')}`).join('\n'));
+    renderQuestions();
+  } catch (e) { toast(e.message, true); }
+}
+
+// ═══════ 動態管理 ═══════
+let fdStatus = '';
+async function renderFeed() {
+  if (!$('fd-list')) {
+    $('fd').innerHTML = `<div class="card">
+      <div class="filters" style="align-items:center">
+        <div class="seg" id="fd-seg">${[['', '全部'], ['hidden', '已隱藏'], ['pinned', '置頂'], ['image', '有照片']].map(([k, l]) => `<button data-k="${k}" class="${k === fdStatus ? 'on' : ''}">${l}<span data-c="${k || 'all'}"></span></button>`).join('')}</div>
+        <input id="fd-q" placeholder="🔍 搜尋內容、玩家或商家" style="min-width:220px" oninput="loadFeedAdmin()">
+      </div>
+      <div class="note" style="margin:0 0 6px">「隱藏」可以隨時恢復，玩家看不到也不會被通知；「刪除」會連同按讚和留言永久移除。</div>
+      <div id="fd-list"></div></div>`;
+    document.querySelectorAll('#fd-seg button').forEach(b => b.onclick = () => {
+      fdStatus = b.dataset.k; document.querySelectorAll('#fd-seg button').forEach(x => x.classList.toggle('on', x === b)); loadFeedAdmin();
+    });
+    $('fd-q').oninput = debounce(loadFeedAdmin, 300);
+  }
+  await loadFeedAdmin();
+}
+async function loadFeedAdmin() {
+  $('fd-list').innerHTML = '<div class="skeleton" style="margin-top:10px"></div>';
+  let d; try { d = await api(`/admin/api/feed?status=${fdStatus}&q=${encodeURIComponent($('fd-q').value)}`); } catch (e) { $('fd-list').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  Object.entries(d.counts).forEach(([k, v]) => { const el = document.querySelector(`#fd-seg [data-c="${k}"]`); if (el) el.textContent = ` ${v}`; });
+  $('fd-list').innerHTML = d.rows.map(postAdminHtml).join('') || '<div class="empty">沒有符合的貼文</div>';
+  if (d.total > d.rows.length) $('fd-list').insertAdjacentHTML('beforeend', `<div class="empty">只顯示最新 ${d.rows.length} 篇，共 ${d.total} 篇，請用搜尋縮小範圍</div>`);
+}
+function postAdminHtml(p) {
+  return `<div class="post-admin ${p.hidden ? 'is-hidden' : ''}" id="pa-${p.id}">
+    <img class="av" src="${esc(p.user_avatar || '/static/images/mascot.jpg')}" onerror="this.src='/static/images/mascot.jpg'" alt="">
+    <div class="body">
+      <div style="font-size:13px"><b>${esc(p.user_name || '探索者')}</b> <span class="tag t-mute">Lv.${p.user_level || 1}</span>
+        ${p.pinned ? '<span class="tag t-warn">📌 置頂</span>' : ''} ${p.hidden ? '<span class="tag t-bad">已隱藏</span>' : ''}
+        <span style="color:var(--muted);font-size:12px"> · ${new Date(p.created_at).toLocaleString('zh-TW')}${p.merchant_name ? ' · 📍' + esc(p.merchant_name) : ''} · ❤️ ${p.likes || 0} · 💬 ${p.comment_count || 0}</span></div>
+      <div class="content">${esc(p.content)}</div>
+      ${p.image_url ? `<img class="thumb" src="${esc(p.image_url)}" alt="" onclick="window.open(this.src)">` : ''}
+      <div class="acts">
+        <button class="btn btn-sm" onclick="modPost(${p.id}, '${p.pinned ? 'unpin' : 'pin'}')">${p.pinned ? '取消置頂' : '📌 置頂'}</button>
+        <button class="btn btn-sm" onclick="modPost(${p.id}, '${p.hidden ? 'unhide' : 'hide'}')">${p.hidden ? '👁 恢復顯示' : '🙈 隱藏'}</button>
+        <button class="btn btn-sm btn-danger" onclick="delPost(${p.id})">🗑 刪除</button>
+        <button class="btn btn-sm" onclick="toggleAdminComments(${p.id})">💬 管理留言</button>
+      </div>
+      <div id="pc-${p.id}"></div>
+    </div></div>`;
+}
+async function modPost(id, action) {
+  try { await send('POST', `/admin/api/feed/${id}`, { action }); toast({ hide: '已隱藏', unhide: '已恢復顯示', pin: '已置頂', unpin: '已取消置頂' }[action]); fresh = true; await loadFeedAdmin(); }
+  catch (e) { toast(e.message, true); } finally { fresh = false; }
+}
+async function delPost(id) {
+  if (!confirm('確定要永久刪除這篇貼文嗎？按讚和留言會一起刪除，無法復原。\n（只是不想讓玩家看到的話，可以改用「隱藏」）')) return;
+  try { await send('DELETE', `/admin/api/feed/${id}`); toast('已刪除'); $('pa-' + id).remove(); } catch (e) { toast(e.message, true); }
+}
+async function toggleAdminComments(pid) {
+  const box = $('pc-' + pid);
+  if (box.innerHTML) { box.innerHTML = ''; return; }
+  box.innerHTML = '<div class="empty" style="padding:8px">載入中…</div>';
+  try {
+    const rows = await send('GET', `/admin/api/feed/${pid}/comments`);
+    box.innerHTML = rows.map(c => `<div class="cmt-admin ${c.hidden ? 'is-hidden' : ''}" id="ca-${c.id}">
+        <div style="flex:1"><b>${esc(c.user_name || '探索者')}</b>${c.hidden ? ' <span class="tag t-bad">已隱藏</span>' : ''} ${esc(c.content)}
+          <div style="font-size:11px;color:var(--muted)">${new Date(c.created_at).toLocaleString('zh-TW')}</div></div>
+        <button class="btn btn-sm" onclick="modComment(${c.id}, ${pid}, '${c.hidden ? 'unhide' : 'hide'}')">${c.hidden ? '恢復' : '隱藏'}</button>
+        <button class="btn btn-sm btn-danger" onclick="delComment(${c.id}, ${pid})">刪除</button></div>`).join('') || '<div class="empty" style="padding:8px">沒有留言</div>';
+  } catch (e) { box.innerHTML = `<div class="empty">${esc(e.message)}</div>`; }
+}
+async function modComment(cid, pid, action) {
+  try { await send('POST', `/admin/api/comments/${cid}`, { action }); toast(action === 'hide' ? '留言已隱藏' : '留言已恢復');
+        $('pc-' + pid).innerHTML = ''; toggleAdminComments(pid); } catch (e) { toast(e.message, true); }
+}
+async function delComment(cid, pid) {
+  if (!confirm('確定要永久刪除這則留言嗎？')) return;
+  try { await send('DELETE', `/admin/api/comments/${cid}`); toast('留言已刪除'); $('ca-' + cid).remove(); } catch (e) { toast(e.message, true); }
 }
 
 // ═══════ 系統健康 ═══════

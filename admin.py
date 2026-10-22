@@ -10,8 +10,12 @@ import requests
 from flask import Blueprint, request, jsonify, render_template, session, redirect
 
 from merchants_data import CATEGORIES, CATEGORY_ORDER
-from game import (SUPABASE_URL, SUPABASE_KEY, GOOGLE_CLIENT_ID, TW, LEVELS,
-                  _h, verify_google_token, level_info)
+import threading
+from game import (SUPABASE_URL, SUPABASE_KEY, GOOGLE_CLIENT_ID, TW, DEFAULT_SETTINGS,
+                  _h, sb_get, sb_insert, sb_patch, sb_delete, verify_google_token, level_info, levels,
+                  settings as game_settings, invalidate_settings, invalidate_questions, question_bank,
+                  delete_post_cascade, send_certificate)
+from game_quiz import QUIZ_QUESTIONS
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -384,7 +388,7 @@ def stats_game(d):
     users = d["users"]
     by_level = Counter(level_info(u.get("xp") or 0)["level"] for u in users)
     levels = [{"level": lv, "title": title, "emoji": emoji, "min_xp": xp, "count": by_level.get(lv, 0),
-               "reached": sum(c for l, c in by_level.items() if l >= lv)} for xp, lv, title, emoji in LEVELS]
+               "reached": sum(c for l, c in by_level.items() if l >= lv)} for xp, lv, title, emoji in levels()]
     labels, reg = daily_series([to_tw(u.get("created_at")) for u in users])
     _, ck = daily_series([to_tw(c.get("created_at")) for c in d["checkins"]])
     _, posts = daily_series([to_tw(p.get("created_at")) for p in d["posts"]])
@@ -537,3 +541,406 @@ def admin_booking_list():
 @require_role("admin")
 def admin_system():
     return jsonify(cached("system", stats_system))
+
+def who():
+    return (current_admin() or {}).get("email")
+
+def body():
+    return request.get_json(silent=True) or {}
+
+# ───────── 遊戲設定 ─────────
+INT_FIELDS = {
+    "xp_checkin": ("打卡 XP", 0, 100000), "xp_quiz_correct": ("答對 XP", 0, 100000),
+    "xp_quiz_wrong": ("答錯 XP", 0, 100000), "xp_quiz_combo": ("連擊加成 XP", 0, 100000),
+    "xp_quiz_perfect": ("全對加碼 XP", 0, 100000), "xp_post": ("發文 XP", 0, 100000),
+    "post_daily_limit": ("每日發文給 XP 篇數", 0, 50), "quiz_round_size": ("每局題數", 1, 30),
+    "quiz_seconds": ("每題秒數", 5, 120),
+}
+
+def validate_settings(raw):
+    errors, clean = [], {}
+    lv = raw.get("levels")
+    if not isinstance(lv, list) or not 2 <= len(lv) <= 10:
+        errors.append("等級數量需介於 2–10 級")
+    else:
+        out, prev = [], -1
+        for i, l in enumerate(lv):
+            title = str(l.get("title") or "").strip()[:12]
+            emoji = str(l.get("emoji") or "").strip()[:4] or "⭐"
+            try:
+                xp = int(l.get("xp"))
+            except (TypeError, ValueError):
+                errors.append(f"Lv.{i + 1} 的 XP 門檻不是數字")
+                continue
+            if not title:
+                errors.append(f"Lv.{i + 1} 需要名稱")
+            if i == 0 and xp != 0:
+                errors.append("Lv.1 的 XP 門檻必須是 0")
+            if i > 0 and xp <= prev:
+                errors.append(f"Lv.{i + 1} 的 XP 門檻必須大於 Lv.{i}（{prev}）")
+            prev = xp
+            out.append({"xp": xp, "title": title, "emoji": emoji})
+        clean["levels"] = out
+    for k, (label, lo, hi) in INT_FIELDS.items():
+        try:
+            v = int(raw.get(k))
+        except (TypeError, ValueError):
+            errors.append(f"{label} 不是數字")
+            continue
+        if not lo <= v <= hi:
+            errors.append(f"{label} 需介於 {lo}–{hi}")
+        clean[k] = v
+    enabled = len(question_bank())
+    if clean.get("quiz_round_size", 0) > enabled:
+        errors.append(f"每局題數（{clean['quiz_round_size']}）不能多於目前啟用的題目數（{enabled}）")
+    return clean, errors
+
+def simulate(s):
+    n, top = s["quiz_round_size"], s["levels"][-1]["xp"]
+    perfect = n * s["xp_quiz_correct"] + s["xp_quiz_combo"] * n * (n - 1) // 2 + s["xp_quiz_perfect"]
+    worst = n * s["xp_quiz_wrong"]
+    total_merchants = len(MERCHANTS)
+    need = lambda xp, per: -(-xp // per) if per else None
+    per_level = [{"title": l["title"], "emoji": l["emoji"], "xp": l["xp"],
+                  "checkins": need(l["xp"], s["xp_checkin"]), "perfect_rounds": need(l["xp"], perfect),
+                  "worst_rounds": need(l["xp"], worst)} for l in s["levels"][1:]]
+    top_row = per_level[-1]
+    warnings = []
+    if top_row["perfect_rounds"] is not None and top_row["perfect_rounds"] <= 1:
+        warnings.append(f"一局問答全對（+{perfect:,} XP）就能直接升到最高級拿證書")
+    if top_row["worst_rounds"] is not None and top_row["worst_rounds"] <= 5:
+        warnings.append(f"就算每題都答錯，玩 {top_row['worst_rounds']} 局也能拿證書")
+    if top_row["checkins"] is not None and top_row["checkins"] > total_merchants:
+        warnings.append(f"只靠打卡，走完全部 {total_merchants} 家也到不了最高級")
+    if top_row["checkins"] is not None and top_row["checkins"] <= 2:
+        warnings.append(f"只要打卡 {top_row['checkins']} 家就能拿證書")
+    return {"perfect_round": perfect, "worst_round": worst, "per_level": per_level,
+            "warnings": warnings, "total_merchants": total_merchants}
+
+def distribution(old, new):
+    users = fetch_all("game_users", "xp,certificate_sent")
+    old_c, new_c = Counter(), Counter()
+    for u in users:
+        old_c[level_info(u.get("xp") or 0, old)["level"]] += 1
+        new_c[level_info(u.get("xp") or 0, new)["level"]] += 1
+    top = new["levels"][-1]["xp"]
+    rows = [{"level": i + 1, "title": l["title"], "old": old_c.get(i + 1, 0), "new": new_c.get(i + 1, 0)}
+            for i, l in enumerate(new["levels"])]
+    pending = sum(1 for u in users if (u.get("xp") or 0) >= top and not u.get("certificate_sent"))
+    return {"rows": rows, "players": len(users), "pending_certificates": pending}
+
+@admin_bp.route('/admin/api/game/settings')
+@require_role("admin")
+def get_game_settings():
+    hist = sb_get("game_settings_history", {"select": "id,value,updated_by,created_at", "order": "id.desc", "limit": "15"})
+    return jsonify({"settings": game_settings(), "defaults": DEFAULT_SETTINGS, "history": hist,
+                    "enabled_questions": len(question_bank()), "fields": [[k, v[0]] for k, v in INT_FIELDS.items()]})
+
+@admin_bp.route('/admin/api/game/settings/preview', methods=['POST'])
+@require_role("admin")
+def preview_game_settings():
+    clean, errors = validate_settings(body().get("settings") or {})
+    if errors:
+        return jsonify({"errors": errors})
+    return jsonify({"errors": [], "sim": simulate(clean), "dist": distribution(game_settings(), clean)})
+
+@admin_bp.route('/admin/api/game/settings', methods=['POST'])
+@require_role("admin")
+def save_game_settings():
+    data = body()
+    clean, errors = validate_settings(data.get("settings") or {})
+    if errors:
+        return jsonify({"errors": errors}), 400
+    before = game_settings()
+    r = requests.post(f"{SUPABASE_URL}/rest/v1/game_settings",
+                      json={"key": "game", "value": clean, "updated_by": who(), "updated_at": datetime.now(TW).isoformat()},
+                      headers=_h({"Prefer": "resolution=merge-duplicates,return=minimal"}), timeout=8)
+    if r.status_code not in (200, 201, 204):
+        return jsonify({"errors": [f"儲存失敗（{r.status_code}）：{r.text[:160]}"]}), 500
+    sb_insert("game_settings_history", {"value": clean, "updated_by": who()})
+    invalidate_settings()
+    changed = {k: [before.get(k), clean[k]] for k in clean if before.get(k) != clean[k]}
+    audit(who(), "game_settings_update", {"changed": changed})
+    sent = 0
+    if data.get("send_certificates"):
+        top = clean["levels"][-1]["xp"]
+        targets = [u for u in fetch_all("game_users", "google_id,email,name,xp,checkin_count,certificate_sent")
+                   if (u.get("xp") or 0) >= top and not u.get("certificate_sent")]
+        for u in targets:
+            sb_patch("game_users", {"google_id": f"eq.{u['google_id']}"}, {"certificate_sent": True})
+        threading.Thread(target=lambda: [send_certificate(u.get("email"), u.get("name"), u.get("xp") or 0,
+                                                          u.get("checkin_count") or 0) for u in targets],
+                         daemon=True).start()
+        sent = len(targets)
+        audit(who(), "certificates_backfill", {"count": sent})
+    _cache.clear()
+    return jsonify({"ok": True, "settings": clean, "certificates_sent": sent})
+
+# ───────── 題目管理 ─────────
+QUESTION_CATEGORIES = ["地理", "歷史文化", "物產職人", "永續旅行", "商家知識", "一般"]
+MIN_ANSWERS_FOR_FLAG = 10
+
+def validate_question(d):
+    errors = []
+    q = str(d.get("question") or "").strip()
+    opts = [str(o or "").strip() for o in (d.get("options") or [])]
+    fact = str(d.get("fact") or "").strip()
+    if not 5 <= len(q) <= 200:
+        errors.append("題目需介於 5–200 字")
+    if len(opts) != 4 or any(not o for o in opts):
+        errors.append("需要 4 個選項，且都不能空白")
+    elif len(set(opts)) != 4:
+        errors.append("4 個選項不能重複")
+    elif any(len(o) > 60 for o in opts):
+        errors.append("每個選項最多 60 字")
+    try:
+        answer = int(d.get("answer"))
+    except (TypeError, ValueError):
+        answer = -1
+    if answer not in range(4):
+        errors.append("請選擇正確答案")
+    if len(fact) > 300:
+        errors.append("補充說明最多 300 字")
+    cat = d.get("category") if d.get("category") in QUESTION_CATEGORIES else "一般"
+    return {"question": q, "options": opts, "answer": answer, "fact": fact, "category": cat,
+            "enabled": bool(d.get("enabled", True))}, errors
+
+def question_stats():
+    stats = defaultdict(lambda: {"n": 0, "correct": 0, "choices": [0, 0, 0, 0]})
+    for a in fetch_all("quiz_answers", "question_id,chosen,correct"):
+        s = stats[a.get("question_id")]
+        s["n"] += 1
+        s["correct"] += 1 if a.get("correct") else 0
+        if a.get("chosen") in (0, 1, 2, 3):
+            s["choices"][a["chosen"]] += 1
+    return stats
+
+def question_flags(row, s):
+    if s["n"] < MIN_ANSWERS_FOR_FLAG:
+        return []
+    flags, rate = [], s["correct"] / s["n"]
+    if rate > .95:
+        flags.append("too_easy")
+    if rate < .2:
+        flags.append("too_hard")
+    top = max(range(4), key=lambda i: s["choices"][i])
+    if top != row["answer"] and s["choices"][top] / s["n"] >= .5:
+        flags.append("suspect_answer")
+    return flags
+
+@admin_bp.route('/admin/api/questions')
+@require_role("admin", "moderator")
+def list_questions():
+    rows = fetch_all("game_questions", "*", {"order": "id.asc"})
+    source = "db" if rows else "builtin"
+    if not rows:
+        rows = [{"id": None, "question": q["q"], "options": q["options"], "answer": q["answer"], "fact": q["fact"],
+                 "category": q.get("cat", "一般"), "enabled": True} for q in QUIZ_QUESTIONS]
+    stats = question_stats() if source == "db" else {}
+    for r in rows:
+        s = stats.get(r["id"], {"n": 0, "correct": 0, "choices": [0, 0, 0, 0]})
+        r["stats"] = {**s, "rate": round(s["correct"] / s["n"] * 100) if s["n"] else None}
+        r["flags"] = question_flags(r, s)
+    return jsonify({"source": source, "rows": rows, "categories": QUESTION_CATEGORIES,
+                    "round_size": game_settings()["quiz_round_size"], "min_answers": MIN_ANSWERS_FOR_FLAG})
+
+@admin_bp.route('/admin/api/questions/import-builtin', methods=['POST'])
+@require_role("admin", "moderator")
+def import_builtin_questions():
+    if sb_get("game_questions", {"select": "id", "limit": "1"}):
+        return jsonify({"error": "資料庫已經有題目，不需要再匯入"}), 400
+    rows = [{"question": q["q"], "options": q["options"], "answer": q["answer"], "fact": q["fact"],
+             "category": q.get("cat", "一般"), "enabled": True, "created_by": who()} for q in QUIZ_QUESTIONS]
+    r = requests.post(f"{SUPABASE_URL}/rest/v1/game_questions", json=rows, headers=_h(), timeout=15)
+    if r.status_code not in (200, 201):
+        return jsonify({"error": f"匯入失敗（{r.status_code}）：{r.text[:160]}"}), 500
+    invalidate_questions()
+    audit(who(), "questions_import_builtin", {"count": len(rows)})
+    return jsonify({"ok": True, "count": len(rows)})
+
+@admin_bp.route('/admin/api/questions', methods=['POST'])
+@require_role("admin", "moderator")
+def create_question():
+    clean, errors = validate_question(body())
+    if errors:
+        return jsonify({"errors": errors}), 400
+    row = sb_insert("game_questions", {**clean, "created_by": who()})
+    if not row:
+        return jsonify({"errors": ["儲存失敗，請確認已建立 game_questions 資料表"]}), 500
+    invalidate_questions()
+    audit(who(), "question_create", {"id": row.get("id"), "question": clean["question"][:60]})
+    return jsonify(row)
+
+@admin_bp.route('/admin/api/questions/bulk', methods=['POST'])
+@require_role("admin", "moderator")
+def bulk_questions():
+    good, bad = [], []
+    for i, d in enumerate((body().get("rows") or [])[:300], 1):
+        clean, errors = validate_question(d)
+        (bad.append({"row": i, "errors": errors}) if errors else good.append({**clean, "created_by": who()}))
+    if good:
+        r = requests.post(f"{SUPABASE_URL}/rest/v1/game_questions", json=good, headers=_h(), timeout=15)
+        if r.status_code not in (200, 201):
+            return jsonify({"error": f"匯入失敗（{r.status_code}）：{r.text[:160]}"}), 500
+        invalidate_questions()
+        audit(who(), "questions_import_csv", {"count": len(good)})
+    return jsonify({"inserted": len(good), "errors": bad})
+
+@admin_bp.route('/admin/api/questions/<int:qid>', methods=['PUT'])
+@require_role("admin", "moderator")
+def update_question(qid):
+    clean, errors = validate_question(body())
+    if errors:
+        return jsonify({"errors": errors}), 400
+    sb_patch("game_questions", {"id": f"eq.{qid}"}, {**clean, "updated_at": datetime.now(TW).isoformat()})
+    invalidate_questions()
+    audit(who(), "question_update", {"id": qid, "question": clean["question"][:60]})
+    return jsonify({"ok": True})
+
+@admin_bp.route('/admin/api/questions/<int:qid>/toggle', methods=['POST'])
+@require_role("admin", "moderator")
+def toggle_question(qid):
+    enabled = bool(body().get("enabled"))
+    if not enabled and len(question_bank()) - 1 < game_settings()["quiz_round_size"]:
+        return jsonify({"error": f"停用後啟用題目會少於每局題數（{game_settings()['quiz_round_size']}），請先到遊戲設定調低每局題數"}), 400
+    sb_patch("game_questions", {"id": f"eq.{qid}"}, {"enabled": enabled})
+    invalidate_questions()
+    audit(who(), "question_enable" if enabled else "question_disable", {"id": qid})
+    return jsonify({"ok": True})
+
+@admin_bp.route('/admin/api/questions/<int:qid>', methods=['DELETE'])
+@require_role("admin", "moderator")
+def delete_question(qid):
+    row = sb_get("game_questions", {"id": f"eq.{qid}", "select": "question,enabled"})
+    if not row:
+        return jsonify({"error": "找不到這題"}), 404
+    if row[0].get("enabled") and len(question_bank()) - 1 < game_settings()["quiz_round_size"]:
+        return jsonify({"error": "刪除後啟用題目會少於每局題數，請先調低每局題數"}), 400
+    sb_delete("quiz_answers", {"question_id": f"eq.{qid}"})
+    sb_delete("game_questions", {"id": f"eq.{qid}"})
+    invalidate_questions()
+    audit(who(), "question_delete", {"id": qid, "question": (row[0].get("question") or "")[:60]})
+    return jsonify({"ok": True})
+
+# ───────── 動態管理 ─────────
+def _public_post(p):
+    return {k: p.get(k) for k in ("id", "user_name", "user_avatar", "user_level", "content", "merchant_name",
+                                  "image_url", "likes", "comment_count", "hidden", "pinned", "created_at")}
+
+@admin_bp.route('/admin/api/feed')
+@require_role("admin", "moderator")
+def admin_feed():
+    status, q = request.args.get("status", ""), (request.args.get("q") or "").strip().lower()
+    posts = fetch_all("game_posts", "*", {"order": "id.desc"}, max_rows=3000)
+    counts = {"all": len(posts), "hidden": sum(1 for p in posts if p.get("hidden")),
+              "pinned": sum(1 for p in posts if p.get("pinned"))}
+    if status == "hidden":
+        posts = [p for p in posts if p.get("hidden")]
+    elif status == "pinned":
+        posts = [p for p in posts if p.get("pinned")]
+    elif status == "image":
+        posts = [p for p in posts if p.get("image_url")]
+    if q:
+        posts = [p for p in posts if any(q in str(p.get(k) or "").lower() for k in ("content", "user_name", "merchant_name"))]
+    return jsonify({"rows": [_public_post(p) for p in posts[:150]], "total": len(posts), "counts": counts})
+
+@admin_bp.route('/admin/api/feed/<int:pid>', methods=['POST'])
+@require_role("admin", "moderator")
+def moderate_post(pid):
+    action = body().get("action")
+    patch = {"hide": {"hidden": True}, "unhide": {"hidden": False},
+             "pin": {"pinned": True}, "unpin": {"pinned": False}}.get(action)
+    if not patch:
+        return jsonify({"error": "未知的操作"}), 400
+    sb_patch("game_posts", {"id": f"eq.{pid}"}, patch)
+    audit(who(), f"post_{action}", {"id": pid})
+    return jsonify({"ok": True})
+
+@admin_bp.route('/admin/api/feed/<int:pid>', methods=['DELETE'])
+@require_role("admin", "moderator")
+def admin_delete_post(pid):
+    row = sb_get("game_posts", {"id": f"eq.{pid}", "select": "user_name,content"})
+    if not row:
+        return jsonify({"error": "找不到這篇貼文"}), 404
+    delete_post_cascade(pid)
+    audit(who(), "post_delete", {"id": pid, "user": row[0].get("user_name"), "content": (row[0].get("content") or "")[:80]})
+    return jsonify({"ok": True})
+
+@admin_bp.route('/admin/api/feed/<int:pid>/comments')
+@require_role("admin", "moderator")
+def admin_comments(pid):
+    return jsonify(sb_get("game_comments", {"post_id": f"eq.{pid}", "order": "id.asc",
+                                            "select": "id,user_name,user_avatar,content,hidden,created_at"}))
+
+def _adjust_comment_count(pid, delta):
+    post = sb_get("game_posts", {"id": f"eq.{pid}", "select": "comment_count"})
+    if post:
+        sb_patch("game_posts", {"id": f"eq.{pid}"}, {"comment_count": max(0, (post[0].get("comment_count") or 0) + delta)})
+
+@admin_bp.route('/admin/api/comments/<int:cid>', methods=['POST'])
+@require_role("admin", "moderator")
+def moderate_comment(cid):
+    action = body().get("action")
+    if action not in ("hide", "unhide"):
+        return jsonify({"error": "未知的操作"}), 400
+    row = sb_get("game_comments", {"id": f"eq.{cid}", "select": "post_id,hidden"})
+    if not row:
+        return jsonify({"error": "找不到這則留言"}), 404
+    hide = action == "hide"
+    if bool(row[0].get("hidden")) != hide:
+        sb_patch("game_comments", {"id": f"eq.{cid}"}, {"hidden": hide})
+        _adjust_comment_count(row[0]["post_id"], -1 if hide else 1)
+    audit(who(), f"comment_{action}", {"id": cid})
+    return jsonify({"ok": True})
+
+@admin_bp.route('/admin/api/comments/<int:cid>', methods=['DELETE'])
+@require_role("admin", "moderator")
+def admin_delete_comment(cid):
+    row = sb_get("game_comments", {"id": f"eq.{cid}", "select": "post_id,hidden,content"})
+    if not row:
+        return jsonify({"error": "找不到這則留言"}), 404
+    sb_delete("game_comments", {"id": f"eq.{cid}"})
+    if not row[0].get("hidden"):
+        _adjust_comment_count(row[0]["post_id"], -1)
+    audit(who(), "comment_delete", {"id": cid, "content": (row[0].get("content") or "")[:80]})
+    return jsonify({"ok": True})
+
+# ───────── AI 嚮導分析 ─────────
+FUNNEL_TOOLS = [("search_local_merchants", "收到推薦"), ("check_availability", "查詢空檔"), ("book_experience", "完成預約")]
+
+def stats_ai():
+    logs = fetch_all("chat_logs", "session_id,lang,category,tools,booked,error,ms,created_at")
+    for l in logs:
+        l["_t"] = to_tw(l.get("created_at"))
+    msg_dt = [l["_t"] for l in logs]
+    first_seen = {}
+    for l in sorted(logs, key=lambda l: l["_t"] or datetime.min.replace(tzinfo=TW)):
+        first_seen.setdefault(l.get("session_id") or id(l), l["_t"])
+    labels, msgs = daily_series(msg_dt)
+    _, sess = daily_series(list(first_seen.values()))
+
+    sessions = defaultdict(set)
+    for l in logs:
+        sessions[l.get("session_id") or id(l)].update(l.get("tools") or [])
+    funnel = [["開始對話", len(sessions)]] + [[label, sum(1 for t in sessions.values() if tool in t)]
+                                              for tool, label in FUNNEL_TOOLS]
+    tools = Counter(t for l in logs for t in (l.get("tools") or []))
+    ms = [l["ms"] for l in logs if l.get("ms")]
+    m_cur, m_prev = window_counts(msg_dt, 7)
+    s_cur, s_prev = window_counts(list(first_seen.values()), 7)
+    return {
+        "messages": {"value": m_cur, "prev": m_prev, "total": len(logs)},
+        "sessions": {"value": s_cur, "prev": s_prev, "total": len(sessions)},
+        "conversion": round(funnel[-1][1] / len(sessions) * 100, 1) if sessions else None,
+        "error_rate": round(sum(1 for l in logs if l.get("error")) / len(logs) * 100, 1) if logs else None,
+        "avg_seconds": round(sum(ms) / len(ms) / 1000, 1) if ms else None,
+        "trend": {"labels": labels, "messages": msgs, "sessions": sess},
+        "langs": Counter({"zh-TW": "繁中", "en": "English", "ja": "日本語"}.get(l.get("lang"), l.get("lang") or "其他")
+                         for l in logs).most_common(),
+        "categories": Counter(l.get("category") or "自由提問" for l in logs).most_common(10),
+        "tools": tools.most_common(),
+        "funnel": funnel,
+    }
+
+admin_bp.add_url_rule('/admin/api/ai', 'ai', require_role("admin")(lambda: jsonify({**cached("ai", stats_ai),
+                                                                                     "fetched_at": datetime.now(TW).isoformat()})))

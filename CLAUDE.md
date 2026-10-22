@@ -150,29 +150,32 @@ Render 環境變數（在 Render dashboard 設定）：
 
 ### 緣投探索者遊戲（`/game`）
 
-- 後端在 `game.py`（Flask Blueprint，`app.py` 只做 `register_blueprint`），題庫在 `game_quiz.py`（40 題）
+- 後端在 `game.py`（Flask Blueprint，`app.py` 只做 `register_blueprint`）；`game_quiz.py` 是內建 40 題（題庫表 `game_questions` 是空的時才使用，也是後台「匯入內建題庫」的來源）
 - **登入**：Google Identity Services → `POST /api/game/login` 驗 id_token → 寫入 Flask `session["gid"]`。所有寫入 API 都從 session 取使用者，**不信任前端傳的 google_id**
-- **遊戲數值集中在 `game.py` 開頭**（`LEVELS`、`XP_*`、`QUIZ_ROUND_SIZE` 等），透過 `GAME_CFG` 傳給模板與前端 `CFG`，頁面文字自動跟著變；調數值只改這裡，不要在 `game.html` 寫死數字
-- **等級**（目前最高 Lv.3，暫定）：旅人 0 → 探索者 300 → 永續達人 900 XP。最高等級的稱號固定為「永續達人」，因為證書綁定最高等級
-- **XP**（已 ×3）：打卡 +240（Gemini Vision 驗人臉，每商家一次）；問答答對 +150、連擊每題 +30、答錯 +30、全對 +300；發文 +60（每日前 3 篇）
-- **問答大挑戰**：每局 10 題、每題 20 秒、可無限局。注意目前一局全對約 +3,150 XP，一局就能到最高等級；正式上線前應提高門檻
+- **遊戲數值由後台「遊戲設定」頁修改**，存在 `game_settings` 表（key=`game`）；`game.settings()` 讀取並快取 60 秒，讀不到就用 `DEFAULT_SETTINGS`。程式一律透過 `settings()` / `levels()` / `public_cfg()` 取值，模板拿到 `cfg`（遊戲頁）或 `game_cfg`（全站），**不要在程式或 `game.html` 寫死數字**
+- **預設值**：最高 Lv.3（旅人 0 → 探索者 300 → 永續達人 900 XP）；打卡 +240、答對 +150、連擊每題 +30、答錯 +30、全對 +300、發文 +60（每日前 3 篇）、每局 10 題、每題 20 秒。後台有平衡試算器，會警告「一局就能拿證書」這類數值
+- **最高等級就是發證書的等級**（等級數可在後台增減）
+- **題庫**：`question_bank()` 讀 `game_questions` 的啟用題目（快取 60 秒）；表是空的時用內建題目。每次作答寫入 `quiz_answers`（題目 id、選項、對錯），後台據此算答對率並標記「太簡單 / 太難 / 答案可能有誤」
 - **問答 session** 存在記憶體 `QUIZ_SESSIONS`，答案不會送到前端；伺服器重啟會清空進行中的局
 - **證書**：首次達到最高等級時（`certificate_sent` 為 false），`award_xp()` 開 thread POST 到 n8n `nantou-certificate` webhook（`n8n_certificate_workflow.json`），由 Gmail OAuth2 寄出 HTML 證書；`/game/certificate/<google_id>` 可線上查看
 - **圖片**：打卡與貼文照片上傳到 Supabase Storage `event-image` bucket 的 `checkins/`、`posts/` 資料夾
+- **動態**：`game_posts.hidden` 為 true 的貼文、`game_comments.hidden` 為 true 的留言玩家看不到；`pinned` 的貼文排在第一頁最上方
 - **前端** `templates/game.html`：左側抽屜選單（≥1000px 預設展開）、6 個頁面（主頁/打卡/問答/動態/排行/證書）、緣投浮動對話、升級彩帶動畫；所有使用者內容都經 `esc()` 轉義
 
 ### 管理後台（`/admin`）
 
 - 後端在 `admin.py`（Flask Blueprint），前端 `templates/admin.html`（Chart.js 4.4.1 + Leaflet）
-- **登入**：Google 登入 → `POST /admin/api/login`，email 必須已驗證且在 `ADMIN_EMAILS`（管理員）或 `MODERATOR_EMAILS`（內容審核，只能看遊戲分析）名單內；每次請求都重新比對名單，移出名單即失效
-- **頁面**：總覽、預約分析（含全部預約清單：搜尋、篩選、分頁、匯出 CSV）、商家表現、地圖視角、永續影響力、遊戲分析、系統健康
+- **登入**：Google 登入 → `POST /admin/api/login`，email 必須已驗證且在 `ADMIN_EMAILS`（管理員）或 `MODERATOR_EMAILS`（內容審核：遊戲分析、題目管理、動態管理）名單內；每次請求都重新比對名單，移出名單即失效
+- **頁面**：總覽、預約分析（含全部預約清單：搜尋、篩選、分頁、匯出 CSV）、商家表現、地圖視角、永續影響力、AI 嚮導、遊戲分析、遊戲設定、題目管理、動態管理、系統健康
+- **可編輯的資料**：遊戲設定（等級、XP、題數；可勾選立即補寄證書）、題目（新增 / 編輯 / 停用 / 刪除 / CSV 匯入）、貼文與留言（隱藏 / 置頂 / 刪除）。停用或刪除題目時，若啟用題數會少於每局題數會被擋下
+- **AI 嚮導分析**：`/api/chat` 每次回覆後把語言、點選的類別、呼叫的工具、是否完成預約、耗時寫入 `chat_logs`（**不存對話內容**）；前端每次開頁產生一個 `session_id` 用來算對話數與轉換漏斗
 - **地圖圖示**：Font Awesome Free 6.5.1（cdnjs），每個類別一個圖示，對照表在 `admin.html` 的 `CAT_ICON`
 - **資料**：`load_data()` 分頁讀取 Supabase 全表（每頁 1000 筆），在 Flask 端統計，快取 60 秒；`?fresh=1`（右上角重新整理）略過快取
 - **商家名稱比對**：`match_merchant()` 依序做完全比對、包含比對、`difflib` 模糊比對（cutoff 0.7），把 AI 送出的店名對應回 `merchants_data` 的 46 家；對不到的列在「商家表現」頁
 - **地圖座標**：商家座標放在 `static/js/locations.js`（首頁與後台共用），後台前端用 bigram 相似度把座標對應到統計資料
 - **n8n 狀態**：需要 `N8N_API_KEY`（n8n Settings → n8n API），讀 `/api/v1/workflows` 與 `/api/v1/executions`；沒設定時頁面會顯示設定步驟
-- **稽核紀錄**：登入、登出、被拒登入寫入 `admin_audit_log` 表
-- 尚未提供：收入估算（缺商家價格表）、AI 嚮導分析與題目答對率（缺記錄表），列在第二批
+- **稽核紀錄**：登入、登出、被拒登入，以及所有設定、題目、貼文、留言的修改都寫入 `admin_audit_log` 表
+- 尚未提供：收入估算（缺商家價格表）
 
 ### Supabase 資料表
 
@@ -188,6 +191,8 @@ Render 環境變數（在 Render dashboard 設定）：
 **game_users / checkins / game_posts / game_likes / game_comments**（RLS disabled）：遊戲用，欄位見 `game.py`
 
 **admin_audit_log**（RLS disabled）：`email`、`action`、`detail`（jsonb）、`created_at`
+
+**game_settings**（`key` 主鍵、`value` jsonb）/ **game_settings_history** / **game_questions** / **quiz_answers** / **chat_logs**（RLS disabled）：後台第二批用，欄位見 `admin.py`；`game_posts`、`game_comments` 另有 `hidden`、`pinned` 欄位
 
 **Supabase Storage**：
 - bucket `event-image`（public）：商家透過 LINE Bot 上傳的活動照片

@@ -1895,6 +1895,7 @@ function sendMessage(text) {
     const chatWidget = document.getElementById('chat-widget');
 
     const conversationHistory = [];
+    const chatSessionId = (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
     let currentLang = 'zh-TW';
 
     function pickCategory(text) {
@@ -1969,7 +1970,8 @@ function sendMessage(text) {
                 body: JSON.stringify({
                     message: text,
                     history: conversationHistory.slice(-20),
-                    lang: currentLang
+                    lang: currentLang,
+                    session_id: chatSessionId
                 })
             });
             const data = await response.json();
