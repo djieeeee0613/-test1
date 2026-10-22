@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 另有兩個子系統：
 - **緣投探索者遊戲**（`/game`）：Google 登入，打卡（AI 驗人臉）、問答大挑戰、旅人動態、排行榜、升到最高等級寄永續達人證書
-- **管理後台**（`/admin`）：Google 登入 + email 白名單，營運與遊戲數據儀表板，以及預約、LINE 綁定、首頁輪播、公告、遊戲設定、題庫、動態、玩家、限時活動的編輯
+- **管理後台**（`/admin`）：Google 登入 + email 白名單，營運與遊戲數據儀表板，以及預約、LINE 綁定、首頁輪播、公告、遊戲設定、題庫、動態、玩家、限時活動的編輯；內建「問緣投」AI 助理（讀取後台數據回答管理員問題）、AI 出題、貼文 AI 自動審核
 
 ## 雲端部署架構
 
@@ -125,7 +125,10 @@ Render 環境變數（在 Render dashboard 設定）：
 
 - `【絕對禁止】` 旅客提供店家名稱時，不可呼叫 `search_local_merchants` 驗證，一律直接進入預約流程
 - `【日期傳遞規則】` 呼叫 `check_availability` / `book_experience` 時，日期字串原樣傳入（不自行補年份）
-- `【互動選項格式】` 詢問人數、預算、區域時輸出 `[選項: A | B | C]` 格式，前端解析為可點擊按鈕
+- `【互動選項格式】` 詢問人數、區域時輸出 `[選項: A | B | C]` 格式，前端解析為可點擊按鈕（預算選項已移除，因為名錄沒有價格）
+- `【搜尋方式】` 旅客指定區域帶 `township`、指定體驗類型帶 `category` 或 `keyword`；分類卡片（`【分類探索】`）直接把類別名稱填入 `category`
+- `【價格】` 名錄沒有價格資料，不可編造金額；只有「🎉 近期活動」有標示費用
+- `【正式店名】` 推薦與預約時使用搜尋結果 `【】` 內的正式店名
 - 經典推薦及行程安排不詢問任何額外資訊，直接輸出
 
 ### `templates/index.html` 關鍵細節
@@ -249,6 +252,16 @@ Render 環境變數（在 Render dashboard 設定）：
 
 **Supabase Storage**：
 - bucket `event-image`（public）：根目錄是商家透過 LINE Bot 上傳的活動照片；`checkins/` 打卡照片、`posts/` 貼文照片、`carousel/` 後台上傳的輪播照片
+
+## 開發注意事項
+
+- **部署順序**：新程式會寫入的 Supabase 欄位或資料表，必須**先在 Supabase SQL Editor 建好再推上 Render**（例如貼文的 `hidden`、`moderation` 欄位不存在時，篩選或發文會整個失敗）。新建的表一律 `DISABLE ROW LEVEL SECURITY`，與現有表一致
+- **Jinja 模板裡的 JavaScript**：不要寫出 `{{`、`{%`（例如 `${{ a: 1 }[k]}`），Jinja 會當成模板語法；需要時先存成變數
+- **HTML 屬性或樣板字串裡的換行**：JS 字串、正規表示式要用跳脫寫法 `\n` 或 `String.fromCharCode(10)`，不可出現真正的換行字元，否則整段 `<script>` 會語法錯誤、頁面所有功能失效。改完 `admin.html` / `game.html` 建議抽出 `<script>` 用 `node --check` 檢查
+- **Gemini 工具呼叫**：用 Python 函式當工具時，一定要關掉自動呼叫（`AutomaticFunctionCallingConfig(disable=True)`），自己跑工具迴圈；工具函式的 docstring 就是給 AI 看的說明，參數用法要寫清楚
+- **給 AI 的資料**：欄位名稱要明確寫出期間與範圍（例如 `pending_bookings_all_time`、`bookings_last_7_days`），否則 AI 容易把全部數字講成「本週」
+- **XSS**：使用者內容一律轉義（前端 `esc()`），不要用 `innerHTML` 直接插入未轉義的字串
+- **專案沒有自動化測試**：改完請重啟本機伺服器實際操作；沒有 `SUPABASE_KEY` 時資料相關功能會是空的
 
 ## 安全性注意事項
 
