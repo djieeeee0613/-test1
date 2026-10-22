@@ -44,6 +44,8 @@ Render 環境變數（在 Render dashboard 設定）：
 - `GOOGLE_CLIENT_ID`（遊戲 Google 登入）
 - `FLASK_SECRET_KEY`（登入 session 簽章；沒設的話每次重新部署所有人都會被登出）
 - `N8N_CERT_WEBHOOK_URL`（預設 https://nantoutravel.app.n8n.cloud/webhook/nantou-certificate）
+- `ADMIN_EMAILS`（管理後台管理員，逗號分隔）、`MODERATOR_EMAILS`（內容審核員，選填）
+- `N8N_API_KEY`（後台讀取 n8n 工作流狀態，選填）
 
 ## 架構
 
@@ -162,6 +164,18 @@ Render 環境變數（在 Render dashboard 設定）：
 - **圖片**：打卡與貼文照片上傳到 Supabase Storage `event-image` bucket 的 `checkins/`、`posts/` 資料夾
 - **前端** `templates/game.html`：左側抽屜選單（≥1000px 預設展開）、6 個頁面（主頁/打卡/問答/動態/排行/證書）、緣投浮動對話、升級彩帶動畫；所有使用者內容都經 `esc()` 轉義
 
+### 管理後台（`/admin`）
+
+- 後端在 `admin.py`（Flask Blueprint），前端 `templates/admin.html`（Chart.js 4.4.1 + Leaflet）
+- **登入**：Google 登入 → `POST /admin/api/login`，email 必須已驗證且在 `ADMIN_EMAILS`（管理員）或 `MODERATOR_EMAILS`（內容審核，只能看遊戲分析）名單內；每次請求都重新比對名單，移出名單即失效
+- **頁面**：總覽、預約分析、商家表現、地圖視角、永續影響力、遊戲分析、系統健康
+- **資料**：`load_data()` 分頁讀取 Supabase 全表（每頁 1000 筆），在 Flask 端統計，快取 60 秒；`?fresh=1`（右上角重新整理）略過快取
+- **商家名稱比對**：`match_merchant()` 依序做完全比對、包含比對、`difflib` 模糊比對（cutoff 0.7），把 AI 送出的店名對應回 `merchants_data` 的 46 家；對不到的列在「商家表現」頁
+- **地圖座標**：商家座標放在 `static/js/locations.js`（首頁與後台共用），後台前端用 bigram 相似度把座標對應到統計資料
+- **n8n 狀態**：需要 `N8N_API_KEY`（n8n Settings → n8n API），讀 `/api/v1/workflows` 與 `/api/v1/executions`；沒設定時頁面會顯示設定步驟
+- **稽核紀錄**：登入、登出、被拒登入寫入 `admin_audit_log` 表
+- 尚未提供：收入估算（缺商家價格表）、AI 嚮導分析與題目答對率（缺記錄表），列在第二批
+
 ### Supabase 資料表
 
 **bookings**（RLS disabled）：
@@ -174,6 +188,8 @@ Render 環境變數（在 Render dashboard 設定）：
 - `id`（int8, primary key）、`artisan`（text）、`title`（text）、`event_date`（text）、`capacity`（int）、`price`（int）、`description`（text）、`active`（bool）、`image_url`（text）
 
 **game_users / checkins / game_posts / game_likes / game_comments**（RLS disabled）：遊戲用，欄位見 `game.py`
+
+**admin_audit_log**（RLS disabled）：`email`、`action`、`detail`（jsonb）、`created_at`
 
 **Supabase Storage**：
 - bucket `event-image`（public）：商家透過 LINE Bot 上傳的活動照片

@@ -227,7 +227,8 @@ def verify_google_token(id_token):
         if GOOGLE_CLIENT_ID and d.get("aud") != GOOGLE_CLIENT_ID:
             return None
         return {"google_id": d["sub"], "name": d.get("name"),
-                "email": d.get("email"), "avatar_url": d.get("picture")}
+                "email": d.get("email"), "avatar_url": d.get("picture"),
+                "email_verified": str(d.get("email_verified")).lower() == "true"}
     except Exception as e:
         print(f"❌ Google token error: {e}")
         return None
@@ -284,7 +285,8 @@ def login():
         return jsonify({"error": "Google 驗證失敗"}), 401
     user = get_user(info["google_id"])
     if not user:
-        user = sb_insert("game_users", {**info, "xp": 0, "level": 1, "title": "旅人",
+        profile = {k: info[k] for k in ("google_id", "name", "email", "avatar_url")}
+        user = sb_insert("game_users", {**profile, "xp": 0, "level": 1, "title": "旅人",
                                         "checkin_count": 0}) or info
     session["gid"] = info["google_id"]
     session.permanent = True

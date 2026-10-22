@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>管理後台 — 南投職人旅遊</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://accounts.google.com/gsi/client" async></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="/static/js/locations.js"></script>
+<style>
+:root {
+  --green: #2d4a35; --green-2: #3d6645; --green-soft: #eaf1ec; --gold: #C8A96E; --gold-soft: #fbf5e8;
+  --bg: #f4f5f2; --card: #fff; --text: #1f2a22; --muted: #6b746d; --line: #e6e8e3;
+  --ok: #10b981; --warn: #f59e0b; --bad: #ef4444; --info: #3b82f6;
+  --sidebar: 236px; --topbar: 58px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans TC', 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 登入 */
+#login { min-height: 100vh; display: grid; place-items: center; background: linear-gradient(150deg, #142d1b, #2d4a35 60%, #3d6645); padding: 20px; }
+.login-card { background: #fff; border-radius: 22px; padding: 36px 32px; width: 360px; max-width: 100%; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+.login-card img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); margin: 0 auto 14px; display: block; }
+.login-card h1 { font-size: 20px; color: var(--green); margin-bottom: 6px; }
+.login-card p { color: var(--muted); font-size: 13px; margin-bottom: 22px; line-height: 1.7; }
+.login-err { color: var(--bad); font-size: 13px; margin-top: 14px; min-height: 18px; }
+.gbtn { display: flex; justify-content: center; min-height: 44px; }
+
+/* 外框 */
+#app { display: none; }
+.topbar { position: fixed; inset: 0 0 auto 0; height: var(--topbar); background: #fff; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; padding: 0 18px; z-index: 50; }
+.burger { width: 38px; height: 38px; border-radius: 10px; display: none; place-items: center; font-size: 20px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 900; color: var(--green); }
+.brand img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+.brand small { font-weight: 500; color: var(--muted); font-size: 12px; background: var(--bg); padding: 2px 8px; border-radius: 8px; }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.updated { font-size: 12px; color: var(--muted); }
+.refresh { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; }
+.refresh:hover { background: var(--bg); }
+.refresh.loading span { display: inline-block; animation: spin 1s linear infinite; }
+.me { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.me img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.role { font-size: 11px; padding: 2px 8px; border-radius: 8px; background: var(--green-soft); color: var(--green); font-weight: 700; }
+.sidebar { position: fixed; top: var(--topbar); bottom: 0; left: 0; width: var(--sidebar); background: var(--green); color: #fff; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; z-index: 40; transition: transform .35s; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 12px; font-size: 14px; color: rgba(255,255,255,.78); text-align: left; transition: background .2s; }
+.nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+.nav-item.active { background: rgba(255,255,255,.15); color: #fff; font-weight: 700; box-shadow: inset 3px 0 0 var(--gold); }
+.nav-item .ic { width: 22px; text-align: center; }
+.nav-sep { font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,.4); padding: 14px 14px 6px; }
+.side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
+.side-foot a, .side-foot button { color: rgba(255,255,255,.7); font-size: 13px; padding: 9px 14px; border-radius: 10px; text-decoration: none; text-align: left; }
+.side-foot a:hover, .side-foot button:hover { background: rgba(255,255,255,.08); color: #fff; }
+.main { margin-left: var(--sidebar); padding: calc(var(--topbar) + 22px) 26px 60px; }
+.view { display: none; max-width: 1280px; margin: 0 auto; }
+.view.active { display: block; animation: fadeUp .4s ease; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+.page-head h1 { font-size: 22px; font-weight: 900; color: var(--green); }
+.page-head p { color: var(--muted); font-size: 13px; margin-top: 3px; }
+@media (max-width: 900px) {
+  .burger { display: grid; }
+  .sidebar { transform: translateX(-100%); }
+  body.nav-open .sidebar { transform: none; box-shadow: 10px 0 40px rgba(0,0,0,.25); }
+  .main { margin-left: 0; padding: calc(var(--topbar) + 16px) 12px 50px; }
+  .updated, .me span, .role, .brand small { display: none; }
+  .refresh { padding: 7px 10px; font-size: 0; }
+  .refresh span { font-size: 16px; }
+  .brand, .refresh { white-space: nowrap; }
+}
+
+/* 元件 */
+.grid { display: grid; gap: 14px; }
+.g2 { grid-template-columns: repeat(2, minmax(0,1fr)); } .g3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.g4 { grid-template-columns: repeat(4, minmax(0,1fr)); } .g6 { grid-template-columns: repeat(6, minmax(0,1fr)); }
+.span2 { grid-column: span 2; }
+@media (max-width: 1200px) { .g6 { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (max-width: 900px) { .g3, .g4 { grid-template-columns: repeat(2, minmax(0,1fr)); } .g2 { grid-template-columns: 1fr; } .span2 { grid-column: auto; } }
+@media (max-width: 560px) {
+  .g3 { grid-template-columns: 1fr; } .g4, .g6 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .kpi .val { font-size: 22px; } .kpi canvas { display: none !important; } .card { padding: 14px; }
+}
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; }
+.card h3 { font-size: 15px; color: var(--green); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.card .q { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+.chart-box { position: relative; height: 260px; }
+.chart-box.tall { height: 340px; } .chart-box.short { height: 200px; }
+.kpi { position: relative; overflow: hidden; }
+.kpi .lbl { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.kpi .val { font-size: 28px; font-weight: 900; margin: 6px 0 2px; color: var(--text); }
+.kpi .sub { font-size: 12px; color: var(--muted); }
+.kpi canvas { position: absolute; right: 12px; top: 14px; width: 72px !important; height: 30px !important; }
+.kpi.alert { border-color: #fecaca; background: #fff7f7; }
+.kpi.alert .val { color: var(--bad); }
+.delta { font-size: 12px; font-weight: 700; padding: 1px 7px; border-radius: 8px; }
+.delta.up { color: #047857; background: #d1fae5; } .delta.down { color: #b91c1c; background: #fee2e2; } .delta.flat { color: var(--muted); background: var(--bg); }
+.skeleton { background: linear-gradient(90deg, #eceee9 25%, #f6f7f4 50%, #eceee9 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 16px; height: 120px; }
+.empty { color: var(--muted); font-size: 13px; text-align: center; padding: 26px 8px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
+.t-ok { background: #d1fae5; color: #047857; } .t-bad { background: #fee2e2; color: #b91c1c; }
+.t-warn { background: #fef3c7; color: #92400e; } .t-mute { background: var(--bg); color: var(--muted); }
+.list-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid #f0f1ee; font-size: 13px; }
+.list-row:last-child { border-bottom: none; }
+.list-row .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; background: var(--bg); padding: 4px 10px; border-radius: 10px; }
+.note { font-size: 12px; color: var(--muted); background: var(--gold-soft); border-left: 3px solid var(--gold); padding: 10px 12px; border-radius: 0 10px 10px 0; line-height: 1.7; margin-top: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 700; padding: 9px 10px; border-bottom: 2px solid var(--line); white-space: nowrap; cursor: default; position: sticky; top: 0; background: #fff; }
+th.sortable { cursor: pointer; } th.sortable:hover { color: var(--green); }
+td { padding: 9px 10px; border-bottom: 1px solid #f0f1ee; white-space: nowrap; }
+tr:hover td { background: #fafbf9; }
+.table-wrap { overflow: auto; max-height: 560px; }
+.bar-cell { display: flex; align-items: center; gap: 8px; }
+.bar-cell i { display: block; height: 8px; border-radius: 4px; background: var(--green); opacity: .75; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.filters input, .filters select { font-family: inherit; font-size: 13px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.seg { display: inline-flex; background: var(--bg); border-radius: 10px; padding: 3px; }
+.seg button { padding: 6px 12px; border-radius: 8px; font-size: 12px; color: var(--muted); }
+.seg button.on { background: #fff; color: var(--green); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+/* 熱力圖 */
+.heat { display: grid; gap: 3px; font-size: 10px; color: var(--muted); }
+.heat .cell { border-radius: 3px; aspect-ratio: 1; min-width: 0; position: relative; }
+.heat .cell:hover { outline: 2px solid var(--green); z-index: 1; }
+.heat .cell.today { outline: 2px solid var(--gold); }
+.heat-legend { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); margin-top: 10px; justify-content: flex-end; }
+.heat-legend i { width: 12px; height: 12px; border-radius: 3px; display: block; }
+#tip { position: fixed; z-index: 100; background: #1f2a22; color: #fff; font-size: 12px; padding: 6px 10px; border-radius: 8px; pointer-events: none; display: none; white-space: nowrap; }
+
+/* 影響力 */
+.big { font-size: 36px; font-weight: 900; color: var(--green); line-height: 1.1; }
+.big small { font-size: 15px; color: var(--muted); font-weight: 500; }
+.meter { height: 10px; background: var(--bg); border-radius: 6px; overflow: hidden; margin-top: 10px; }
+.meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--gold)); border-radius: 6px; }
+#map-admin { height: 560px; border-radius: 14px; }
+.post-mini { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f1ee; }
+.post-mini img { width: 54px; height: 54px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.post-mini .c { font-size: 13px; line-height: 1.6; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.status-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+
+<section id="login">
+  <div class="login-card">
+    <img src="/static/images/mascot.jpg" alt="緣投">
+    <h1>南投職人旅遊 管理後台</h1>
+    <p>請使用已授權的 Google 帳號登入。<br>未在管理員名單中的帳號無法進入。</p>
+    <div class="gbtn">
+      <div id="g_id_onload" data-client_id="{{ google_client_id }}" data-callback="handleLogin" data-auto_prompt="false"></div>
+      <div class="g_id_signin" data-type="standard" data-size="large" data-theme="filled_blue" data-text="signin_with" data-shape="pill" data-locale="zh-TW" data-width="280"></div>
+    </div>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</section>
+
+<section id="app">
+  <header class="topbar">
+    <button class="burger" onclick="document.body.classList.toggle('nav-open')" aria-label="選單">☰</button>
+    <div class="brand"><img src="/static/images/mascot.jpg" alt="">管理後台 <small>南投職人旅遊</small></div>
+    <div class="top-right">
+      <span class="updated" id="updated"></span>
+      <button class="refresh" id="refresh" onclick="refresh()"><span>⟳</span> 重新整理</button>
+      <div class="me"><img id="me-avatar" alt=""><span id="me-name"></span><b class="role" id="me-role"></b></div>
+    </div>
+  </header>
+
+  <aside class="sidebar">
+    <div class="nav-sep" data-role="admin">營運</div>
+    <button class="nav-item" data-view="overview" data-role="admin"><span class="ic">📊</span>總覽</button>
+    <button class="nav-item" data-view="bookings" data-role="admin"><span class="ic">📅</span>預約分析</button>
+    <button class="nav-item" data-view="merchants" data-role="admin"><span class="ic">🏪</span>商家表現</button>
+    <button class="nav-item" data-view="map" data-role="admin"><span class="ic">🗺️</span>地圖視角</button>
+    <button class="nav-item" data-view="impact" data-role="admin"><span class="ic">🌱</span>永續影響力</button>
+    <div class="nav-sep">遊戲</div>
+    <button class="nav-item" data-view="game" data-role="admin moderator"><span class="ic">🎮</span>遊戲分析</button>
+    <div class="nav-sep" data-role="admin">系統</div>
+    <button class="nav-item" data-view="system" data-role="admin"><span class="ic">🩺</span>系統健康</button>
+    <div class="side-foot">
+      <a href="/merchant">🧾 舊版商家後台</a>
+      <a href="/">🏠 回網站首頁</a>
+      <button onclick="logout()">🚪 登出</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="view" id="v-overview">
+      <div class="page-head"><div><h1>📊 總覽</h1><p>本週營運狀況與需要處理的事項</p></div></div>
+      <div id="ov"></div>
+    </div>
+    <div class="view" id="v-bookings">
+      <div class="page-head"><div><h1>📅 預約分析</h1><p>旅客想要什麼、什麼時候來、提前多久訂</p></div></div>
+      <div id="bk"></div>
+    </div>
+    <div class="view" id="v-merchants">
+      <div class="page-head"><div><h1>🏪 商家表現</h1><p>46 家職人的預約、回覆與曝光狀況</p></div></div>
+      <div id="mc"></div>
+    </div>
+    <div class="view" id="v-map">
+      <div class="page-head"><div><h1>🗺️ 地圖視角</h1><p>旅客去了哪裡？哪些職人還沒被看見？</p></div>
+        <div class="seg" id="map-seg"><button data-k="visits" class="on">全部造訪</button><button data-k="bookings">只看預約</button><button data-k="checkins">只看打卡</button></div></div>
+      <div class="grid" style="grid-template-columns: minmax(0,1fr) 300px" id="map-grid">
+        <div class="card" style="padding:8px"><div id="map-admin"></div></div>
+        <div class="card"><h3>🧊 冷門商家</h3><div class="q">還沒有任何預約或打卡，下一波推廣的對象</div><div id="map-cold"></div></div>
+      </div>
+    </div>
+    <div class="view" id="v-impact">
+      <div class="page-head"><div><h1>🌱 永續影響力</h1><p>平台為南投在地帶來的實際改變</p></div></div>
+      <div id="im"></div>
+    </div>
+    <div class="view" id="v-game">
+      <div class="page-head"><div><h1>🎮 遊戲分析</h1><p>緣投探索者的玩家成長與互動</p></div></div>
+      <div id="gm"></div>
+    </div>
+    <div class="view" id="v-system">
+      <div class="page-head"><div><h1>🩺 系統健康</h1><p>資料庫、n8n 工作流與環境設定狀態</p></div></div>
+      <div id="sy"></div>
+    </div>
+  </main>
+</section>
+<div id="tip"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => n == null ? '—' : Number(n).toLocaleString();
+const C = { green: '#2d4a35', green2: '#5b8a66', gold: '#C8A96E', ok: '#10b981', warn: '#f59e0b', bad: '#ef4444', info: '#3b82f6', mute: '#cbd5c9' };
+let ME = {{ admin|tojson }};
+let current = null, fresh = false;
+const charts = {}, loaded = {};
+
+if (window.Chart) {
+  Chart.defaults.font.family = "'Noto Sans TC', 'Helvetica Neue', sans-serif";
+  Chart.defaults.color = '#6b746d';
+  Chart.defaults.plugins.legend.labels.boxWidth = 12;
+  Chart.defaults.maintainAspectRatio = false;
+}
+function chart(id, cfg) { if (charts[id]) charts[id].destroy(); const el = $(id); if (el) charts[id] = new Chart(el, cfg); }
+const gridless = { grid: { display: false } };
+const softGrid = { grid: { color: '#f0f1ee' }, beginAtZero: true, ticks: { precision: 0 } };
+
+async function api(path) {
+  const r = await fetch(path + (fresh ? (path.includes('?') ? '&' : '?') + 'fresh=1' : ''), { credentials: 'same-origin' });
+  if (r.status === 401) { location.reload(); throw new Error('unauth'); }
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || r.status);
+  if (d.fetched_at) $('updated').textContent = '資料更新於 ' + new Date(d.fetched_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+  return d;
+}
+function deltaBadge(cur, prev) {
+  if (!prev && !cur) return '<span class="delta flat">—</span>';
+  if (!prev) return '<span class="delta up">新增</span>';
+  const p = Math.round((cur - prev) / prev * 100);
+  return `<span class="delta ${p > 0 ? 'up' : p < 0 ? 'down' : 'flat'}">${p > 0 ? '↑' : p < 0 ? '↓' : ''}${Math.abs(p)}% vs 上週</span>`;
+}
+function spark(id, data, color = C.green) {
+  chart(id, { type: 'line', data: { labels: data.map((_, i) => i), datasets: [{ data, borderColor: color, borderWidth: 2, pointRadius: 0, tension: .35, fill: true, backgroundColor: color + '18' }] },
+    options: { plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false, beginAtZero: true } }, animation: { duration: 600 } } });
+}
+function showTip(e, text) { const t = $('tip'); t.textContent = text; t.style.display = 'block'; t.style.left = (e.clientX + 12) + 'px'; t.style.top = (e.clientY + 12) + 'px'; }
+function hideTip() { $('tip').style.display = 'none'; }
+function heatColor(v, max) {
+  if (!v) return '#eef0ec';
+  const t = Math.min(1, v / Math.max(1, max));
+  const stops = [[214, 232, 219], [123, 170, 133], [45, 74, 53]];
+  const [a, b, f] = t < .5 ? [stops[0], stops[1], t * 2] : [stops[1], stops[2], (t - .5) * 2];
+  return `rgb(${a.map((x, i) => Math.round(x + (b[i] - x) * f)).join(',')})`;
+}
+const legend = () => `<div class="heat-legend">少 ${[0, .2, .5, .8, 1].map(t => `<i style="background:${heatColor(t, 1)}"></i>`).join('')} 多</div>`;
+const loading = id => $(id).innerHTML = '<div class="grid g4">' + '<div class="skeleton"></div>'.repeat(4) + '</div><div class="skeleton" style="height:300px;margin-top:14px"></div>';
+const fail = (id, e) => $(id).innerHTML = `<div class="card empty">載入失敗：${esc(e.message)}</div>`;
+
+// ═══════ 登入 / 導覽 ═══════
+async function handleLogin(resp) {
+  $('login-err').textContent = '登入中…';
+  const r = await fetch('/admin/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id_token: resp.credential }) });
+  const d = await r.json();
+  if (!r.ok) { $('login-err').textContent = d.error || '登入失敗'; return; }
+  ME = d; start();
+}
+async function logout() {
+  await fetch('/admin/api/logout', { method: 'POST' });
+  if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
+  location.reload();
+}
+function start() {
+  $('login').style.display = 'none';
+  $('app').style.display = 'block';
+  $('me-avatar').src = ME.avatar || '/static/images/mascot.jpg';
+  $('me-name').textContent = ME.name || ME.email;
+  $('me-role').textContent = ME.role === 'admin' ? '管理員' : '內容審核';
+  document.querySelectorAll('[data-role]').forEach(el => el.style.display = el.dataset.role.split(' ').includes(ME.role) ? '' : 'none');
+  const allowed = [...document.querySelectorAll('.nav-item')].filter(b => b.style.display !== 'none').map(b => b.dataset.view);
+  const want = location.hash.slice(1);
+  go(allowed.includes(want) ? want : allowed[0]);
+}
+document.querySelectorAll('.nav-item').forEach(b => b.onclick = () => go(b.dataset.view));
+function go(view) {
+  current = view;
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + view));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  history.replaceState(null, '', '#' + view);
+  document.body.classList.remove('nav-open');
+  if (!loaded[view]) render(view);
+  if (view === 'map' && mapObj) setTimeout(() => mapObj.invalidateSize(), 50);
+}
+async function refresh() {
+  const b = $('refresh'); b.classList.add('loading');
+  fresh = true; Object.keys(loaded).forEach(k => delete loaded[k]);
+  try { await render(current); } finally { fresh = false; b.classList.remove('loading'); }
+}
+const RENDER = { overview: renderOverview, bookings: renderBookings, merchants: renderMerchants, map: renderMap, impact: renderImpact, game: renderGame, system: renderSystem };
+async function render(view) { loaded[view] = true; await RENDER[view](); }
+
+// ═══════ 總覽 ═══════
+async function renderOverview() {
+  loading('ov');
+  let d; try { d = await api('/admin/api/overview'); } catch (e) { return fail('ov', e); }
+  const k = d.kpis;
+  $('ov').innerHTML = `
+    <div class="grid g6">
+      <div class="card kpi"><div class="lbl">📅 本週預約</div><div class="val">${fmt(k.bookings_7d.value)}</div><div class="sub">${deltaBadge(k.bookings_7d.value, k.bookings_7d.prev)}</div><canvas id="sp-bk"></canvas></div>
+      <div class="card kpi ${k.pending.overdue ? 'alert' : ''}"><div class="lbl">⏳ 待確認預約</div><div class="val">${fmt(k.pending.value)}</div><div class="sub">${k.pending.overdue ? `<b style="color:var(--bad)">${k.pending.overdue} 筆超過 24 小時</b>` : '全部在 24 小時內'}</div></div>
+      <div class="card kpi"><div class="lbl">✅ 商家確認率</div><div class="val">${k.confirm_rate.value == null ? '—' : k.confirm_rate.value + '%'}</div><div class="sub">已處理 ${fmt(k.confirm_rate.decided)} 筆</div></div>
+      <div class="card kpi"><div class="lbl">⭐ 平均評分</div><div class="val">${k.rating.value ?? '—'}</div><div class="sub">${k.rating.count ? k.rating.count + ' 則評價' : '尚無評價'}</div></div>
+      <div class="card kpi"><div class="lbl">🎮 本週新玩家</div><div class="val">${fmt(k.new_players_7d.value)}</div><div class="sub">${deltaBadge(k.new_players_7d.value, k.new_players_7d.prev)}</div><canvas id="sp-pl"></canvas></div>
+      <div class="card kpi" id="kpi-n8n"><div class="lbl">⚙️ n8n 24h 成功率</div><div class="val">…</div><div class="sub">讀取中</div></div>
+    </div>
+    <div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr);margin-top:14px" id="ov-row">
+      <div class="card"><h3>📈 過去 30 天趨勢</h3><div class="q">打卡有沒有帶動預約？</div><div class="chart-box tall"><canvas id="ch-trend"></canvas></div></div>
+      <div class="card"><h3>🔔 待辦事項</h3><div class="q">需要人工跟進的項目</div>
+        <div style="font-weight:700;font-size:13px;margin:6px 0">超過 24 小時未回覆的預約</div>
+        ${d.todo.overdue.length ? d.todo.overdue.map(b => `<div class="list-row"><span class="tag t-bad">${b.hours >= 48 ? Math.floor(b.hours / 24) + ' 天' : b.hours + ' 小時'}</span><span class="grow">${esc(b.artisan)} · ${esc(b.date)} · ${b.pax} 人</span><code style="font-size:11px;color:var(--muted)">${esc(b.id)}</code></div>`).join('') : '<div class="empty" style="padding:10px">沒有 🎉</div>'}
+        <div style="font-weight:700;font-size:13px;margin:16px 0 6px">尚未綁定 LINE 的商家（${d.todo.unbound.length}）</div>
+        <div class="note" style="margin:0 0 8px">這些商家被預約時收不到 LINE 通知。</div>
+        <div class="chips">${d.todo.unbound.slice(0, 12).map(n => `<span class="chip">${esc(n)}</span>`).join('')}${d.todo.unbound.length > 12 ? `<button class="chip" onclick="go('merchants')">…還有 ${d.todo.unbound.length - 12} 家 →</button>` : ''}</div>
+        <div style="font-weight:700;font-size:13px;margin:16px 0 6px">n8n 最近失敗</div><div id="ov-fail" class="muted" style="font-size:12px;color:var(--muted)">讀取中…</div>
+      </div>
+    </div>`;
+  if (innerWidth < 900) $('ov-row').style.gridTemplateColumns = '1fr';
+  spark('sp-bk', k.bookings_7d.spark); spark('sp-pl', k.new_players_7d.spark, C.gold);
+  chart('ch-trend', { type: 'line', data: { labels: d.trend.labels, datasets: [
+      { label: '預約', data: d.trend.bookings, borderColor: C.green, backgroundColor: C.green + '22', fill: true, tension: .3, pointRadius: 2 },
+      { label: '打卡', data: d.trend.checkins, borderColor: C.gold, tension: .3, pointRadius: 2 },
+      { label: '新玩家', data: d.trend.players, borderColor: C.info, borderDash: [4, 4], tension: .3, pointRadius: 0 }] },
+    options: { interaction: { mode: 'index', intersect: false }, scales: { x: { ...gridless, ticks: { maxTicksLimit: 10 } }, y: softGrid } } });
+  try {
+    const s = await api('/admin/api/system'); const n = s.n8n;
+    const el = $('kpi-n8n');
+    if (!n.configured) { el.querySelector('.val').textContent = '—'; el.querySelector('.sub').textContent = '尚未設定 N8N_API_KEY'; $('ov-fail').textContent = '尚未設定 n8n API'; }
+    else if (n.error) { el.classList.add('alert'); el.querySelector('.val').textContent = '!'; el.querySelector('.sub').textContent = '無法連線 n8n'; $('ov-fail').textContent = n.error; }
+    else {
+      el.querySelector('.val').textContent = n.success_rate_24h == null ? '—' : n.success_rate_24h + '%';
+      el.querySelector('.sub').textContent = `24 小時內執行 ${n.runs_24h} 次`;
+      if (n.success_rate_24h != null && n.success_rate_24h < 95) el.classList.add('alert');
+      $('ov-fail').innerHTML = n.failures.length ? n.failures.slice(0, 3).map(f => `<div class="list-row"><span class="tag t-bad">失敗</span><span class="grow">${esc(f.workflow)}${f.node ? ' · ' + esc(f.node) : ''}</span></div>`).join('') : '沒有失敗紀錄 🎉';
+    }
+  } catch (e) { $('ov-fail').textContent = '讀取失敗'; }
+}
+
+// ═══════ 預約分析 ═══════
+async function renderBookings() {
+  loading('bk');
+  let d; try { d = await api('/admin/api/bookings'); } catch (e) { return fail('bk', e); }
+  const sColor = { '待確認': C.warn, '已確認': C.ok, '已婉拒': C.bad };
+  $('bk').innerHTML = `
+    <div class="grid g4">
+      <div class="card kpi"><div class="lbl">總預約</div><div class="val">${fmt(d.total)}</div></div>
+      <div class="card kpi"><div class="lbl">總人次</div><div class="val">${fmt(d.people)}</div></div>
+      <div class="card kpi"><div class="lbl">平均每筆人數</div><div class="val">${d.total ? (d.people / d.total).toFixed(1) : '—'}</div></div>
+      <div class="card kpi"><div class="lbl">婉拒率</div><div class="val">${d.total ? Math.round(d.status['已婉拒'] / d.total * 100) + '%' : '—'}</div></div>
+    </div>
+    <div class="grid g3" style="margin-top:14px">
+      <div class="card"><h3>🍩 預約狀態</h3><div class="q">有多少預約卡住了？</div><div class="chart-box"><canvas id="ch-status"></canvas></div></div>
+      <div class="card span2"><h3>🏷️ 各類別預約</h3><div class="q">旅客最想體驗哪一類？（長條：預約數，點：人次）</div><div class="chart-box"><canvas id="ch-cat"></canvas></div></div>
+    </div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><h3>🏆 熱門商家 Top 10</h3><div class="q">哪幾家最受歡迎？</div><div class="chart-box tall"><canvas id="ch-top"></canvas></div></div>
+      <div class="card"><h3>🗓️ 未來 12 週體驗日曆</h3><div class="q">哪幾天會爆滿？提早提醒商家準備（不含已婉拒）</div><div id="cal"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>⏰ 旅客什麼時候下單？</h3><div class="q">星期 × 小時（台灣時間），可用來安排客服與廣告時段</div><div id="hourheat"></div></div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><h3>📆 提前多久預訂</h3><div class="q">臨時起意還是提早規劃？</div><div class="chart-box short"><canvas id="ch-lead"></canvas></div></div>
+      <div class="card"><h3>👥 團體人數</h3><div class="q">多是情侶、家庭還是團體？</div><div class="chart-box short"><canvas id="ch-pax"></canvas></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>🧾 最新 20 筆預約</h3><div class="table-wrap"><table>
+      <tr><th>下單時間</th><th>編號</th><th>商家</th><th>體驗日期</th><th>人數</th><th>旅客</th><th>狀態</th></tr>
+      ${d.recent.map(b => `<tr><td>${esc(b.created)}</td><td><code>${esc(b.id)}</code></td><td>${esc(b.artisan)}</td><td>${esc(b.date)}</td><td>${b.pax}</td><td>${esc(b.customer)}</td><td><span class="tag ${b.status === '已確認' ? 't-ok' : b.status === '已婉拒' ? 't-bad' : 't-warn'}">${esc(b.status)}</span></td></tr>`).join('') || '<tr><td colspan="7" class="empty">尚無預約</td></tr>'}
+    </table></div></div>`;
+  const st = Object.entries(d.status);
+  chart('ch-status', { type: 'doughnut', data: { labels: st.map(s => s[0]), datasets: [{ data: st.map(s => s[1]), backgroundColor: st.map(s => sColor[s[0]]), borderWidth: 2 }] },
+    options: { cutout: '62%', plugins: { legend: { position: 'bottom' } } } });
+  chart('ch-cat', { data: { labels: d.categories.map(c => c.emoji + ' ' + c.name), datasets: [
+      { type: 'bar', label: '預約數', data: d.categories.map(c => c.bookings), backgroundColor: d.categories.map(c => c.color), borderRadius: 6, yAxisID: 'y' },
+      { type: 'line', label: '人次', data: d.categories.map(c => c.people), borderColor: C.gold, backgroundColor: C.gold, showLine: false, pointRadius: 5, yAxisID: 'y2' }] },
+    options: { scales: { x: gridless, y: { ...softGrid, title: { display: true, text: '預約數' } }, y2: { position: 'right', beginAtZero: true, grid: { display: false }, title: { display: true, text: '人次' } } } } });
+  chart('ch-top', { type: 'bar', data: { labels: d.top_merchants.map(m => m[0].replace(/（.*?）/g, '')), datasets: [{ data: d.top_merchants.map(m => m[1]), backgroundColor: C.green, borderRadius: 6 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: softGrid, y: gridless } } });
+  chart('ch-lead', { type: 'bar', data: { labels: d.lead_time.map(x => x[0]), datasets: [{ data: d.lead_time.map(x => x[1]), backgroundColor: C.green2, borderRadius: 6 }] },
+    options: { plugins: { legend: { display: false } }, scales: { x: gridless, y: softGrid } } });
+  chart('ch-pax', { type: 'bar', data: { labels: d.party_size.map(x => x[0]), datasets: [{ data: d.party_size.map(x => x[1]), backgroundColor: C.gold, borderRadius: 6 }] },
+    options: { plugins: { legend: { display: false } }, scales: { x: gridless, y: softGrid } } });
+
+  const max = Math.max(1, ...d.calendar.map(c => c.count));
+  const days = ['一', '二', '三', '四', '五', '六', '日'];
+  let cal = `<div class="heat" style="grid-template-columns: 20px repeat(12, minmax(0,1fr))"><span></span>`;
+  for (let w = 0; w < 12; w++) { const dt = d.calendar[w * 7].date; cal += `<span style="text-align:center">${w % 2 === 0 ? dt.slice(5).replace('-', '/') : ''}</span>`; }
+  for (let r = 0; r < 7; r++) {
+    cal += `<span>${days[r]}</span>`;
+    for (let w = 0; w < 12; w++) { const c = d.calendar[w * 7 + r];
+      cal += `<div class="cell ${c.date === d.today ? 'today' : ''}" style="background:${heatColor(c.count, max)}" onmousemove="showTip(event,'${c.date}：${c.count} 筆預約')" onmouseleave="hideTip()"></div>`; }
+  }
+  $('cal').innerHTML = cal + '</div>' + legend();
+
+  const hmax = Math.max(1, ...d.heatmap.flat());
+  let hh = `<div class="heat" style="grid-template-columns: 24px repeat(24, minmax(0,1fr))"><span></span>${Array.from({ length: 24 }, (_, h) => `<span style="text-align:center">${h % 3 === 0 ? h : ''}</span>`).join('')}`;
+  d.heatmap.forEach((row, r) => { hh += `<span>${days[r]}</span>` + row.map((v, h) => `<div class="cell" style="background:${heatColor(v, hmax)}" onmousemove="showTip(event,'星期${days[r]} ${h}:00–${h}:59：${v} 筆')" onmouseleave="hideTip()"></div>`).join(''); });
+  $('hourheat').innerHTML = hh + '</div>' + legend();
+}
+
+// ═══════ 商家表現 ═══════
+let MC = null, mcSort = { k: 'visits', dir: -1 };
+async function renderMerchants() {
+  loading('mc');
+  try { MC = await api('/admin/api/merchants'); } catch (e) { return fail('mc', e); }
+  const cats = [...new Map(MC.rows.map(r => [r.cat, r.emoji + ' ' + r.cat_name])).entries()];
+  const lowRate = MC.rows.filter(r => r.confirm_rate != null && r.confirm_rate < 60).length;
+  $('mc').innerHTML = `
+    <div class="grid g4">
+      <div class="card kpi"><div class="lbl">已綁定 LINE</div><div class="val">${MC.bound} <small style="font-size:14px;color:var(--muted)">/ ${MC.total}</small></div><div class="meter"><i style="width:${MC.bound / MC.total * 100}%"></i></div></div>
+      <div class="card kpi"><div class="lbl">有預約的商家</div><div class="val">${MC.rows.filter(r => r.bookings).length}</div></div>
+      <div class="card kpi ${lowRate ? 'alert' : ''}"><div class="lbl">確認率低於 60%</div><div class="val">${lowRate}</div><div class="sub">需要關心的商家</div></div>
+      <div class="card kpi ${MC.unmatched.length ? 'alert' : ''}"><div class="lbl">對不到的商家名稱</div><div class="val">${MC.unmatched.reduce((s, x) => s + x[1], 0)}</div><div class="sub">筆預約無法歸類</div></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="filters">
+        <input id="mc-q" placeholder="🔍 搜尋商家" oninput="drawMerchants()">
+        <select id="mc-cat" onchange="drawMerchants()"><option value="">全部類別</option>${cats.map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}</select>
+        <select id="mc-flag" onchange="drawMerchants()"><option value="">全部狀態</option><option value="unbound">未綁定 LINE</option><option value="low">確認率 < 60%</option><option value="cold">零造訪</option></select>
+      </div>
+      <div class="table-wrap" id="mc-table"></div>
+    </div>
+    ${MC.unmatched.length ? `<div class="card" style="margin-top:14px"><h3>❔ 對不到的商家名稱</h3><div class="q">AI 嚮導送出的店名和 46 家名單對不起來，這些預約無法計入上表。若店名寫錯，LINE 通知也可能送不到商家。</div>
+      ${MC.unmatched.map(([n, c]) => `<div class="list-row"><span class="grow">${esc(n)}</span><span class="tag t-warn">${c} 筆</span></div>`).join('')}</div>` : ''}`;
+  drawMerchants();
+}
+function drawMerchants() {
+  const q = $('mc-q').value.trim(), cat = $('mc-cat').value, flag = $('mc-flag').value;
+  let rows = MC.rows.filter(r => (!q || r.name.includes(q)) && (!cat || r.cat === cat) &&
+    (!flag || (flag === 'unbound' && !r.line_bound) || (flag === 'low' && r.confirm_rate != null && r.confirm_rate < 60) || (flag === 'cold' && !r.visits)));
+  const { k, dir } = mcSort;
+  rows.sort((a, b) => ((a[k] ?? -1) > (b[k] ?? -1) ? 1 : (a[k] ?? -1) < (b[k] ?? -1) ? -1 : 0) * dir);
+  const maxV = Math.max(1, ...MC.rows.map(r => r.visits));
+  const cols = [['name', '商家'], ['township', '鄉鎮'], ['visits', '總造訪'], ['bookings', '預約'], ['people', '人次'], ['confirm_rate', '確認率'], ['pending', '待確認'], ['rating', '評分'], ['checkins', '打卡'], ['posts', '貼文'], ['line_bound', 'LINE']];
+  $('mc-table').innerHTML = `<table><tr>${cols.map(([c, l]) => `<th class="sortable" onclick="sortMc('${c}')">${l}${k === c ? (dir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr>
+    ${rows.map(r => `<tr>
+      <td><span style="color:${r.color}">${r.emoji}</span> ${esc(r.name)}</td><td>${esc(r.township)}</td>
+      <td><div class="bar-cell"><i style="width:${r.visits / maxV * 80}px;background:${r.color}"></i>${r.visits}</div></td>
+      <td>${r.bookings}</td><td>${r.people}</td>
+      <td>${r.confirm_rate == null ? '<span class="muted">—</span>' : `<span class="tag ${r.confirm_rate >= 80 ? 't-ok' : r.confirm_rate >= 60 ? 't-warn' : 't-bad'}">${r.confirm_rate}%</span>`}</td>
+      <td>${r.pending ? `<b style="color:var(--warn)">${r.pending}</b>` : 0}</td>
+      <td>${r.rating ?? '—'}</td><td>${r.checkins}</td><td>${r.posts}</td>
+      <td>${r.line_bound ? '<span class="tag t-ok">已綁定</span>' : '<span class="tag t-bad">未綁定</span>'}</td></tr>`).join('') || '<tr><td colspan="11" class="empty">沒有符合的商家</td></tr>'}</table>`;
+}
+function sortMc(k) { mcSort = { k, dir: mcSort.k === k ? -mcSort.dir : (k === 'name' || k === 'township' ? 1 : -1) }; drawMerchants(); }
+
+// ═══════ 地圖 ═══════
+let mapObj = null, mapLayer = null, mapData = null, mapKey = 'visits';
+const bigrams = s => { const n = s.replace(/[（(].*?[）)]/g, '').replace(/[\s&＆×Xx·・\-—]/g, '').toLowerCase(); const o = new Set(); for (let i = 0; i < n.length - 1; i++) o.add(n.slice(i, i + 2)); return o; };
+function similar(a, b) { const A = bigrams(a), B = bigrams(b); let i = 0; A.forEach(x => B.has(x) && i++); return (2 * i) / ((A.size + B.size) || 1); }
+async function renderMap() {
+  try { mapData = await api('/admin/api/map'); } catch (e) { return fail('map-cold', e); }
+  if (innerWidth < 900) $('map-grid').style.gridTemplateColumns = '1fr';
+  if (!mapObj) {
+    mapObj = L.map('map-admin').setView([23.85, 120.88], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 18 }).addTo(mapObj);
+    document.querySelectorAll('#map-seg button').forEach(b => b.onclick = () => {
+      document.querySelectorAll('#map-seg button').forEach(x => x.classList.toggle('on', x === b));
+      mapKey = b.dataset.k; drawMap();
+    });
+  }
+  drawMap();
+  $('map-cold').innerHTML = mapData.merchants.filter(m => !m.visits).map(m => `<div class="list-row"><span class="status-dot" style="background:${m.color}"></span><span class="grow">${esc(m.name)}</span><span class="muted" style="font-size:11px">${esc(m.cat_name)}</span></div>`).join('') || '<div class="empty">每一家都有人造訪 🎉</div>';
+  setTimeout(() => mapObj.invalidateSize(), 80);
+}
+function drawMap() {
+  if (mapLayer) mapLayer.remove();
+  mapLayer = L.layerGroup().addTo(mapObj);
+  const max = Math.max(1, ...mapData.merchants.map(m => m[mapKey]));
+  LOCATIONS.forEach(loc => {
+    let best = null, score = 0;
+    mapData.merchants.forEach(m => { const s = similar(loc.label, m.name); if (s > score) { score = s; best = m; } });
+    if (!best || score < .45) return;
+    const v = best[mapKey];
+    const marker = v
+      ? L.circleMarker([loc.lat, loc.lng], { radius: 6 + Math.sqrt(v / max) * 22, color: '#fff', weight: 2, fillColor: best.color, fillOpacity: .78 })
+      : L.circleMarker([loc.lat, loc.lng], { radius: 6, color: '#9ca3af', weight: 2, dashArray: '3 3', fillOpacity: 0 });
+    marker.bindPopup(`<b>${esc(best.name)}</b><br>${esc(best.cat_name)}<br>預約 ${best.bookings} · 打卡 ${best.checkins}`);
+    marker.addTo(mapLayer);
+  });
+}
+
+// ═══════ 永續影響力 ═══════
+async function renderImpact() {
+  loading('im');
+  let d; try { d = await api('/admin/api/impact'); } catch (e) { return fail('im', e); }
+  const pct = v => v == null ? '—' : v + '%';
+  $('im').innerHTML = `
+    <div class="grid g4">
+      <div class="card"><div class="muted" style="font-size:12px;color:var(--muted)">👥 服務旅客人次</div><div class="big">${fmt(d.people_served)}</div><div class="q" style="margin:4px 0 0">其中商家已確認 ${fmt(d.people_confirmed)} 人次</div></div>
+      <div class="card"><div style="font-size:12px;color:var(--muted)">🤝 支持過的職人</div><div class="big">${d.supported}<small> / ${d.total_merchants} 家</small></div><div class="meter"><i style="width:${d.supported / d.total_merchants * 100}%"></i></div></div>
+      <div class="card"><div style="font-size:12px;color:var(--muted)">⚖️ 前 3 名商家集中度</div><div class="big">${pct(d.top3_share)}</div><div class="q" style="margin:4px 0 0">越低代表遊客越分散、越不擠在熱門點</div></div>
+      <div class="card"><div style="font-size:12px;color:var(--muted)">🏔️ 原鄉造訪占比</div><div class="big">${pct(d.indigenous_share)}</div><div class="q" style="margin:4px 0 0">${d.indigenous_townships.join('、')}</div></div>
+    </div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><h3>📐 旅遊分散度（羅倫茲曲線）</h3><div class="q">曲線越貼近虛線，代表造訪越平均分配到每一家職人${d.gini != null ? `　·　吉尼係數 <b>${d.gini}</b>（0 = 完全平均，1 = 全擠在一家）` : ''}</div><div class="chart-box tall"><canvas id="ch-lorenz"></canvas></div></div>
+      <div class="card"><h3>📍 各鄉鎮造訪分布</h3><div class="q">預約 + 打卡，金色為原鄉</div><div class="chart-box tall"><canvas id="ch-town"></canvas></div></div>
+    </div>
+    <div class="grid g3" style="margin-top:14px">
+      <div class="card"><h3>🍩 類別分布</h3><div class="chart-box"><canvas id="ch-imcat"></canvas></div></div>
+      <div class="card"><h3>📈 每月造訪</h3><div class="chart-box"><canvas id="ch-month"></canvas></div></div>
+      <div class="card"><h3>🧊 零造訪職人（${d.cold.length}）</h3><div class="q">下一波推廣重點</div><div class="chips" style="max-height:220px;overflow:auto">${d.cold.map(n => `<span class="chip">${esc(n)}</span>`).join('') || '<div class="empty">每一家都有人造訪 🎉</div>'}</div></div>
+    </div>
+    <div class="note">💰 「帶給職人的估計收入」需要每家商家的體驗價格，目前資料庫沒有標準價格欄位，整理價格表後就能加上。</div>`;
+  chart('ch-lorenz', { type: 'line', data: { datasets: [
+      { label: '實際分布', data: d.lorenz.map(p => ({ x: p[0], y: p[1] })), borderColor: C.green, backgroundColor: C.green + '22', fill: true, pointRadius: 0, tension: .2 },
+      { label: '完全平均', data: [{ x: 0, y: 0 }, { x: 100, y: 100 }], borderColor: C.gold, borderDash: [6, 6], pointRadius: 0 }] },
+    options: { scales: { x: { type: 'linear', min: 0, max: 100, title: { display: true, text: '商家累積占比 %' }, grid: { color: '#f0f1ee' } }, y: { min: 0, max: 100, title: { display: true, text: '造訪累積占比 %' }, grid: { color: '#f0f1ee' } } } } });
+  chart('ch-town', { type: 'bar', data: { labels: d.townships.map(t => t[0]), datasets: [{ data: d.townships.map(t => t[1]), backgroundColor: d.townships.map(t => d.indigenous_townships.includes(t[0]) ? C.gold : C.green2), borderRadius: 6 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: softGrid, y: gridless } } });
+  chart('ch-imcat', { type: 'doughnut', data: { labels: d.categories.map(c => c.emoji + ' ' + c.name), datasets: [{ data: d.categories.map(c => c.visits), backgroundColor: d.categories.map(c => c.color), borderWidth: 2 }] },
+    options: { cutout: '58%', plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } } });
+  chart('ch-month', { type: 'bar', data: { labels: d.monthly.labels, datasets: [{ data: d.monthly.visits, backgroundColor: C.green, borderRadius: 6 }] },
+    options: { plugins: { legend: { display: false } }, scales: { x: gridless, y: softGrid } } });
+}
+
+// ═══════ 遊戲分析 ═══════
+async function renderGame() {
+  loading('gm');
+  let d; try { d = await api('/admin/api/game'); } catch (e) { return fail('gm', e); }
+  const t = d.totals;
+  const acc = t.quiz_rounds ? Math.round(t.quiz_correct / (t.quiz_rounds * 10) * 100) : null;
+  $('gm').innerHTML = `
+    <div class="grid g6">
+      <div class="card kpi"><div class="lbl">🎮 玩家</div><div class="val">${fmt(t.players)}</div></div>
+      <div class="card kpi"><div class="lbl">📜 證書發出</div><div class="val">${fmt(t.certificates)}</div></div>
+      <div class="card kpi"><div class="lbl">📸 打卡</div><div class="val">${fmt(t.checkins)}</div></div>
+      <div class="card kpi"><div class="lbl">🧠 問答局數</div><div class="val">${fmt(t.quiz_rounds)}</div><div class="sub">${acc == null ? '' : '估計答對率 ' + acc + '%'}</div></div>
+      <div class="card kpi"><div class="lbl">💬 貼文 / 留言</div><div class="val">${fmt(t.posts)} <small style="font-size:14px;color:var(--muted)">/ ${fmt(t.comments)}</small></div></div>
+      <div class="card kpi"><div class="lbl">❤️ 按讚</div><div class="val">${fmt(t.likes)}</div></div>
+    </div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><h3>🪜 等級漏斗</h3><div class="q">玩家卡在哪一關？（達到該等級以上的人數）</div><div class="chart-box"><canvas id="ch-funnel"></canvas></div></div>
+      <div class="card"><h3>📈 過去 30 天活動</h3><div class="q">新玩家、打卡、貼文、留言</div><div class="chart-box"><canvas id="ch-gtrend"></canvas></div></div>
+    </div>
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card"><h3>📸 打卡 vs 預約</h3><div class="q">打卡最多的 10 家，有沒有轉成預約？</div><div class="chart-box tall"><canvas id="ch-ckbk"></canvas></div></div>
+      <div class="card"><h3>🏆 玩家 Top 10</h3><div class="table-wrap" style="max-height:340px"><table>
+        <tr><th>#</th><th>玩家</th><th>等級</th><th>XP</th><th>打卡</th><th>貼文</th></tr>
+        ${d.top_players.map((u, i) => `<tr><td>${['🥇', '🥈', '🥉'][i] || i + 1}</td><td style="display:flex;align-items:center;gap:8px"><img src="${esc(u.avatar || '/static/images/mascot.jpg')}" style="width:24px;height:24px;border-radius:50%;object-fit:cover" onerror="this.src='/static/images/mascot.jpg'">${esc(u.name)}</td><td>Lv.${u.level}</td><td><b>${fmt(u.xp)}</b></td><td>${u.checkins}</td><td>${u.posts}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">尚無玩家</td></tr>'}
+      </table></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>💬 最新貼文</h3><div class="q">貼文管理（隱藏、刪除、置頂）會在第二批加入</div>
+      ${d.recent_posts.map(p => `<div class="post-mini">${p.image_url ? `<img src="${esc(p.image_url)}" alt="">` : ''}<div style="min-width:0"><div style="font-size:12px;color:var(--muted)"><b style="color:var(--text)">${esc(p.user_name)}</b>${p.merchant_name ? ' · 📍' + esc(p.merchant_name) : ''} · ${new Date(p.created_at).toLocaleString('zh-TW')} · ❤️ ${p.likes || 0} · 💬 ${p.comment_count || 0}</div><div class="c">${esc(p.content)}</div></div></div>`).join('') || '<div class="empty">尚無貼文</div>'}
+    </div>`;
+  chart('ch-funnel', { type: 'bar', data: { labels: d.levels.map(l => `Lv.${l.level} ${l.title}`), datasets: [{ data: d.levels.map(l => l.reached), backgroundColor: [C.mute, C.green2, C.gold, C.green, C.info].slice(0, d.levels.length), borderRadius: 8 }] },
+    options: { indexAxis: 'y', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => { const l = d.levels[c.dataIndex]; const base = d.levels[0].reached || 1; return `${l.reached} 人（${Math.round(l.reached / base * 100)}%），停留在此級 ${l.count} 人`; } } } }, scales: { x: softGrid, y: gridless } } });
+  chart('ch-gtrend', { type: 'line', data: { labels: d.trend.labels, datasets: [
+      { label: '新玩家', data: d.trend.players, borderColor: C.info, tension: .3, pointRadius: 0 },
+      { label: '打卡', data: d.trend.checkins, borderColor: C.green, tension: .3, pointRadius: 0 },
+      { label: '貼文', data: d.trend.posts, borderColor: C.gold, tension: .3, pointRadius: 0 },
+      { label: '留言', data: d.trend.comments, borderColor: '#e11d48', borderDash: [4, 4], tension: .3, pointRadius: 0 }] },
+    options: { interaction: { mode: 'index', intersect: false }, scales: { x: { ...gridless, ticks: { maxTicksLimit: 8 } }, y: softGrid } } });
+  chart('ch-ckbk', { type: 'bar', data: { labels: d.checkin_vs_booking.map(m => m.name.replace(/（.*?）/g, '')), datasets: [
+      { label: '打卡', data: d.checkin_vs_booking.map(m => m.checkins), backgroundColor: C.gold, borderRadius: 5 },
+      { label: '預約', data: d.checkin_vs_booking.map(m => m.bookings), backgroundColor: C.green, borderRadius: 5 }] },
+    options: { indexAxis: 'y', scales: { x: softGrid, y: gridless } } });
+}
+
+// ═══════ 系統健康 ═══════
+async function renderSystem() {
+  loading('sy');
+  let d; try { d = await api('/admin/api/system'); } catch (e) { return fail('sy', e); }
+  const s = d.supabase, n = d.n8n;
+  const envLabel = { GEMINI_API_KEY: 'Gemini AI', SUPABASE_KEY: 'Supabase 金鑰', GOOGLE_CLIENT_ID: 'Google 登入', FLASK_SECRET_KEY: '登入 Session 金鑰', N8N_API_KEY: 'n8n API', ADMIN_EMAILS: '管理員名單' };
+  let n8nHtml;
+  if (!n.configured) n8nHtml = `<div class="note" style="margin:0">尚未設定 n8n API，無法讀取工作流狀態。<br>
+      1. 到 n8n → <b>Settings → n8n API</b> → 建立 API key<br>
+      2. 到 Render → Environment 新增 <code>N8N_API_KEY</code>，貼上剛才的 key<br>
+      （部分方案如試用版可能沒有開放 API）</div>`;
+  else if (n.error) n8nHtml = `<div class="note" style="margin:0;border-color:var(--bad)">無法連線 n8n：${esc(n.error)}</div>`;
+  else n8nHtml = `
+      <div class="table-wrap"><table><tr><th>工作流</th><th>狀態</th><th>24h 成功</th><th>24h 失敗</th><th style="min-width:140px">成功比例</th><th>平均耗時</th></tr>
+      ${n.workflows.map(w => { const tot = w.success + w.error; return `<tr><td>${esc(w.name)}</td><td>${w.active ? '<span class="tag t-ok">● 啟用中</span>' : '<span class="tag t-mute">○ 未啟用</span>'}</td>
+        <td>${w.success}</td><td>${w.error ? `<b style="color:var(--bad)">${w.error}</b>` : 0}</td>
+        <td>${tot ? `<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--bg)"><i style="width:${w.success / tot * 100}%;background:var(--ok)"></i><i style="width:${w.error / tot * 100}%;background:var(--bad)"></i></div>` : '<span class="muted" style="color:var(--muted)">無執行</span>'}</td>
+        <td>${w.avg_seconds == null ? '—' : w.avg_seconds + ' 秒'}</td></tr>`; }).join('')}</table></div>
+      <div style="font-weight:700;margin:16px 0 6px">最近失敗</div>
+      ${n.failures.length ? n.failures.map(f => `<div class="list-row"><span class="tag t-bad">失敗</span><span class="grow"><b>${esc(f.workflow)}</b>${f.node ? ' · 卡在「' + esc(f.node) + '」' : ''}${f.message ? '<br><span style="color:var(--muted);font-size:12px;white-space:normal">' + esc(f.message) + '</span>' : ''}</span><span style="font-size:12px;color:var(--muted)">${new Date(f.started).toLocaleString('zh-TW')}</span></div>`).join('') : '<div class="empty">沒有失敗紀錄 🎉</div>'}`;
+  $('sy').innerHTML = `
+    <div class="grid g3">
+      <div class="card kpi ${s.ok ? '' : 'alert'}"><div class="lbl">🗄️ Supabase</div><div class="val">${s.ok ? '正常' : '異常'}</div><div class="sub">${s.ms != null ? '回應 ' + s.ms + ' ms' : esc(s.error || '')}</div></div>
+      <div class="card kpi ${n.configured && !n.error && n.success_rate_24h != null && n.success_rate_24h < 95 ? 'alert' : ''}"><div class="lbl">⚙️ n8n 24h 成功率</div><div class="val">${!n.configured ? '未設定' : n.error ? '無法連線' : n.success_rate_24h == null ? '—' : n.success_rate_24h + '%'}</div><div class="sub">${n.configured && !n.error ? `執行 ${n.runs_24h} 次` : ''}</div></div>
+      <div class="card"><h3>🔑 環境變數</h3><div class="q">只顯示是否已設定，不顯示內容</div>
+        ${Object.entries(d.env).map(([k, v]) => `<div class="list-row"><span class="grow">${envLabel[k] || k} <code style="font-size:11px;color:var(--muted)">${k}</code></span>${v ? '<span class="tag t-ok">已設定</span>' : '<span class="tag t-bad">未設定</span>'}</div>`).join('')}</div>
+    </div>
+    <div class="card" style="margin-top:14px"><h3>⚙️ n8n 工作流</h3><div class="q">預約通知、商家 LINE Bot、證書寄送</div>${n8nHtml}</div>`;
+}
+
+if (ME) start();
+</script>
+</body>
+</html>

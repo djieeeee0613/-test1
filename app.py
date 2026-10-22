@@ -679,6 +679,8 @@ def submit_rate():
 # ==========================================
 from game import game_bp
 app.register_blueprint(game_bp)
+from admin import admin_bp
+app.register_blueprint(admin_bp)
 
 # ==========================================
 # 5. Chat API
