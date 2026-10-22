@@ -62,7 +62,8 @@ Render 環境變數（在 Render dashboard 設定）：
 | `game.py` | 遊戲 Blueprint：`/game`、`/api/game/*`；也提供共用工具（Supabase 讀寫 `sb_*`、`settings()`、`site_settings()`、`send_email()`、`upload_image()`） |
 | `admin.py` | 後台 Blueprint：`/admin`、`/admin/api/*`（統計、編輯、稽核） |
 | `game_quiz.py` | 內建 40 題問答 |
-| `merchants_data.py` | 46 家商家的正式名錄（名稱、地址、電話、介紹、標籤、9 大類別），分類頁、遊戲、後台都以它為準 |
+| `merchants_data.py` | 46 家商家的正式名錄（名稱、地址、電話、介紹、標籤、9 大類別），是全站唯一的商家資料來源 |
+| `merchant_directory.py` | 商家名錄的索引、店名比對與檢索（AI 嚮導、預約、後台共用） |
 | `static/js/locations.js` | 46 家商家的地圖座標（首頁地圖與後台地圖共用） |
 | `templates/index.html` / `category.html` / `game.html` / `admin.html` | 首頁、分類頁、遊戲頁、後台 |
 | `n8n_*.json` | n8n 工作流匯出檔（含 token，不進 git） |
@@ -106,9 +107,10 @@ Render 環境變數（在 Render dashboard 設定）：
 
 ### `app.py` 關鍵細節
 
-- **資料來源**：啟動時從 `南投深度游資源 (1).docx` 以 zipfile 解 XML 取純文字，存入 `MERCHANT_DATA`
-- **隨機推薦**：`search_local_merchants` 每次呼叫用 `re.split` 切段後 `random.shuffle`，避免 AI 永遠推薦相同商家
-- **Agent 循環**：`/api/chat` 只做速率限制與記錄，實際對話在 `run_chat(user_message, history, lang, state)`：`while True` 跑 `generate_content` → 有 `function_call` 就執行並回送結果 → 無 `function_call` 才回傳文字；回傳 `(回覆, 是否錯誤)`，`state` 記下呼叫過的工具與是否完成預約
+- **單一資料來源**：AI 嚮導、網站、遊戲、後台都以 `merchants_data.py` 為準，透過 `merchant_directory.py` 存取（`MERCHANTS` 索引、`match_merchant()` 店名比對、`search()` 檢索、`format_for_ai()`）。`南投深度游資源 (1).docx` 只是原始資料，**程式已不再讀取**
+- **結構化檢索**：`search_local_merchants(category, township, keyword)` 依類別、鄉鎮、關鍵字篩選，結果隨機排序避免永遠推薦同幾家；會附上首頁輪播上架中的活動（快取 5 分鐘）。名錄沒有價格資料，系統指示要求 AI 不可編造金額
+- **正式店名**：`check_availability`、`book_experience` 先用 `official_name()` 把 AI 送出的店名校正成名錄正式名稱，n8n 才查得到商家的 LINE ID
+- **Agent 循環**：`/api/chat` 只做速率限制與記錄，實際對話在 `run_chat(user_message, history, lang, state)`（**必須**設定 `automatic_function_calling=AutomaticFunctionCallingConfig(disable=True)`，否則 google-genai 會自動執行工具，手動迴圈與 `chat_logs` 的工具紀錄都收不到呼叫）：`while True` 跑 `generate_content` → 有 `function_call` 就執行並回送結果 → 無 `function_call` 才回傳文字；回傳 `(回覆, 是否錯誤)`，`state` 記下呼叫過的工具與是否完成預約
 - **使用紀錄**：每次回覆後背景寫入 `chat_logs`（`session_id`、語言、`chat_category()` 解析出的類別、工具、是否預約、耗時），**不存對話內容**
 - **AI 補充指示**：`run_chat()` 會把後台設定的 `site_settings()["ai_extra"]` 接在系統指示最後
 - **首頁公告**：`index()` 把後台設定的公告（開啟且有內容時）以 `announcement` 傳給模板
@@ -219,7 +221,8 @@ Render 環境變數（在 Render dashboard 設定）：
 - **AI 嚮導分析**：`/api/chat` 每次回覆後把語言、點選的類別、呼叫的工具、是否完成預約、耗時寫入 `chat_logs`（**不存對話內容**）；前端每次開頁產生一個 `session_id` 用來算對話數與轉換漏斗
 - **地圖圖示**：Font Awesome Free 6.5.1（cdnjs），每個類別一個圖示，對照表在 `admin.html` 的 `CAT_ICON`
 - **資料**：`load_data()` 分頁讀取 Supabase 全表（每頁 1000 筆），在 Flask 端統計，快取 60 秒；`?fresh=1`（右上角重新整理）略過快取
-- **商家名稱比對**：`match_merchant()` 依序做完全比對、包含比對、`difflib` 模糊比對（cutoff 0.7），把 AI 送出的店名對應回 `merchants_data` 的 46 家；對不到的列在「商家表現」頁
+- **商家名稱比對**：`merchant_directory.match_merchant()` 依序做完全比對、包含比對、`difflib` 模糊比對（cutoff 0.7），把店名對應回 `merchants_data` 的 46 家；對不到的列在「商家表現」頁
+- **後台 AI 助理**：右下角「問緣投」開啟側邊對話框，`POST /admin/api/assistant`。Gemini 只能呼叫 `ASSISTANT_TOOLS` 裡的唯讀工具（包裝既有統計函式，旅客姓名遮蔽、不含電話與 Email），依角色給工具（內容審核員只有遊戲分析、待審核、題目品質）；每次最多 6 輪工具呼叫、每人每分鐘 15 次；回答附上資料來源；提問寫入稽核紀錄。新增統計頁時，可順便在 `ASSISTANT_TOOLS` 加對應工具，並用明確的欄位名稱（例如 `pending_bookings_all_time`），避免 AI 誤解期間
 - **地圖座標**：商家座標放在 `static/js/locations.js`（首頁與後台共用），後台前端用 bigram 相似度把座標對應到統計資料
 - **n8n 狀態**：需要 `N8N_API_KEY`（n8n Settings → n8n API），讀 `/api/v1/workflows` 與 `/api/v1/executions`；沒設定時頁面會顯示設定步驟
 - **稽核紀錄**：登入、登出、被拒登入，以及所有設定、題目、貼文、留言的修改都寫入 `admin_audit_log` 表
@@ -260,7 +263,7 @@ Render 環境變數（在 Render dashboard 設定）：
 
 ## 資料庫商家清單（46 筆）
 
-商家資料來自 `南投深度游資源 (1).docx`，共 9 大類別 46 筆，涵蓋：
+商家資料在 `merchants_data.py`（原始資料整理自 `南投深度游資源 (1).docx`），共 9 大類別 46 筆，涵蓋：
 - **咖啡職人**（5）：向陽咖啡莊園、日晨咖啡烘焙、佳芳咖啡、山豬衝吧咖啡館、百勝村咖啡莊園
 - **茶&酒莊**（8）：威石東葡萄酒莊、台灣菸酒南投酒廠、蔡氏釀酒、吉臣茶廠、和菓森林茶廠、山中茶學、連勝茶廠、煜倫茶業
 - **工藝手作**（9）：元泰竹藝社、武岫竹炭窯、龍南天然漆博物館、毓秀美術館、添興窯、水里蛇窯、葉寶蓮竹編、攻玉山房、大禾竹藝工坊（+ 林喜美賽德克織布）

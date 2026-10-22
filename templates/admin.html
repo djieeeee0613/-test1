@@ -376,6 +376,112 @@ tr:hover td { background: #fafbf9; }
   </main>
 </section>
 <div id="tip"></div>
+<button id="as-fab" onclick="toggleAssistant()" title="後台 AI 助理"><img src="/static/images/mascot.jpg" alt=""><span>問緣投</span></button>
+<aside id="as-panel" aria-label="後台 AI 助理">
+  <div class="as-head">
+    <img src="/static/images/mascot.jpg" alt="">
+    <div><b>緣投 · 後台助理</b><small>讀取後台數據回答問題，不會修改資料</small></div>
+    <button onclick="clearAssistant()" title="清除對話">⟲</button>
+    <button onclick="toggleAssistant(false)" title="關閉">✕</button>
+  </div>
+  <div class="as-body" id="as-body"></div>
+  <form class="as-input" onsubmit="event.preventDefault(); askAssistant();">
+    <textarea id="as-q" rows="1" maxlength="500" placeholder="問問看：這週營運狀況如何？" onkeydown="if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();askAssistant();}"></textarea>
+    <button type="submit" id="as-send">➤</button>
+  </form>
+</aside>
+<style>
+#as-fab { position: fixed; right: 22px; bottom: 22px; z-index: 150; display: flex; align-items: center; gap: 8px; padding: 6px 16px 6px 6px;
+  border-radius: 999px; background: var(--green); color: #fff; font-weight: 700; font-size: 14px; box-shadow: 0 10px 28px rgba(45,74,53,.35); transition: transform .2s; }
+#as-fab:hover { transform: translateY(-2px); }
+body:not(.logged-in) #as-fab, body:not(.logged-in) #as-panel { display: none; }
+#as-fab img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); }
+body.as-open #as-fab { display: none; }
+#as-panel { position: fixed; top: var(--topbar); right: 0; bottom: 0; width: 420px; max-width: 100%; z-index: 160; background: #fff;
+  border-left: 1px solid var(--line); box-shadow: -14px 0 40px rgba(0,0,0,.12); display: flex; flex-direction: column;
+  transform: translateX(105%); transition: transform .3s ease; }
+body.as-open #as-panel { transform: none; }
+.as-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.as-head img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
+.as-head div { flex: 1; min-width: 0; }
+.as-head b { display: block; color: var(--green); font-size: 15px; }
+.as-head small { font-size: 11px; color: var(--muted); }
+.as-head button { width: 32px; height: 32px; border-radius: 10px; font-size: 15px; color: var(--muted); }
+.as-head button:hover { background: var(--bg); }
+.as-body { flex: 1; overflow-y: auto; padding: 16px 14px; display: flex; flex-direction: column; gap: 12px; background: #fafbf9; }
+.as-msg { max-width: 92%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.75; word-break: break-word; animation: fadeUp .25s ease; }
+.as-msg.user { align-self: flex-end; background: var(--green); color: #fff; border-bottom-right-radius: 4px; white-space: pre-wrap; }
+.as-msg.bot { align-self: flex-start; background: #fff; border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+.as-msg.bot ul { margin: 4px 0 4px 18px; }
+.as-msg.bot li { margin: 2px 0; }
+.as-msg.err { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+.as-src { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line); font-size: 11px; color: var(--muted); align-items: center; }
+.as-src span { background: var(--green-soft); color: var(--green); padding: 1px 8px; border-radius: 8px; font-weight: 700; }
+.as-chips { display: flex; flex-direction: column; gap: 6px; }
+.as-chips button { text-align: left; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font-size: 13px; transition: border-color .2s, background .2s; }
+.as-chips button:hover { border-color: var(--green-2); background: var(--green-soft); }
+.as-typing { align-self: flex-start; display: flex; gap: 5px; padding: 12px 14px; background: #fff; border: 1px solid var(--line); border-radius: 14px; }
+.as-typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--green-2); animation: as-dot 1.2s infinite ease-in-out; }
+.as-typing i:nth-child(2) { animation-delay: .15s; } .as-typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes as-dot { 0%, 80%, 100% { opacity: .25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
+.as-input { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
+.as-input textarea { flex: 1; resize: none; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; max-height: 120px; }
+.as-input textarea:focus { outline: 2px solid var(--green-soft); border-color: var(--green-2); }
+.as-input button { width: 42px; border-radius: 12px; background: var(--green); color: #fff; font-size: 16px; }
+.as-input button:disabled { opacity: .5; }
+@media (max-width: 560px) { #as-fab span { display: none; } #as-fab { padding: 6px; } #as-panel { width: 100%; } }
+</style>
+<script>
+const AS_SUGGEST = {
+  admin: ['這週營運狀況如何？跟上週比呢？', '哪些商家需要我特別關心？', '未來兩週哪幾天預約最多？', 'AI 嚮導的預約轉換率怎麼樣？', '有哪些題目需要修正？', '系統最近有沒有異常？'],
+  moderator: ['待審核的內容有哪些？', '有哪些題目需要修正？', '遊戲玩家這週有成長嗎？'],
+};
+let asHistory = [], asBusy = false;
+function toggleAssistant(force) {
+  const open = typeof force === 'boolean' ? force : !document.body.classList.contains('as-open');
+  document.body.classList.toggle('as-open', open);
+  if (open) { if (!$('as-body').children.length) asWelcome(); setTimeout(() => $('as-q').focus(), 300); }
+}
+function asWelcome() {
+  const list = AS_SUGGEST[ME.role] || AS_SUGGEST.moderator;
+  $('as-body').innerHTML = `<div class="as-msg bot">嗨 ${esc(ME.name || '')}！我是緣投，可以幫你查後台數據。我只會讀資料、不會修改任何東西，旅客的電話和 Email 我也看不到。<br>想問什麼呢？</div>
+    <div class="as-chips">${list.map(q => `<button onclick="askAssistant(this.textContent)">${esc(q)}</button>`).join('')}</div>`;
+}
+function clearAssistant() { asHistory = []; asWelcome(); }
+function asFormat(text) {
+  const lines = esc(text).split(/\r?\n/);
+  let html = '', inList = false;
+  for (const raw of lines) {
+    const m = raw.match(/^\s*(?:[*\-・•]|\d+\.)\s+(.*)$/);
+    if (m) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${m[1]}</li>`; continue; }
+    if (inList) { html += '</ul>'; inList = false; }
+    html += raw.trim() ? raw + '<br>' : '<br>';
+  }
+  if (inList) html += '</ul>';
+  return html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(<br>){3,}/g, '<br><br>').replace(/<br>$/, '');
+}
+async function askAssistant(preset) {
+  const box = $('as-q'), q = (preset || box.value).trim();
+  if (!q || asBusy) return;
+  asBusy = true; $('as-send').disabled = true; box.value = '';
+  document.querySelector('#as-body .as-chips')?.remove();
+  const body = $('as-body');
+  body.insertAdjacentHTML('beforeend', `<div class="as-msg user">${esc(q)}</div><div class="as-typing" id="as-typing"><i></i><i></i><i></i></div>`);
+  body.scrollTop = body.scrollHeight;
+  try {
+    const d = await send('POST', '/admin/api/assistant', { message: q, history: asHistory.slice(-10) });
+    asHistory.push({ role: 'user', text: q }, { role: 'model', text: d.reply });
+    $('as-typing').remove();
+    body.insertAdjacentHTML('beforeend', `<div class="as-msg bot">${asFormat(d.reply)}${d.sources.length ? `<div class="as-src">依據：${d.sources.map(s => `<span>${esc(s)}</span>`).join('')}</div>` : ''}</div>`);
+  } catch (e) {
+    $('as-typing')?.remove();
+    body.insertAdjacentHTML('beforeend', `<div class="as-msg bot err">${esc(e.message)}</div>`);
+  } finally {
+    asBusy = false; $('as-send').disabled = false; body.scrollTop = body.scrollHeight; box.focus();
+  }
+}
+</script>
+
 <div id="modal" onclick="if(event.target===this)closeModal()"><div class="modal-box" id="modal-box"></div></div>
 <div id="toast"></div>
 
@@ -444,6 +550,7 @@ async function logout() {
 }
 function start() {
   $('login').style.display = 'none';
+  document.body.classList.add('logged-in');
   $('app').style.display = 'block';
   $('me-avatar').src = ME.avatar || '/static/images/mascot.jpg';
   $('me-name').textContent = ME.name || ME.email;

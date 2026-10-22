@@ -2,7 +2,6 @@ import os
 import sys
 import json
 import uuid
-import zipfile
 import re
 import threading
 import time
@@ -14,26 +13,12 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify, render_template, render_template_string
 from google import genai
 from merchants_data import CATEGORIES, CATEGORY_ORDER
+import merchant_directory as md
 from google.genai import types
 
 load_dotenv()
 sys.stdout.reconfigure(encoding='utf-8')
 sys.stderr.reconfigure(encoding='utf-8')
-
-# ==========================================
-# 0. 資料載入
-# ==========================================
-def load_docx_text(path: str) -> str:
-    with zipfile.ZipFile(path, 'r') as z:
-        with z.open('word/document.xml') as f:
-            xml = f.read().decode('utf-8')
-    text = re.sub(r'<[^>]+>', ' ', xml)
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
-
-DOCX_PATH = os.path.join(os.path.dirname(__file__), '南投深度游資源 (1).docx')
-MERCHANT_DATA = load_docx_text(DOCX_PATH)
-print(f"✅ 已載入職人資料庫，共 {len(MERCHANT_DATA)} 字")
 
 BOOKINGS_FILE = os.path.join(os.path.dirname(__file__), 'bookings.json')
 PLANS = {}  # plan_id -> {text, created_at}
@@ -172,8 +157,16 @@ def _check_date_not_past(date_str: str) -> str | None:
         )
     return None
 
+def official_name(artisan_name: str) -> str:
+    """把 AI 送出的店名校正成商家名錄上的正式名稱（LINE 通知依正式店名找商家）；對不到就原樣使用"""
+    m = md.match_merchant(artisan_name)
+    if m and m["name"] != artisan_name:
+        print(f"🏷️ 店名校正：{artisan_name} → {m['name']}")
+    return m["name"] if m else artisan_name
+
 def check_availability(artisan_name: str, date: str) -> str:
     """查詢特定職人空檔"""
+    artisan_name = official_name(artisan_name)
     print(f"👉 查詢空檔：{artisan_name} 於 {date}")
     err = _check_date_not_past(date)
     if err:
@@ -186,6 +179,7 @@ def book_experience(artisan_name: str, date: str, pax: int,
     err = _check_date_not_past(date)
     if err:
         return err
+    artisan_name = official_name(artisan_name)
     print(f"🚀 發送預約單：{artisan_name}, {date}, {pax}人, 旅客：{customer_name}")
     booking_id = log_booking({
         "artisan": artisan_name, "date": date, "pax": pax,
@@ -199,25 +193,49 @@ def book_experience(artisan_name: str, date: str, pax: int,
     try:
         response = requests.post(N8N_WEBHOOK_URL, json=payload, timeout=10)
         if response.status_code == 200:
-            return f"預約資料已成功送出！您的預約編號為 **{booking_id}**。"
+            return f"預約資料已成功送出！商家：{artisan_name}，您的預約編號為 **{booking_id}**。"
         return f"系統錯誤 ({response.status_code})，預約編號 {booking_id} 已暫存。"
     except Exception as e:
         return f"連線異常（預約已記錄，編號 **{booking_id}**）：{str(e)}"
 
-def search_local_merchants(location: str = "南投", budget: int = 0) -> str:
-    """搜尋南投在地推薦商家與體驗，budget 為每人預算上限（元），0 表示不限"""
-    blocks = re.split(r'\n(?=\d+[\.、]|\【)', MERCHANT_DATA)
-    blocks = [b.strip() for b in blocks if b.strip()]
-    if budget > 0:
-        filtered = []
-        for b in blocks:
-            prices = re.findall(r'(\d[\d,]*)\s*元', b)
-            if not prices or any(int(p.replace(',', '')) <= budget for p in prices):
-                filtered.append(b)
-        if filtered:
-            blocks = filtered
-    random.shuffle(blocks)
-    return "\n\n".join(blocks)
+_events_cache = {"at": 0, "value": {}}
+
+def _active_events_by_merchant():
+    """首頁輪播上架中的活動（快取 5 分鐘），依正式店名分組，讓 AI 推薦時可以提到"""
+    if time.time() - _events_cache["at"] < 300:
+        return _events_cache["value"]
+    grouped = {}
+    try:
+        r = requests.get(f"{SUPABASE_URL}/rest/v1/events", params={"active": "eq.true", "select": "*", "order": "id.desc"},
+                         headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}, timeout=6)
+        for e in (r.json() if r.status_code == 200 else []):
+            m = md.match_merchant(e.get("artisan"))
+            if m:
+                grouped.setdefault(m["name"], []).append(e)
+    except Exception as e:
+        print(f"⚠️ 讀取活動失敗：{e}")
+    _events_cache.update(at=time.time(), value=grouped)
+    return grouped
+
+def search_local_merchants(category: str = "", township: str = "", keyword: str = "") -> str:
+    """搜尋南投在地職人商家（資料來自正式商家名錄，結果隨機排序）。
+    三個參數都可以留空；留空代表不篩選，全部留空會回傳全部 46 家。
+
+    Args:
+        category: 類別名稱，可填：咖啡職人、茶&酒莊、工藝手作、農業休閒、秘境溫泉、永續餐飲、永續住宿、部落文化、宗教文化。
+        township: 鄉鎮，例如：魚池、埔里、國姓、鹿谷、竹山、信義、仁愛、水里、集集、草屯、南投市。
+        keyword: 關鍵字，會比對店名、介紹與特色標籤，例如：手沖、柴燒、親子、溫泉、布農。
+    """
+    rows, slug = md.search(category, township, keyword)
+    notes = []
+    if category and not slug:
+        notes.append(f"（找不到「{category}」這個類別，已改為不限類別）")
+    if not rows and (township or keyword):
+        rows, _ = md.search(category if slug else "")
+        notes.append("（沒有完全符合的商家，以下改列同類別的全部商家）")
+    print(f"🔎 搜尋商家：category={category!r} township={township!r} keyword={keyword!r} → {len(rows)} 家")
+    header = f"共 {len(rows)} 家（店名以【】內為正式名稱）："
+    return "\n".join(notes + [header, "", md.format_for_ai(rows, _active_events_by_merchant())])
 
 # ==========================================
 # 3. 模型設定與系統提示
@@ -234,14 +252,17 @@ BASE_SYSTEM_INSTRUCTION = """
 
 【天氣整合】如果旅客詢問行程規劃，主動先呼叫 get_nantou_weather 取得天氣，在行程中加入天氣提醒（如：今天有雨，建議攜帶雨具；天氣晴朗適合戶外部落體驗）。
 
-【預算篩選】如果旅客提到「預算」或「多少錢以內」，呼叫 search_local_merchants 時帶入 budget 參數（整數，單位元）。
+【搜尋方式】search_local_merchants 可以依 category（類別）、township（鄉鎮）、keyword（關鍵字）篩選。旅客指定區域時帶入 township，指定體驗類型時帶入 category 或 keyword。
+
+【價格】商家名錄沒有價格資料，只有「🎉 近期活動」會標示費用。旅客詢問價格或預算時，絕對不可自行編造金額；請說明費用依體驗內容而定，預約時商家會再確認，若有標示費用的近期活動可以優先介紹。
+
+【正式店名】推薦與預約時，請使用搜尋結果中【】內的正式店名。
 
 ---
 
 【互動選項格式】
 當你需要詢問以下資訊時，必須在問句後加上 [選項: 選項1 | 選項2 | ...] 讓旅客點選，不得只用文字敘述：
 - 人數 → [選項: 1-2人 | 3-4人 | 5-6人 | 7-8人 | 8人以上]
-- 每人預算 → [選項: 1000元以下 | 1000-2000元 | 2000-3000元 | 3000元以上]
 - 感興趣的區域 → [選項: 日月潭周邊 | 清境合歡山 | 埔里小鎮 | 竹山鹿谷 | 國姓咖啡公路 | 信義原民部落 | 其他]
 日期讓旅客自由文字輸入，不加選項。
 
@@ -251,7 +272,7 @@ BASE_SYSTEM_INSTRUCTION = """
 觸發條件：旅客說「幫我規劃行程」、「一日遊」、「行程推薦」、「怎麼安排」等。
 
 1. 先呼叫 get_nantou_weather 取得天氣。
-2. 再呼叫 search_local_merchants 取得資料庫內容（若旅客指定預算，帶入 budget 參數）。
+2. 再呼叫 search_local_merchants 取得商家（旅客有指定區域或喜好時，帶入 township 或 keyword；沒有就不帶參數）。
 3. 根據天氣安排早午晚三個時段，格式如下：
 
 ---
@@ -311,16 +332,9 @@ BASE_SYSTEM_INSTRUCTION = """
 【C. 旅客點擊分類卡片】
 觸發條件：訊息以「【分類探索】」開頭。
 
-1. 呼叫 search_local_merchants 取得完整資料庫。
-2. 從結果中篩選出與該分類最相關的商家：
-   - ☕ 咖啡職人 → 咖啡、手沖、烘焙、莊園相關
-   - 🌾 農業休閒 → 茶園、農場、採茶、有機、梅園相關
-   - ♨️ 秘境溫泉 → 溫泉、湯屋、泡湯相關
-   - 🍽️ 永續餐飲 → 餐廳、料理、蔬食、風味餐相關
-   - 🏡 特色住宿 → 民宿、住宿、露營、帳篷相關
-   - 🏔️ 部落文化 → 部落、原住民、族、獵人相關
-   - 🎨 工藝手作 → 編織、陶藝、染布、木工、手作相關
-3. 列出 3～5 個最相關的商家，格式如下：
+1. 呼叫 search_local_merchants，把訊息中的類別名稱填入 category（例如 category="咖啡職人"；「特色住宿」請填「永續住宿」）。
+2. 從結果中挑選商家。
+3. 列出 3～5 個商家，格式如下：
 
 ---
 [類別 emoji] **[類別名稱] 精選商家**
@@ -629,6 +643,7 @@ def run_chat(user_message, history, lang, state):
                 config = types.GenerateContentConfig(
                     system_instruction=system_instruction,
                     tools=[check_availability, book_experience, search_local_merchants, get_nantou_weather],
+                    automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
                 )
 
                 while True:

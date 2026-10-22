@@ -1,7 +1,6 @@
 import os
 import re
 import time
-import difflib
 from collections import Counter, defaultdict
 from datetime import datetime, date, timedelta, timezone
 from functools import wraps
@@ -110,36 +109,8 @@ def load_data():
         "fetched_at": datetime.now(TW).isoformat(),
     })
 
-# ───────── 商家名稱比對 ─────────
-def _norm(s):
-    s = re.sub(r"[（(].*?[）)]", "", s or "")
-    return re.sub(r"[\s&＆×Xx·・\-—_,，。]", "", s).lower()
-
-def _township(addr):
-    m = re.search(r"南投縣?(.{1,3}?[鄉鎮市])", addr or "")
-    return m.group(1) if m else "其他"
-
-MERCHANTS = []
-for _slug in CATEGORY_ORDER:
-    _c = CATEGORIES[_slug]
-    for _m in _c["merchants"]:
-        MERCHANTS.append({"name": _m["name"], "norm": _norm(_m["name"]), "cat": _slug,
-                          "cat_name": _c["name"], "emoji": _c["emoji"], "color": _c["color"],
-                          "township": _township(_m.get("address"))})
-_BY_NAME = {m["name"]: m for m in MERCHANTS}
-
-def match_merchant(name):
-    n = _norm(name)
-    if not n:
-        return None
-    for m in MERCHANTS:
-        if m["norm"] == n:
-            return m
-    for m in MERCHANTS:
-        if len(n) >= 3 and (n in m["norm"] or m["norm"] in n):
-            return m
-    close = difflib.get_close_matches(n, [m["norm"] for m in MERCHANTS], n=1, cutoff=0.7)
-    return next((m for m in MERCHANTS if close and m["norm"] == close[0]), None)
+# ───────── 商家名稱比對（共用 merchant_directory）─────────
+from merchant_directory import MERCHANTS, BY_NAME as _BY_NAME, match_merchant
 
 # ───────── 時間工具 ─────────
 def to_tw(iso):
@@ -1576,3 +1547,237 @@ def audit_log():
     if act:
         rows = [r for r in rows if (r.get("action") or "").startswith(act)]
     return jsonify({"rows": rows, "admins": sorted({r.get("email") for r in rows if r.get("email")})})
+
+# ───────── 後台 AI 助理（唯讀工具 + Gemini）─────────
+from merchant_directory import resolve_category
+
+ASSISTANT_PROMPT = """你是「南投職人旅遊平台」管理後台的資料助理，替管理員解讀營運、商家、預約、遊戲、AI 嚮導與系統狀態的數據。
+規則：
+1. 一律先呼叫工具取得資料再回答，絕對不可以自己編造數字；工具沒有提供的資料，就直接說「後台目前沒有這項資料」。
+2. 用繁體中文回答，先講結論，再用條列補充；重要數字用 **粗體**；比較時講清楚期間（例如「本週 vs 上週」）。
+3. 你只能讀取資料，不能修改任何東西。需要處理時，告訴管理員要去後台哪一頁操作，例如「LINE 綁定」、「預約分析 → 全部預約」、「動態管理 → 待審核」、「題目管理」、「遊戲設定」。
+4. 旅客個資已經遮蔽，不要推測或要求完整姓名、電話、Email。
+5. 回答精簡，一般不超過 250 字；除非管理員要求，不要列出超過 10 筆明細。
+6. 今天是 __TODAY__（台灣時間）。"""
+
+def _jsonable(x):
+    return json_mod.loads(json_mod.dumps(x, ensure_ascii=False, default=str))
+
+def _mask_name(n):
+    n = (n or "").strip()
+    return (n[0] + "○" * max(1, len(n) - 1)) if n else ""
+
+def tool_overview() -> dict:
+    """營運總覽：本週預約數與上週比較、待確認與逾時未回覆的預約、商家確認率、平均評分、本週新玩家、今日打卡、近 14 天每日趨勢、未綁定 LINE 的商家。"""
+    d = stats_overview(load_data())
+    t, k = d["trend"], d["kpis"]
+    kpis = {"bookings_last_7_days": k["bookings_7d"]["value"], "bookings_previous_7_days": k["bookings_7d"]["prev"],
+            "pending_bookings_all_time": k["pending"]["value"], "pending_bookings_waiting_over_24h": k["pending"]["overdue"],
+            "merchant_confirm_rate_percent_all_time": k["confirm_rate"]["value"], "average_rating": k["rating"]["value"],
+            "rating_count": k["rating"]["count"], "new_players_last_7_days": k["new_players_7d"]["value"],
+            "new_players_previous_7_days": k["new_players_7d"]["prev"], "checkins_today": k["checkins_today"]["value"]}
+    return {"kpis": kpis, "last_14_days": {"dates": t["labels"][-14:], "bookings": t["bookings"][-14:],
+                                                "checkins": t["checkins"][-14:], "new_players": t["players"][-14:]},
+            "overdue_bookings": d["todo"]["overdue"], "unbound_line_count": len(d["todo"]["unbound"]),
+            "unbound_line_merchants": d["todo"]["unbound"][:15]}
+
+def tool_booking_stats() -> dict:
+    """預約分析：總預約與人次、狀態分布、各類別預約、熱門商家、提前幾天預訂、團體人數、未來 30 天每天的預約數、旅客最常下單的星期與時段。"""
+    d = stats_bookings(load_data())
+    today = d["today"]
+    upcoming = [c for c in d["calendar"] if c["date"] >= today and c["count"]][:30]
+    days = ["一", "二", "三", "四", "五", "六", "日"]
+    slots = sorted(((v, f"星期{days[r]} {h}:00") for r, row in enumerate(d["heatmap"]) for h, v in enumerate(row) if v), reverse=True)[:5]
+    return {"total": d["total"], "people": d["people"], "status": d["status"],
+            "categories": [{"name": c["name"], "bookings": c["bookings"], "people": c["people"]} for c in d["categories"]],
+            "top_merchants": d["top_merchants"], "lead_time": d["lead_time"], "party_size": d["party_size"],
+            "upcoming_days_with_bookings": upcoming, "busiest_order_times": [{"time": s, "count": v} for v, s in slots]}
+
+def tool_merchant_performance(category: str = "", sort_by: str = "visits", limit: int = 15) -> dict:
+    """商家表現表：每家的預約數、人次、確認率、待確認數、評分、打卡數、貼文數、是否綁定 LINE，以及 AI 送出但對不到名錄的店名。
+
+    Args:
+        category: 只看某個類別（例如：咖啡職人、茶&酒莊、工藝手作），留空代表全部。
+        sort_by: 排序依據：visits（預約+打卡）、bookings、confirm_rate、rating、pending、checkins。
+        limit: 最多回傳幾家，預設 15。
+    """
+    rows, unmatched = merchant_table(load_data())
+    slug = resolve_category(category) if category else None
+    if slug:
+        rows = [r for r in rows if r["cat"] == slug]
+    key = sort_by if sort_by in ("visits", "bookings", "confirm_rate", "rating", "pending", "checkins") else "visits"
+    rows.sort(key=lambda r: (r.get(key) is None, -(r.get(key) or 0)))
+    fields = ("name", "cat_name", "township", "bookings", "people", "confirm_rate", "pending", "rating", "checkins", "posts", "line_bound")
+    return {"count": len(rows), "sorted_by": key, "merchants": [{k: r[k] for k in fields} for r in rows[:max(1, min(46, limit))]],
+            "unmatched_names": unmatched.most_common(10)}
+
+def tool_search_bookings(merchant: str = "", status: str = "", date_from: str = "", date_to: str = "", limit: int = 20) -> dict:
+    """查詢預約明細（旅客姓名已遮蔽，不含電話與 Email）。
+
+    Args:
+        merchant: 商家名稱，可以只打部分名稱，留空代表全部。
+        status: 待確認、已確認或已婉拒，留空代表全部。
+        date_from: 體驗日期起（YYYY-MM-DD），留空不限。
+        date_to: 體驗日期迄（YYYY-MM-DD），留空不限。
+        limit: 最多回傳幾筆，預設 20。
+    """
+    rows = enrich_bookings(load_data()["bookings"])
+    m = match_merchant(merchant) if merchant else None
+    if merchant:
+        rows = [b for b in rows if (b["_m"] and m and b["_m"]["name"] == m["name"]) or merchant in (b.get("artisan") or "")]
+    if status:
+        rows = [b for b in rows if b["_status"] == status]
+    if date_from:
+        rows = [b for b in rows if b["_date"] and b["_date"].isoformat() >= date_from]
+    if date_to:
+        rows = [b for b in rows if b["_date"] and b["_date"].isoformat() <= date_to]
+    rows.sort(key=lambda b: b["_created"] or datetime.min.replace(tzinfo=TW), reverse=True)
+    return {"count": len(rows), "bookings": [{
+        "booking_id": b.get("booking_id"), "merchant": b["_m"]["name"] if b["_m"] else b.get("artisan"),
+        "date": b["_date"].isoformat() if b["_date"] else b.get("booking_date"), "pax": b["_pax"], "status": b["_status"],
+        "customer": _mask_name(b.get("customer_name")), "rating": b.get("rating"),
+        "ordered_at": b["_created"].strftime("%Y-%m-%d %H:%M") if b["_created"] else None} for b in rows[:max(1, min(50, limit))]]}
+
+def tool_impact() -> dict:
+    """永續影響力：服務旅客人次、支持過的職人數、前三名集中度、吉尼係數、各鄉鎮造訪、原鄉占比、類別分布、每月造訪、零造訪職人。"""
+    d = stats_impact(load_data())
+    d.pop("lorenz", None)
+    return d
+
+def tool_ai_guide_stats() -> dict:
+    """前台 AI 嚮導的使用情況：本週對話與訊息數、對話到預約的轉換漏斗、使用語言、旅客點的類別、AI 呼叫的工具、平均回應秒數、錯誤率。"""
+    d = dict(cached("ai", stats_ai))
+    d["trend"] = {k: v[-14:] for k, v in d["trend"].items()}
+    return d
+
+def tool_game_stats() -> dict:
+    """遊戲（緣投探索者）數據：玩家數、證書數、打卡、問答局數、貼文留言按讚、等級漏斗、近 14 天活動、打卡 vs 預約、前 10 名玩家。"""
+    d = stats_game(load_data())
+    d["trend"] = {k: v[-14:] for k, v in d["trend"].items()}
+    for p in d["top_players"]:
+        p.pop("avatar", None)
+    d["recent_posts"] = [{"user": p.get("user_name"), "content": (p.get("content") or "")[:60], "merchant": p.get("merchant_name"),
+                          "likes": p.get("likes")} for p in d["recent_posts"]]
+    return d
+
+def tool_review_queue() -> dict:
+    """動態管理的待審核內容：被 AI、禁用詞或檢舉標記而隱藏的貼文與留言，含標記原因與檢舉原因。"""
+    reasons = _open_report_reasons()
+    flt = {"moderation": f"in.({','.join(PENDING_MODERATION)})", "order": "id.asc"}
+    items = [{"type": "貼文", "user": p.get("user_name"), "content": (p.get("content") or "")[:80], "flag": p.get("moderation"),
+              "reason": p.get("moderation_reason"), "reports": reasons.get(("post", p["id"]), Counter()).most_common()}
+             for p in fetch_all("game_posts", "*", flt)]
+    items += [{"type": "留言", "user": c.get("user_name"), "content": (c.get("content") or "")[:80], "flag": c.get("moderation"),
+               "reason": c.get("moderation_reason"), "reports": reasons.get(("comment", c["id"]), Counter()).most_common()}
+              for c in fetch_all("game_comments", "id,user_name,content,moderation,moderation_reason", flt)]
+    return {"count": len(items), "items": items[:20]}
+
+def tool_question_quality() -> dict:
+    """問答題庫品質：題數、整體答對率、被標記（太簡單、太難、答案可能有誤）的題目、最難與最簡單的題目。"""
+    rows = fetch_all("game_questions", "*", {"order": "id.asc"})
+    if not rows:
+        return {"note": "題庫尚未匯入資料庫，目前使用內建題目，沒有答對率資料"}
+    stats = question_stats()
+    out = []
+    for r in rows:
+        s = stats.get(r["id"], {"n": 0, "correct": 0, "choices": [0, 0, 0, 0]})
+        out.append({"id": r["id"], "question": r["question"][:60], "category": r.get("category"), "enabled": r.get("enabled"),
+                    "answers": s["n"], "correct_rate": round(s["correct"] / s["n"] * 100) if s["n"] else None,
+                    "flags": question_flags(r, s)})
+    rated = [q for q in out if q["correct_rate"] is not None and q["answers"] >= MIN_ANSWERS_FOR_FLAG]
+    total_n = sum(q["answers"] for q in out)
+    return {"questions": len(out), "enabled": sum(1 for q in out if q["enabled"]), "total_answers": total_n,
+            "overall_correct_rate": round(sum(stats[q["id"]]["correct"] for q in out if q["id"] in stats) / total_n * 100) if total_n else None,
+            "flagged": [q for q in out if q["flags"]][:15],
+            "hardest": sorted(rated, key=lambda q: q["correct_rate"])[:5], "easiest": sorted(rated, key=lambda q: -q["correct_rate"])[:5]}
+
+def tool_system_status() -> dict:
+    """系統健康：Supabase 連線與延遲、n8n 各工作流是否啟用與 24 小時成功失敗次數、最近失敗、環境變數是否設定。"""
+    return cached("system", stats_system)
+
+def tool_game_config() -> dict:
+    """目前的遊戲設定（等級門檻、各項 XP、每局題數）、進行中與即將開始的限時活動、首頁公告與 AI 嚮導補充指示。"""
+    events = [_event_row(e) for e in fetch_all("game_events", "*", {"order": "start_at.desc"})]
+    return {"game_settings": {k: v for k, v in game_settings().items() if k != "blocked_words"},
+            "events": [{k: e.get(k) for k in ("name", "multiplier", "scope", "category", "status", "start_local", "end_local")}
+                       for e in events if e["status"] in ("active", "upcoming")],
+            "site": site_settings()}
+
+def tool_recent_admin_actions(limit: int = 20) -> dict:
+    """最近的後台操作紀錄（誰在什麼時候做了什麼修改）。
+
+    Args:
+        limit: 最多回傳幾筆，預設 20。
+    """
+    rows = sb_get("admin_audit_log", {"order": "id.desc", "limit": str(max(1, min(100, limit))), "select": "email,action,detail,created_at"})
+    return {"actions": [{**r, "detail": json_mod.dumps(r.get("detail") or {}, ensure_ascii=False)[:160]} for r in rows]}
+
+ASSISTANT_TOOLS = {
+    "tool_overview": (tool_overview, "總覽", ("admin",)),
+    "tool_booking_stats": (tool_booking_stats, "預約分析", ("admin",)),
+    "tool_merchant_performance": (tool_merchant_performance, "商家表現", ("admin",)),
+    "tool_search_bookings": (tool_search_bookings, "全部預約", ("admin",)),
+    "tool_impact": (tool_impact, "永續影響力", ("admin",)),
+    "tool_ai_guide_stats": (tool_ai_guide_stats, "AI 嚮導", ("admin",)),
+    "tool_system_status": (tool_system_status, "系統健康", ("admin",)),
+    "tool_game_config": (tool_game_config, "遊戲設定／限時活動", ("admin",)),
+    "tool_recent_admin_actions": (tool_recent_admin_actions, "操作紀錄", ("admin",)),
+    "tool_game_stats": (tool_game_stats, "遊戲分析", ("admin", "moderator")),
+    "tool_review_queue": (tool_review_queue, "動態管理", ("admin", "moderator")),
+    "tool_question_quality": (tool_question_quality, "題目管理", ("admin", "moderator")),
+}
+_assistant_rate = defaultdict(list)
+
+@admin_bp.route('/admin/api/assistant', methods=['POST'])
+@require_role("admin", "moderator")
+def admin_assistant():
+    a = current_admin()
+    now = time.time()
+    hits = [t for t in _assistant_rate[a["email"]] if now - t < 60]
+    if len(hits) >= 15:
+        return jsonify({"error": "提問太頻繁，請稍等一下再問"}), 429
+    _assistant_rate[a["email"]] = hits + [now]
+
+    d = body()
+    question = str(d.get("message") or "").strip()[:500]
+    if not question:
+        return jsonify({"error": "請輸入問題"}), 400
+    allowed = {k: v for k, v in ASSISTANT_TOOLS.items() if a["role"] in v[2]}
+    contents = []
+    for h in (d.get("history") or [])[-10:]:
+        if h.get("role") in ("user", "model") and h.get("text"):
+            contents.append(genai_types.Content(role=h["role"], parts=[genai_types.Part(text=str(h["text"])[:2000])]))
+    contents.append(genai_types.Content(role="user", parts=[genai_types.Part(text=question)]))
+    prompt = ASSISTANT_PROMPT.replace("__TODAY__", today().strftime("%Y-%m-%d（%a）"))
+    if a["role"] != "admin":
+        prompt += "\n7. 這位使用者是內容審核員，只能查詢遊戲、動態與題目相關資料；營運、預約、商家數據請回答「這需要管理員權限」。"
+    config = genai_types.GenerateContentConfig(
+        system_instruction=prompt, tools=[v[0] for v in allowed.values()], temperature=0.2,
+        automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=True))
+    used = []
+    try:
+        for _ in range(6):
+            resp = _gemini_client().models.generate_content(model="gemini-2.5-flash", contents=contents, config=config)
+            cand = resp.candidates[0].content if resp.candidates else None
+            calls = [p.function_call for p in (cand.parts if cand and cand.parts else []) if p.function_call]
+            if not calls:
+                reply = resp.text or "抱歉，我沒有產生回答，請換個方式再問一次。"
+                break
+            results = []
+            for fc in calls:
+                tool = allowed.get(fc.name)
+                try:
+                    out = _jsonable(tool[0](**dict(fc.args or {}))) if tool else {"error": "沒有權限使用這個資料來源"}
+                except Exception as e:
+                    out = {"error": f"讀取失敗：{str(e)[:120]}"}
+                if tool and tool[1] not in used:
+                    used.append(tool[1])
+                results.append(genai_types.Part(function_response=genai_types.FunctionResponse(name=fc.name, response={"result": out})))
+            contents += [cand, genai_types.Content(role="user", parts=results)]
+        else:
+            reply = "這個問題需要查太多資料了，請把問題拆小一點再問。"
+    except Exception as e:
+        print(f"❌ 後台 AI 助理錯誤：{e}")
+        return jsonify({"error": "AI 助理暫時無法回應，請稍後再試"}), 502
+    audit(a["email"], "assistant_query", {"q": question[:200], "sources": used})
+    return jsonify({"reply": reply, "sources": used})
