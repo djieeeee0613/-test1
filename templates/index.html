@@ -85,6 +85,23 @@
             border-color: rgba(255,255,255,0.4);
         }
 
+        /* ===== 網站公告 ===== */
+        .site-ann {
+            position: fixed; top: 76px; left: 50%; transform: translateX(-50%); z-index: 999;
+            display: flex; align-items: center; gap: 10px; max-width: calc(100% - 32px);
+            padding: 10px 12px 10px 16px; border-radius: 999px; font-size: 14px; font-weight: 700;
+            box-shadow: 0 8px 24px rgba(0,0,0,.18); animation: ann-in .5s ease;
+        }
+        .site-ann[hidden] { display: none; }
+        @keyframes ann-in { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .site-ann a, .site-ann span { color: inherit; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .site-ann a:hover { text-decoration: underline; }
+        .site-ann button { background: rgba(0,0,0,.12); border: none; color: inherit; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; flex-shrink: 0; }
+        .ann-info { background: #2d4a35; color: #fff; }
+        .ann-promo { background: linear-gradient(90deg, #d9b56f, #b88a3e); color: #fff; }
+        .ann-warning { background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; }
+        @media (max-width: 768px) { .site-ann { top: 70px; font-size: 13px; } }
+
         /* ===== 流光按鈕 ===== */
         @keyframes glow-spin { to { transform: rotate(360deg); } }
         @keyframes glow-sweep { 0% { left: -60%; } 60%, 100% { left: 130%; } }
@@ -1224,6 +1241,26 @@
 </head>
 <body>
 
+{% if announcement %}
+<div class="site-ann ann-{{ announcement.style }}" id="site-ann" data-key="{{ announcement.text|e }}" hidden>
+    <span class="ann-ic">{{ {'info': '📢', 'promo': '🎉', 'warning': '⚠️'}.get(announcement.style, '📢') }}</span>
+    {% if announcement.link %}<a href="{{ announcement.link|e }}">{{ announcement.text }} →</a>{% else %}<span>{{ announcement.text }}</span>{% endif %}
+    <button onclick="closeAnnouncement()" aria-label="關閉公告">✕</button>
+</div>
+<script>
+(function () {
+    const el = document.getElementById('site-ann');
+    let closed = null;
+    try { closed = sessionStorage.getItem('ann-closed'); } catch (e) {}
+    if (closed !== el.dataset.key) el.hidden = false;
+})();
+function closeAnnouncement() {
+    const el = document.getElementById('site-ann');
+    el.hidden = true;
+    try { sessionStorage.setItem('ann-closed', el.dataset.key); } catch (e) {}
+}
+</script>
+{% endif %}
 <!-- ===== 導覽列 ===== -->
 <nav>
     <div class="nav-logo"><img src="/static/images/mascot.jpg" alt="緣投" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;"> 南投<span>職人旅遊</span></div>

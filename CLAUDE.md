@@ -171,9 +171,16 @@ Render 環境變數（在 Render dashboard 設定）：
 
 - 後端在 `admin.py`（Flask Blueprint），前端 `templates/admin.html`（Chart.js 4.4.1 + Leaflet）
 - **登入**：Google 登入 → `POST /admin/api/login`，email 必須已驗證且在 `ADMIN_EMAILS`（管理員）或 `MODERATOR_EMAILS`（內容審核：見下方權限說明）名單內；每次請求都重新比對名單，移出名單即失效
-- **頁面**：總覽、預約分析（含全部預約清單：搜尋、篩選、分頁、匯出 CSV）、商家表現、地圖視角、永續影響力、AI 嚮導、遊戲分析、遊戲設定、題目管理、動態管理（含待審核佇列）、玩家管理、限時活動、系統健康；側邊欄分「營運 / 遊戲 / 系統」可收合群組
+- **頁面**：總覽、預約分析（含全部預約清單：搜尋、篩選、分頁、匯出 CSV）、商家表現、地圖視角、永續影響力、AI 嚮導、遊戲分析、遊戲設定、題目管理、動態管理（含待審核佇列）、玩家管理、限時活動、首頁輪播、LINE 綁定、公告與 AI 指示、系統健康、操作紀錄；側邊欄分「營運 / 遊戲 / 網站 / 系統」可收合群組
 - **可編輯的資料**：遊戲設定（等級、XP、題數、檢舉門檻、AI 審核開關、禁用詞；可勾選立即補寄證書）、題目（新增 / 編輯 / 停用 / 刪除 / CSV 匯入 / AI 出題）、貼文與留言（核可 / 駁回 / 隱藏 / 置頂 / 刪除）、限時活動、玩家（調整 XP、撤銷打卡、暫停發言、補寄證書）。停用或刪除題目時，若啟用題數會少於每局題數會被擋下
 - **權限**：內容審核員可用遊戲分析、題目管理（含 AI 出題）、動態管理、玩家管理（只能暫停發言，看不到 Email）；遊戲設定、限時活動、調整 XP、撤銷打卡、補寄證書只有管理員能用
+- **營運資料編輯（只有管理員）**：
+  - 預約：編輯（狀態、日期、人數、聯絡資料）、刪除、補登。補登時勾「用 LINE 通知商家」會改打 n8n `nantou-booking` webhook（由 n8n 寫入 bookings，Flask 不重複寫入）；改狀態時可勾選寄 email 通知旅客
+  - 商家 LINE 綁定（`merchants` 表）：店名只能從 46 家名單選（必須和 AI 送出的店名完全一致，n8n 才查得到 line_id），LINE ID 需符合 `U` + 32 個英數字
+  - 首頁輪播（`events` 表）：上下架、編輯、換照片（上傳到 `event-image/carousel/`）、刪除
+  - 公告與 AI 指示：存在 `game_settings` 表 key=`site`；`game.site_settings()` 快取 60 秒。首頁 `index()` 傳入 `announcement` 顯示浮動公告列；`run_chat()` 把 `ai_extra` 接在系統指示最後
+  - 操作紀錄頁：唯讀檢視 `admin_audit_log` 最新 300 筆
+- **寄信**：`game.send_email(email, subject, html)` 透過 n8n `nantou-certificate` webhook 寄任意 HTML 信（證書與預約通知共用）
 - **AI 出題**：`/admin/api/questions/generate` 只用選定商家或類別在 `merchants_data` 的介紹當素材，產生的題目是草稿，管理員勾選後才透過 bulk API 寫入題庫
 - **AI 嚮導分析**：`/api/chat` 每次回覆後把語言、點選的類別、呼叫的工具、是否完成預約、耗時寫入 `chat_logs`（**不存對話內容**）；前端每次開頁產生一個 `session_id` 用來算對話數與轉換漏斗
 - **地圖圖示**：Font Awesome Free 6.5.1（cdnjs），每個類別一個圖示，對照表在 `admin.html` 的 `CAT_ICON`

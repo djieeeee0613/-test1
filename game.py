@@ -308,19 +308,43 @@ def certificate_html(name, xp, checkins, date_str):
 </td></tr>
 </table></td></tr></table></body></html>"""
 
-def send_certificate(email, name, xp, checkins):
+def send_email(email, subject, html, name=None):
+    """透過 n8n 的 Gmail 工作流寄 HTML 信（n8n 只負責轉寄 email / subject / html）"""
     if not email:
-        return
-    date_str = datetime.now(TW).strftime('%Y 年 %m 月 %d 日')
+        return False
     try:
-        r = requests.post(N8N_CERT_WEBHOOK_URL, json={
-            "email": email, "name": name,
-            "subject": "🏆 恭喜！您已獲得「南投永續達人」認證證書",
-            "html": certificate_html(name, xp, checkins, date_str),
-        }, timeout=15)
-        print(f"📜 證書寄送 {email}：{r.status_code}")
+        r = requests.post(N8N_CERT_WEBHOOK_URL, json={"email": email, "name": name, "subject": subject, "html": html},
+                          timeout=15)
+        print(f"✉️ 寄信 {email}：{r.status_code}")
+        return r.status_code < 400
     except Exception as e:
-        print(f"❌ 證書寄送失敗：{e}")
+        print(f"❌ 寄信失敗：{e}")
+        return False
+
+def send_certificate(email, name, xp, checkins):
+    date_str = datetime.now(TW).strftime('%Y 年 %m 月 %d 日')
+    send_email(email, "🏆 恭喜！您已獲得「南投永續達人」認證證書", certificate_html(name, xp, checkins, date_str), name)
+
+# ───────── 網站設定（公告列、AI 補充指示；存在 game_settings 表 key=site）─────────
+DEFAULT_SITE = {"announcement": {"enabled": False, "text": "", "link": "", "style": "info"}, "ai_extra": ""}
+_site_cache = {"at": 0, "value": None}
+
+def site_settings():
+    if _site_cache["value"] and time.time() - _site_cache["at"] < SETTINGS_TTL:
+        return _site_cache["value"]
+    stored = {}
+    try:
+        rows = sb_get("game_settings", {"key": "eq.site", "select": "value"})
+        stored = rows[0]["value"] if rows else {}
+    except Exception as e:
+        print(f"⚠️ 讀取網站設定失敗：{e}")
+    value = {**DEFAULT_SITE, **stored}
+    value["announcement"] = {**DEFAULT_SITE["announcement"], **(stored.get("announcement") or {})}
+    _site_cache.update(at=time.time(), value=value)
+    return value
+
+def invalidate_site():
+    _site_cache["at"] = 0
 
 # ───────── 驗證 ─────────
 def verify_google_token(id_token):

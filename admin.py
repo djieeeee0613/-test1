@@ -15,7 +15,10 @@ from game import (SUPABASE_URL, SUPABASE_KEY, GOOGLE_CLIENT_ID, TW, DEFAULT_SETT
                   _h, sb_get, sb_insert, sb_patch, sb_delete, verify_google_token, level_info, levels,
                   settings as game_settings, invalidate_settings, invalidate_questions, question_bank,
                   delete_post_cascade, send_certificate, adjust_comment_count, award_xp, get_user,
-                  invalidate_events, MERCHANT_GROUPS, EVENT_SCOPES, _gemini_client)
+                  invalidate_events, MERCHANT_GROUPS, EVENT_SCOPES, _gemini_client,
+                  send_email, upload_image, site_settings, invalidate_site)
+import uuid
+from html import escape as html_escape
 from google.genai import types as genai_types
 import json as json_mod
 from game_quiz import QUIZ_QUESTIONS
@@ -533,6 +536,7 @@ def admin_booking_list():
     bks = sorted(enrich_bookings(load_data()["bookings"]),
                  key=lambda b: b["_created"] or datetime.min.replace(tzinfo=TW), reverse=True)
     return jsonify({"rows": [{
+        "row_id": b.get("id"),
         "id": b.get("booking_id"), "created": b["_created"].strftime("%Y-%m-%d %H:%M") if b["_created"] else "",
         "artisan": b.get("artisan"), "merchant": b["_m"]["name"] if b["_m"] else None,
         "date": b.get("booking_date"), "date_iso": b["_date"].isoformat() if b["_date"] else None,
@@ -1262,3 +1266,313 @@ def resend_certificate(gid):
                                                     u.get("checkin_count") or 0), daemon=True).start()
     audit(who(), "certificate_resend", {"google_id": gid})
     return jsonify({"ok": True})
+
+# ───────── 營運資料編輯：預約 ─────────
+BOOKING_STATUSES = ("待確認", "已確認", "已婉拒")
+PHONE_RE = re.compile(r"^[0-9+\-() ]{8,20}$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+N8N_BOOKING_URL = os.getenv("N8N_WEBHOOK_URL", "https://nantoutravel.app.n8n.cloud/webhook/nantou-booking")
+
+def validate_booking(d):
+    errors = []
+    artisan = str(d.get("artisan") or "").strip()
+    m = match_merchant(artisan)
+    if not artisan:
+        errors.append("請選擇商家")
+    elif not m:
+        errors.append(f"「{artisan}」不在 46 家商家名單中")
+    try:
+        day = datetime.strptime(str(d.get("date") or ""), "%Y-%m-%d").date()
+    except ValueError:
+        day = None
+        errors.append("請選擇體驗日期")
+    try:
+        pax = int(d.get("pax"))
+    except (TypeError, ValueError):
+        pax = 0
+    if not 1 <= pax <= 50:
+        errors.append("人數需介於 1–50")
+    name = str(d.get("customer") or "").strip()
+    phone = str(d.get("phone") or "").strip()
+    email = str(d.get("email") or "").strip()
+    if not 1 <= len(name) <= 30:
+        errors.append("請填寫旅客姓名（30 字內）")
+    if not PHONE_RE.match(phone):
+        errors.append("電話格式不正確")
+    if email and not EMAIL_RE.match(email):
+        errors.append("Email 格式不正確")
+    status = d.get("status") if d.get("status") in BOOKING_STATUSES else None
+    if not status:
+        errors.append("狀態不正確")
+    return {"artisan": m["name"] if m else artisan, "booking_date": day.isoformat() if day else None,
+            "people_count": pax, "customer_name": name, "phone": phone, "email": email, "status": status}, errors
+
+def booking_email_html(b, status, note):
+    ok = status == "已確認"
+    title = "您的南投職人體驗預約已確認 🎉" if ok else "關於您的南投職人體驗預約"
+    body = ("商家已確認您的預約，期待與您見面！" if ok else
+            "很抱歉，商家這次無法接受您的預約。歡迎回到網站，請 AI 嚮導緣投幫您推薦其他職人體驗。")
+    esc = html_escape
+    note_html = f'<p style="background:#fbf5e8;border-left:3px solid #C8A96E;padding:10px 14px;border-radius:0 8px 8px 0">{esc(note)}</p>' if note else ""
+    return f"""<div style="font-family:'Noto Sans TC',Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1f2a22">
+  <h2 style="color:#2d4a35">{title}</h2>
+  <p>親愛的 {esc(b.get('customer_name') or '旅客')} 您好，</p><p>{body}</p>{note_html}
+  <table style="width:100%;border-collapse:collapse;background:#f7f5f0;border-radius:12px;margin:16px 0">
+    <tr><td style="padding:10px 14px;color:#888">預約編號</td><td style="padding:10px 14px"><b>{esc(b.get('booking_id') or '')}</b></td></tr>
+    <tr><td style="padding:10px 14px;color:#888">職人商家</td><td style="padding:10px 14px">{esc(b.get('artisan') or '')}</td></tr>
+    <tr><td style="padding:10px 14px;color:#888">體驗日期</td><td style="padding:10px 14px">{esc(str(b.get('booking_date') or ''))}</td></tr>
+    <tr><td style="padding:10px 14px;color:#888">人數</td><td style="padding:10px 14px">{esc(str(b.get('people_count') or ''))} 位</td></tr>
+  </table>
+  <p style="color:#888;font-size:13px">南投職人旅遊 · <a href="https://nantoutravel.com" style="color:#2d4a35">nantoutravel.com</a></p></div>"""
+
+@admin_bp.route('/admin/api/bookings', methods=['POST'])
+@require_role("admin")
+def create_booking():
+    d = body()
+    clean, errors = validate_booking({**d, "status": d.get("status") or "待確認"})
+    if errors:
+        return jsonify({"errors": errors}), 400
+    booking_id = uuid.uuid4().hex[:8].upper()
+    if d.get("notify_merchant"):
+        payload = {"artisan": clean["artisan"], "booking_date": clean["booking_date"], "people_count": clean["people_count"],
+                   "customer_name": clean["customer_name"], "phone": clean["phone"], "email": clean["email"],
+                   "booking_id": booking_id, "status": "new_booking"}
+        try:
+            r = requests.post(N8N_BOOKING_URL, json=payload, timeout=15)
+            if r.status_code >= 400:
+                return jsonify({"errors": [f"n8n 回應錯誤（{r.status_code}），預約沒有建立"]}), 502
+        except Exception as e:
+            return jsonify({"errors": [f"無法連線 n8n：{str(e)[:80]}"]}), 502
+    else:
+        if not sb_insert("bookings", {**clean, "booking_id": booking_id}):
+            return jsonify({"errors": ["儲存失敗"]}), 500
+    audit(who(), "booking_create", {"booking_id": booking_id, "artisan": clean["artisan"], "notify": bool(d.get("notify_merchant"))})
+    _cache.clear()
+    return jsonify({"ok": True, "booking_id": booking_id})
+
+@admin_bp.route('/admin/api/bookings/<int:rid>', methods=['PUT'])
+@require_role("admin")
+def update_booking(rid):
+    d = body()
+    clean, errors = validate_booking(d)
+    if errors:
+        return jsonify({"errors": errors}), 400
+    old = sb_get("bookings", {"id": f"eq.{rid}", "select": "*"})
+    if not old:
+        return jsonify({"errors": ["找不到這筆預約"]}), 404
+    old = old[0]
+    sb_patch("bookings", {"id": f"eq.{rid}"}, clean)
+    changed = {k: [old.get(k), v] for k, v in clean.items() if str(old.get(k) or "") != str(v or "")}
+    mailed = False
+    if d.get("notify_customer") and old.get("status") != clean["status"] and clean["status"] in ("已確認", "已婉拒") and clean["email"]:
+        merged = {**old, **clean}
+        subject = "✅ 您的南投職人體驗預約已確認" if clean["status"] == "已確認" else "關於您的南投職人體驗預約"
+        threading.Thread(target=send_email, args=(clean["email"], subject,
+                                                   booking_email_html(merged, clean["status"], str(d.get("note") or "")[:200]),
+                                                   clean["customer_name"]), daemon=True).start()
+        mailed = True
+    audit(who(), "booking_update", {"id": rid, "booking_id": old.get("booking_id"), "changed": changed, "mailed": mailed})
+    _cache.clear()
+    return jsonify({"ok": True, "mailed": mailed})
+
+@admin_bp.route('/admin/api/bookings/<int:rid>', methods=['DELETE'])
+@require_role("admin")
+def delete_booking(rid):
+    old = sb_get("bookings", {"id": f"eq.{rid}", "select": "booking_id,artisan,customer_name,booking_date"})
+    if not old:
+        return jsonify({"error": "找不到這筆預約"}), 404
+    sb_delete("bookings", {"id": f"eq.{rid}"})
+    audit(who(), "booking_delete", {"id": rid, **old[0]})
+    _cache.clear()
+    return jsonify({"ok": True})
+
+# ───────── 營運資料編輯：商家 LINE 綁定 ─────────
+LINE_ID_RE = re.compile(r"^U[0-9a-f]{32}$")
+
+@admin_bp.route('/admin/api/line-bindings')
+@require_role("admin")
+def list_line_bindings():
+    rows = fetch_all("merchants", "id,artisan,line_id", {"order": "id.asc"})
+    counts = Counter(r.get("artisan") for r in rows)
+    out = []
+    for r in rows:
+        m = match_merchant(r.get("artisan"))
+        out.append({**r, "matched": m["name"] if m else None, "exact": bool(m and m["name"] == r.get("artisan")),
+                    "duplicate": counts[r.get("artisan")] > 1, "valid_line_id": bool(LINE_ID_RE.match(r.get("line_id") or ""))})
+    bound = {o["matched"] for o in out if o["matched"] and o["valid_line_id"]}
+    return jsonify({"rows": out, "unbound": [m["name"] for m in MERCHANTS if m["name"] not in bound],
+                    "merchant_groups": MERCHANT_GROUPS})
+
+def validate_binding(d, rid=None):
+    errors = []
+    artisan = str(d.get("artisan") or "").strip()
+    line_id = str(d.get("line_id") or "").strip()
+    if artisan not in _BY_NAME:
+        errors.append("請從 46 家商家名單中選擇店名（店名必須完全一致，LINE 通知才找得到）")
+    if not LINE_ID_RE.match(line_id):
+        errors.append("LINE User ID 格式不正確（U 開頭，後面 32 個英數字；商家可在 LINE Bot 輸入「我的ID」取得）")
+    dup = [r for r in sb_get("merchants", {"artisan": f"eq.{artisan}", "select": "id"}) if r["id"] != rid]
+    if artisan and dup:
+        errors.append("這家商家已經綁定過了，請直接修改原本那筆")
+    return {"artisan": artisan, "line_id": line_id}, errors
+
+@admin_bp.route('/admin/api/line-bindings', methods=['POST'])
+@require_role("admin")
+def create_binding():
+    clean, errors = validate_binding(body())
+    if errors:
+        return jsonify({"errors": errors}), 400
+    row = sb_insert("merchants", clean)
+    if not row:
+        return jsonify({"errors": ["儲存失敗"]}), 500
+    audit(who(), "line_binding_create", {"artisan": clean["artisan"]})
+    _cache.clear()
+    return jsonify(row)
+
+@admin_bp.route('/admin/api/line-bindings/<int:rid>', methods=['PUT'])
+@require_role("admin")
+def update_binding(rid):
+    clean, errors = validate_binding(body(), rid)
+    if errors:
+        return jsonify({"errors": errors}), 400
+    sb_patch("merchants", {"id": f"eq.{rid}"}, clean)
+    audit(who(), "line_binding_update", {"id": rid, "artisan": clean["artisan"]})
+    _cache.clear()
+    return jsonify({"ok": True})
+
+@admin_bp.route('/admin/api/line-bindings/<int:rid>', methods=['DELETE'])
+@require_role("admin")
+def delete_binding(rid):
+    old = sb_get("merchants", {"id": f"eq.{rid}", "select": "artisan"})
+    sb_delete("merchants", {"id": f"eq.{rid}"})
+    audit(who(), "line_binding_delete", {"id": rid, "artisan": old[0].get("artisan") if old else None})
+    _cache.clear()
+    return jsonify({"ok": True})
+
+# ───────── 營運資料編輯：首頁輪播活動 ─────────
+def validate_carousel(d):
+    errors = []
+    title = str(d.get("title") or "").strip()
+    artisan = str(d.get("artisan") or "").strip()
+    if not 1 <= len(title) <= 40:
+        errors.append("活動標題需介於 1–40 字")
+    if not 1 <= len(artisan) <= 40:
+        errors.append("請填寫商家名稱")
+    def opt_int(key, label, hi):
+        v = d.get(key)
+        if v in (None, ""):
+            return None
+        try:
+            v = int(v)
+        except (TypeError, ValueError):
+            errors.append(f"{label}必須是數字")
+            return None
+        if not 0 <= v <= hi:
+            errors.append(f"{label}需介於 0–{hi}")
+        return v
+    desc = str(d.get("description") or "").strip()
+    if len(desc) > 300:
+        errors.append("活動說明最多 300 字")
+    return {"title": title, "artisan": artisan, "event_date": str(d.get("event_date") or "").strip()[:30],
+            "capacity": opt_int("capacity", "名額", 1000), "price": opt_int("price", "費用", 100000),
+            "description": desc, "active": bool(d.get("active", True))}, errors
+
+@admin_bp.route('/admin/api/carousel')
+@require_role("admin")
+def list_carousel():
+    return jsonify({"rows": fetch_all("events", "*", {"order": "id.desc"}), "merchant_groups": MERCHANT_GROUPS})
+
+def _carousel_image(d, rid):
+    if d.get("image"):
+        return upload_image(d["image"], "carousel", f"admin{rid or ''}")
+    if d.get("remove_image"):
+        return ""
+    return None
+
+@admin_bp.route('/admin/api/carousel', methods=['POST'])
+@require_role("admin")
+def create_carousel():
+    d = body()
+    clean, errors = validate_carousel(d)
+    if errors:
+        return jsonify({"errors": errors}), 400
+    img = _carousel_image(d, None)
+    row = sb_insert("events", {**clean, **({"image_url": img} if img else {})})
+    if not row:
+        return jsonify({"errors": ["儲存失敗"]}), 500
+    audit(who(), "carousel_create", {"id": row.get("id"), "title": clean["title"]})
+    return jsonify(row)
+
+@admin_bp.route('/admin/api/carousel/<int:rid>', methods=['PUT'])
+@require_role("admin")
+def update_carousel(rid):
+    d = body()
+    clean, errors = validate_carousel(d)
+    if errors:
+        return jsonify({"errors": errors}), 400
+    img = _carousel_image(d, rid)
+    if img is not None:
+        clean["image_url"] = img or None
+    sb_patch("events", {"id": f"eq.{rid}"}, clean)
+    audit(who(), "carousel_update", {"id": rid, "title": clean["title"], "active": clean["active"]})
+    return jsonify({"ok": True})
+
+@admin_bp.route('/admin/api/carousel/<int:rid>', methods=['DELETE'])
+@require_role("admin")
+def delete_carousel(rid):
+    old = sb_get("events", {"id": f"eq.{rid}", "select": "title,artisan"})
+    sb_delete("events", {"id": f"eq.{rid}"})
+    audit(who(), "carousel_delete", {"id": rid, **(old[0] if old else {})})
+    return jsonify({"ok": True})
+
+# ───────── 網站設定：公告列、AI 補充指示 ─────────
+@admin_bp.route('/admin/api/site')
+@require_role("admin")
+def get_site():
+    return jsonify(site_settings())
+
+@admin_bp.route('/admin/api/site', methods=['POST'])
+@require_role("admin")
+def save_site():
+    d = body()
+    ann = d.get("announcement") or {}
+    errors = []
+    text = str(ann.get("text") or "").strip()
+    link = str(ann.get("link") or "").strip()
+    style = ann.get("style") if ann.get("style") in ("info", "promo", "warning") else "info"
+    enabled = bool(ann.get("enabled"))
+    if enabled and not text:
+        errors.append("公告開啟時要填寫內容")
+    if len(text) > 80:
+        errors.append("公告最多 80 字")
+    if link and not re.match(r"^(https?://|/)[^\s<>\"']*$", link):
+        errors.append("連結必須是 https:// 開頭的網址，或 / 開頭的站內路徑")
+    extra = str(d.get("ai_extra") or "").strip()
+    if len(extra) > 800:
+        errors.append("AI 補充指示最多 800 字")
+    if errors:
+        return jsonify({"errors": errors}), 400
+    value = {"announcement": {"enabled": enabled, "text": text, "link": link, "style": style}, "ai_extra": extra}
+    before = site_settings()
+    r = requests.post(f"{SUPABASE_URL}/rest/v1/game_settings",
+                      json={"key": "site", "value": value, "updated_by": who(), "updated_at": datetime.now(TW).isoformat()},
+                      headers=_h({"Prefer": "resolution=merge-duplicates,return=minimal"}), timeout=8)
+    if r.status_code not in (200, 201, 204):
+        return jsonify({"errors": [f"儲存失敗（{r.status_code}）"]}), 500
+    invalidate_site()
+    audit(who(), "site_update", {"announcement": [before.get("announcement"), value["announcement"]],
+                                 "ai_extra_changed": before.get("ai_extra") != extra})
+    return jsonify({"ok": True, **value})
+
+# ───────── 操作紀錄 ─────────
+@admin_bp.route('/admin/api/audit')
+@require_role("admin")
+def audit_log():
+    params = {"order": "id.desc", "limit": "300", "select": "id,email,action,detail,created_at"}
+    if request.args.get("email"):
+        params["email"] = f"eq.{request.args['email']}"
+    rows = sb_get("admin_audit_log", params)
+    act = (request.args.get("action") or "").strip()
+    if act:
+        rows = [r for r in rows if (r.get("action") or "").startswith(act)]
+    return jsonify({"rows": rows, "admins": sorted({r.get("email") for r in rows if r.get("email")})})

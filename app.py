@@ -368,7 +368,9 @@ Email：example@email.com
 # ==========================================
 @app.route('/')
 def index():
-    return render_template('index.html')
+    from game import site_settings
+    ann = site_settings()["announcement"]
+    return render_template('index.html', announcement=ann if ann.get("enabled") and ann.get("text") else None)
 
 @app.route('/category/<slug>')
 def category_page(slug):
@@ -608,7 +610,11 @@ def run_chat(user_message, history, lang, state):
         'en': "\n[LANGUAGE OVERRIDE]: Respond entirely in English for this conversation.",
         'ja': "\n[LANGUAGE OVERRIDE]: この会話はすべて日本語でお答えください。",
     }.get(lang, "")
+    from game import site_settings
+    extra = (site_settings().get("ai_extra") or "").strip()
     system_instruction = BASE_SYSTEM_INSTRUCTION + lang_note
+    if extra:
+        system_instruction += f"\n\n【管理員補充指示（本期營運重點，請優先遵守，但不可違反上面的預約規則）】\n{extra}"
 
     for model in [MODEL_NAME, FALLBACK_MODEL]:
         for attempt in range(3):

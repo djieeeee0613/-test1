@@ -276,10 +276,19 @@ tr:hover td { background: #fafbf9; }
         <button class="nav-item" data-view="events" data-role="admin"><span class="ic">🎉</span>限時活動</button>
       </div>
     </div>
+    <div class="nav-group" data-group="site" data-role="admin">
+      <button class="nav-sep" onclick="toggleGroup('site')">網站<span class="chev">▾</span></button>
+      <div class="nav-items">
+        <button class="nav-item" data-view="carousel" data-role="admin"><span class="ic">🖼️</span>首頁輪播</button>
+        <button class="nav-item" data-view="line" data-role="admin"><span class="ic">🔗</span>LINE 綁定</button>
+        <button class="nav-item" data-view="site" data-role="admin"><span class="ic">📢</span>公告與 AI 指示</button>
+      </div>
+    </div>
     <div class="nav-group" data-group="sys" data-role="admin">
       <button class="nav-sep" onclick="toggleGroup('sys')">系統<span class="chev">▾</span></button>
       <div class="nav-items">
         <button class="nav-item" data-view="system" data-role="admin"><span class="ic">🩺</span>系統健康</button>
+        <button class="nav-item" data-view="audit" data-role="admin"><span class="ic">🧾</span>操作紀錄</button>
       </div>
     </div>
     <div class="side-foot">
@@ -341,6 +350,24 @@ tr:hover td { background: #fafbf9; }
       <div class="page-head"><div><h1>🎉 限時活動</h1><p>在指定期間提高 XP 倍率，例如「茶莊週：茶&amp;酒莊打卡 ×2」</p></div>
         <button class="btn btn-green" onclick="editEvent()">＋ 新增活動</button></div>
       <div id="ev"></div>
+    </div>
+    <div class="view" id="v-carousel">
+      <div class="page-head"><div><h1>🖼️ 首頁輪播</h1><p>首頁「精選體驗工作坊」輪播的活動，商家透過 LINE Bot 登錄的也會出現在這裡</p></div>
+        <button class="btn btn-green" onclick="editCarousel()">＋ 新增輪播活動</button></div>
+      <div id="cs"></div>
+    </div>
+    <div class="view" id="v-line">
+      <div class="page-head"><div><h1>🔗 商家 LINE 綁定</h1><p>旅客預約時，系統用這裡的對應把通知推播到商家的 LINE</p></div>
+        <button class="btn btn-green" onclick="editBinding()">＋ 新增綁定</button></div>
+      <div id="ln"></div>
+    </div>
+    <div class="view" id="v-site">
+      <div class="page-head"><div><h1>📢 公告與 AI 指示</h1><p>首頁公告列，以及給 AI 嚮導的本期營運重點</p></div></div>
+      <div id="si"></div>
+    </div>
+    <div class="view" id="v-audit">
+      <div class="page-head"><div><h1>🧾 操作紀錄</h1><p>後台所有登入與修改紀錄（最新 300 筆）</p></div></div>
+      <div id="au"></div>
     </div>
     <div class="view" id="v-system">
       <div class="page-head"><div><h1>🩺 系統健康</h1><p>資料庫、n8n 工作流與環境設定狀態</p></div></div>
@@ -458,7 +485,8 @@ async function refresh() {
 }
 const RENDER = { overview: renderOverview, bookings: renderBookings, merchants: renderMerchants, map: renderMap, impact: renderImpact,
                  ai: renderAI, game: renderGame, settings: renderSettings, questions: renderQuestions, feed: renderFeed,
-                 players: renderPlayers, events: renderEvents, system: renderSystem };
+                 players: renderPlayers, events: renderEvents, carousel: renderCarousel, line: renderLine, site: renderSite,
+                 audit: renderAudit, system: renderSystem };
 
 // ═══════ 共用：寫入、提示、彈窗 ═══════
 async function send(method, path, data) {
@@ -552,6 +580,7 @@ async function renderBookings() {
         <select id="bl-status" onchange="blPage=0;drawBookingList()"><option value="">全部狀態</option><option>待確認</option><option>已確認</option><option>已婉拒</option></select>
         <select id="bl-when" onchange="blPage=0;drawBookingList()"><option value="">全部日期</option><option value="upcoming">即將到來</option><option value="past">已過去</option></select>
         <button class="refresh" onclick="exportBookings()">⬇ 匯出 CSV</button>
+        <button class="btn btn-green btn-sm" onclick="editBooking()">＋ 補登預約</button>
       </div>
       <div class="table-wrap" id="bl-table"><div class="skeleton"></div></div>
       <div id="bl-pager" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px"></div>
@@ -606,12 +635,13 @@ function drawBookingList() {
   blPage = Math.min(blPage, pages - 1);
   const show = rows.slice(blPage * BL_PER_PAGE, (blPage + 1) * BL_PER_PAGE);
   const tag = s => `<span class="tag ${s === '已確認' ? 't-ok' : s === '已婉拒' ? 't-bad' : 't-warn'}">${esc(s)}</span>`;
-  $('bl-table').innerHTML = `<table><tr><th>下單時間</th><th>編號</th><th>商家</th><th>體驗日期</th><th>人數</th><th>旅客</th><th>電話</th><th>Email</th><th>狀態</th><th>評分</th></tr>
+  $('bl-table').innerHTML = `<table><tr><th>下單時間</th><th>編號</th><th>商家</th><th>體驗日期</th><th>人數</th><th>旅客</th><th>電話</th><th>Email</th><th>狀態</th><th>評分</th><th></th></tr>
     ${show.map(b => `<tr><td>${esc(b.created)}</td><td><code>${esc(b.id)}</code></td>
       <td>${esc(b.artisan)}${b.merchant ? '' : ' <span class="tag t-warn" title="對不到 46 家商家名單">?</span>'}</td>
       <td>${esc(b.date)}</td><td>${b.pax}</td><td>${esc(b.customer)}</td><td>${esc(b.phone)}</td><td>${esc(b.email)}</td>
-      <td>${tag(b.status)}</td><td title="${esc(b.comment)}">${b.rating ? '⭐'.repeat(Math.round(b.rating)) : '—'}</td></tr>`).join('')
-      || '<tr><td colspan="10" class="empty">沒有符合的預約</td></tr>'}</table>`;
+      <td>${tag(b.status)}</td><td title="${esc(b.comment)}">${b.rating ? '⭐'.repeat(Math.round(b.rating)) : '—'}</td>
+      <td>${b.row_id ? `<button class="btn btn-sm" onclick="editBooking(${b.row_id})">編輯</button>` : ''}</td></tr>`).join('')
+      || '<tr><td colspan="11" class="empty">沒有符合的預約</td></tr>'}</table>`;
   $('bl-pager').innerHTML = `<span style="color:var(--muted)">共 ${rows.length} 筆</span>
     <button class="refresh" ${blPage === 0 ? 'disabled' : ''} onclick="blPage--;drawBookingList()">‹</button>
     <span>${blPage + 1} / ${pages}</span>
@@ -1439,6 +1469,293 @@ async function resendCert(gid) {
   if (!confirm('確定要寄送證書到這位玩家的 Gmail 嗎？')) return;
   try { await send('POST', `/admin/api/players/${encodeURIComponent(gid)}/certificate`); toast('證書寄送中'); openPlayer(gid); }
   catch (e) { toast(e.message, true); }
+}
+
+
+// ═══════ 共用：商家下拉選單 ═══════
+function merchantOptions(groups, selected) {
+  return groups.map(g => `<optgroup label="${esc(g.emoji + ' ' + g.name)}">${g.merchants.map(m => `<option ${m === selected ? 'selected' : ''}>${esc(m)}</option>`).join('')}</optgroup>`).join('');
+}
+let MERCHANT_GROUPS_CACHE = null;
+async function merchantGroups() {
+  if (!MERCHANT_GROUPS_CACHE) MERCHANT_GROUPS_CACHE = (await send('GET', '/admin/api/line-bindings')).merchant_groups;
+  return MERCHANT_GROUPS_CACHE;
+}
+function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    if (file.size > 10 * 1024 * 1024) return reject(new Error('照片請小於 10MB'));
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const s = Math.min(1, 1600 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas'); c.width = img.width * s; c.height = img.height * s;
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        resolve(c.toDataURL('image/jpeg', .85));
+      };
+      img.onerror = () => reject(new Error('無法讀取這張圖片'));
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ═══════ 預約編輯 ═══════
+async function editBooking(rowId) {
+  const b = rowId ? BL.find(x => x.row_id === rowId) : null;
+  const groups = await merchantGroups();
+  const today = new Date().toISOString().slice(0, 10);
+  openModal(`<h2>${b ? '✏️ 編輯預約 ' + esc(b.id || '') : '＋ 補登預約'}</h2>
+    ${b && !b.merchant ? `<div class="warns" style="margin-bottom:12px">原本的店名「${esc(b.artisan)}」對不到商家名單，請重新選擇正確的商家。</div>` : ''}
+    <div class="grid g2">
+      <div class="field"><label>商家</label><select id="bk-artisan">${merchantOptions(groups, b ? b.merchant : '')}</select></div>
+      <div class="field"><label>體驗日期</label><input type="date" id="bk-date" value="${esc(b ? b.date_iso || '' : today)}">
+        ${b && !b.date_iso ? `<small>原本填的是「${esc(b.date)}」，系統看不懂，請重新選擇</small>` : ''}</div>
+      <div class="field"><label>人數</label><input type="number" id="bk-pax" min="1" max="50" value="${b ? b.pax : 2}"></div>
+      <div class="field"><label>狀態</label><select id="bk-status" onchange="bkStatusChanged()">${['待確認', '已確認', '已婉拒'].map(st => `<option ${(b ? b.status : '待確認') === st ? 'selected' : ''}>${st}</option>`).join('')}</select></div>
+      <div class="field"><label>旅客姓名</label><input id="bk-name" maxlength="30" value="${esc(b ? b.customer : '')}"></div>
+      <div class="field"><label>電話</label><input id="bk-phone" maxlength="20" value="${esc(b ? b.phone : '')}"></div>
+      <div class="field" style="grid-column:1/-1"><label>Email（選填）</label><input id="bk-email" maxlength="80" value="${esc(b ? b.email : '')}"></div>
+    </div>
+    ${b ? `<div id="bk-notify" style="display:none;margin-top:14px" class="card">
+        <label style="display:flex;gap:8px;align-items:center;font-size:13px"><input type="checkbox" id="bk-mail"> <b>寄 email 通知旅客</b>狀態變更（需要有 Email）</label>
+        <div class="field" style="margin-top:8px"><input id="bk-note" maxlength="200" placeholder="給旅客的補充說明（選填），例如：當天請提早 10 分鐘報到"></div></div>`
+      : `<label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;margin-top:14px;line-height:1.6"><input type="checkbox" id="bk-line" style="margin-top:4px" checked>
+        <span><b>用 LINE 通知商家</b>（跟 AI 嚮導預約一樣，商家會收到可以按確認／婉拒的訊息）。不勾的話只會記錄在系統裡，適合商家已經知道的電話預約。</span></label>`}
+    <div id="bk-err" style="margin-top:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:space-between;margin-top:16px;flex-wrap:wrap">
+      <div>${b ? `<button class="btn btn-danger" onclick="deleteBooking(${b.row_id})">🗑 刪除預約</button>` : ''}</div>
+      <div style="display:flex;gap:8px"><button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-green" onclick="saveBooking(${b ? b.row_id : 'null'}, '${b ? esc(b.status) : ''}')">💾 儲存</button></div>
+    </div>`);
+  window._bkOrigStatus = b ? b.status : null;
+}
+function bkStatusChanged() {
+  const box = $('bk-notify');
+  if (box) box.style.display = $('bk-status').value !== window._bkOrigStatus && $('bk-status').value !== '待確認' ? 'block' : 'none';
+}
+async function saveBooking(rowId) {
+  const data = { artisan: $('bk-artisan').value, date: $('bk-date').value, pax: +$('bk-pax').value, status: $('bk-status').value,
+                 customer: $('bk-name').value, phone: $('bk-phone').value, email: $('bk-email').value };
+  if (rowId) { data.notify_customer = $('bk-mail')?.checked && $('bk-notify').style.display !== 'none'; data.note = $('bk-note')?.value; }
+  else data.notify_merchant = $('bk-line').checked;
+  try {
+    const d = await send(rowId ? 'PUT' : 'POST', '/admin/api/bookings' + (rowId ? '/' + rowId : ''), data);
+    closeModal();
+    toast(rowId ? ('預約已更新' + (d.mailed ? '，通知信寄送中' : '')) : `已建立預約 ${d.booking_id}` + (data.notify_merchant ? '，已通知商家' : ''));
+    fresh = true; delete loaded.bookings; await render('bookings'); fresh = false;
+  } catch (e) { $('bk-err').innerHTML = `<div class="errors">${esc(e.message)}</div>`; }
+}
+async function deleteBooking(rowId) {
+  if (!confirm('確定要刪除這筆預約嗎？刪除後無法復原。\n（如果是商家無法接待，建議改成「已婉拒」並通知旅客）')) return;
+  try { await send('DELETE', '/admin/api/bookings/' + rowId); closeModal(); toast('已刪除'); fresh = true; delete loaded.bookings; await render('bookings'); fresh = false; }
+  catch (e) { toast(e.message, true); }
+}
+
+// ═══════ LINE 綁定 ═══════
+let LN = null;
+async function renderLine() {
+  loading('ln');
+  try { LN = await api('/admin/api/line-bindings'); } catch (e) { return fail('ln', e); }
+  MERCHANT_GROUPS_CACHE = LN.merchant_groups;
+  const problems = LN.rows.filter(r => !r.exact || r.duplicate || !r.valid_line_id).length;
+  $('ln').innerHTML = `
+    <div class="grid g3">
+      <div class="card kpi"><div class="lbl">已綁定商家</div><div class="val">${46 - LN.unbound.length} <small style="font-size:14px;color:var(--muted)">/ 46</small></div><div class="meter"><i style="width:${(46 - LN.unbound.length) / 46 * 100}%"></i></div></div>
+      <div class="card kpi ${problems ? 'alert' : ''}"><div class="lbl">有問題的綁定</div><div class="val">${problems}</div><div class="sub">店名不一致、重複或 ID 格式錯誤</div></div>
+      <div class="card kpi"><div class="lbl">商家怎麼取得 LINE ID？</div><div class="sub" style="line-height:1.7;margin-top:6px">請商家加入 LINE Bot 後傳送「<b>我的ID</b>」，Bot 會回覆一串 U 開頭的 ID。</div></div>
+    </div>
+    <div class="grid" style="grid-template-columns:minmax(0,2fr) minmax(0,1fr);margin-top:14px;align-items:start" id="ln-grid">
+      <div class="card"><h3>已綁定（${LN.rows.length}）</h3><div class="table-wrap"><table>
+        <tr><th>店名</th><th>LINE User ID</th><th>狀態</th><th></th></tr>
+        ${LN.rows.map((r, i) => `<tr>
+          <td>${esc(r.artisan)}${!r.exact && r.matched ? `<br><small style="color:var(--warn)">名單上是「${esc(r.matched)}」</small>` : ''}</td>
+          <td><code style="font-size:11px">${esc(r.line_id)}</code></td>
+          <td>${!r.matched ? '<span class="tag t-bad">店名不在名單</span>' : !r.exact ? '<span class="tag t-warn">店名不一致</span>' : ''}
+              ${r.duplicate ? '<span class="tag t-bad">重複</span>' : ''} ${r.valid_line_id ? '' : '<span class="tag t-bad">ID 格式錯誤</span>'}
+              ${r.exact && !r.duplicate && r.valid_line_id ? '<span class="tag t-ok">正常</span>' : ''}</td>
+          <td><button class="btn btn-sm" onclick="editBinding(${i})">編輯</button> <button class="btn btn-sm btn-danger" onclick="deleteBinding(${r.id}, '${esc(r.artisan)}')">解除</button></td></tr>`).join('')
+          || '<tr><td colspan="4" class="empty">還沒有任何綁定</td></tr>'}</table></div>
+        <div class="note">「店名不一致」會讓 LINE 通知找不到商家。按「編輯」改成名單上的正式店名即可。</div></div>
+      <div class="card"><h3>尚未綁定（${LN.unbound.length}）</h3><div class="q">這些商家被預約時收不到 LINE 通知</div>
+        ${LN.unbound.map(n => `<div class="list-row"><span class="grow">${esc(n)}</span><button class="btn btn-sm" onclick="editBinding(null, '${esc(n)}')">綁定</button></div>`).join('') || '<div class="empty">全部都綁定了 🎉</div>'}</div>
+    </div>`;
+  if (innerWidth < 900) $('ln-grid').style.gridTemplateColumns = '1fr';
+}
+async function editBinding(i, presetName) {
+  const r = i == null ? { artisan: presetName || '', line_id: '' } : LN.rows[i];
+  const groups = await merchantGroups();
+  openModal(`<h2>${i == null ? '＋ 新增 LINE 綁定' : '✏️ 編輯綁定'}</h2>
+    <div class="field"><label>商家（從名單選，店名必須完全一致）</label><select id="ln-artisan">${merchantOptions(groups, r.matched || r.artisan)}</select></div>
+    <div class="field" style="margin-top:12px"><label>LINE User ID</label><input id="ln-id" value="${esc(r.line_id)}" placeholder="U 開頭，共 33 個字元" style="font-family:monospace">
+      <small>請商家在 LINE Bot 傳「我的ID」取得</small></div>
+    <div id="ln-err" style="margin-top:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-green" onclick="saveBinding(${i == null ? 'null' : r.id})">💾 儲存</button></div>`);
+}
+async function saveBinding(id) {
+  try {
+    await send(id ? 'PUT' : 'POST', '/admin/api/line-bindings' + (id ? '/' + id : ''), { artisan: $('ln-artisan').value, line_id: $('ln-id').value.trim() });
+    closeModal(); toast('已儲存'); renderLine();
+  } catch (e) { $('ln-err').innerHTML = `<div class="errors">${esc(e.message)}</div>`; }
+}
+async function deleteBinding(id, name) {
+  if (!confirm(`確定要解除「${name}」的 LINE 綁定嗎？之後這家商家被預約時不會收到 LINE 通知。`)) return;
+  try { await send('DELETE', '/admin/api/line-bindings/' + id); toast('已解除'); renderLine(); } catch (e) { toast(e.message, true); }
+}
+
+// ═══════ 首頁輪播 ═══════
+let CS = null, csImage = null, csRemove = false;
+async function renderCarousel() {
+  loading('cs');
+  try { CS = await api('/admin/api/carousel'); } catch (e) { return fail('cs', e); }
+  MERCHANT_GROUPS_CACHE = CS.merchant_groups;
+  const on = CS.rows.filter(r => r.active).length;
+  $('cs').innerHTML = `
+    <div class="note" style="margin:0 0 14px">首頁目前顯示 <b>${on}</b> 個上架中的活動${on < 3 ? `，不足 3 個時會補上「待推廣」空位卡片` : ''}。商家也可以在 LINE Bot 用「活動登錄」新增、傳照片換圖。</div>
+    <div class="grid g3">${CS.rows.map((r, i) => `<div class="card" style="padding:0;overflow:hidden;${r.active ? '' : 'opacity:.6'}">
+      ${r.image_url ? `<img src="${esc(r.image_url)}" alt="" style="width:100%;height:170px;object-fit:cover;display:block">`
+                    : '<div style="height:170px;background:var(--bg);display:grid;place-items:center;color:var(--muted);font-size:13px">沒有照片</div>'}
+      <div style="padding:14px">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">${r.active ? '<span class="tag t-ok">上架中</span>' : '<span class="tag t-mute">已下架</span>'}<small style="color:var(--muted)">${esc(r.artisan)}</small></div>
+        <b>${esc(r.title)}</b>
+        <div style="font-size:12px;color:var(--muted);margin:6px 0 10px">${esc(r.event_date || '日期未定')} · ${r.price != null ? 'NT$' + fmt(r.price) : '費用未定'} · ${r.capacity != null ? r.capacity + ' 人' : '名額未定'}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <label class="switch" title="上下架"><input type="checkbox" ${r.active ? 'checked' : ''} onchange="toggleCarousel(${i}, this)"><span></span></label>
+          <button class="btn btn-sm" onclick="editCarousel(${i})">編輯</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteCarousel(${r.id}, '${esc(r.title)}')">刪除</button></div>
+      </div></div>`).join('') || '<div class="card empty" style="grid-column:1/-1">還沒有輪播活動，按右上角「新增輪播活動」</div>'}</div>`;
+}
+async function editCarousel(i) {
+  const groups = await merchantGroups();
+  const r = i == null ? { title: '', artisan: '', event_date: '', capacity: '', price: '', description: '', active: true, image_url: null } : CS.rows[i];
+  csImage = null; csRemove = false;
+  openModal(`<h2>${i == null ? '＋ 新增輪播活動' : '✏️ 編輯輪播活動'}</h2>
+    <div class="grid" style="grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);align-items:start" id="cs-grid">
+      <div class="grid g2">
+        <div class="field" style="grid-column:1/-1"><label>活動標題</label><input id="cs-title" maxlength="40" value="${esc(r.title)}" placeholder="例如：柴燒陶杯手作體驗"></div>
+        <div class="field" style="grid-column:1/-1"><label>商家</label><input id="cs-artisan" list="cs-merchants" maxlength="40" value="${esc(r.artisan)}">
+          <datalist id="cs-merchants">${groups.flatMap(g => g.merchants).map(m => `<option value="${esc(m)}">`).join('')}</datalist></div>
+        <div class="field"><label>日期</label><input id="cs-date" maxlength="30" value="${esc(r.event_date || '')}" placeholder="例如：11/15（六）14:00"></div>
+        <div class="field"><label>費用（元）</label><input type="number" id="cs-price" min="0" value="${r.price ?? ''}"></div>
+        <div class="field"><label>名額</label><input type="number" id="cs-cap" min="0" value="${r.capacity ?? ''}"></div>
+        <div class="field" style="justify-content:flex-end"><label style="display:flex;gap:8px;align-items:center"><label class="switch"><input type="checkbox" id="cs-active" ${r.active ? 'checked' : ''}><span></span></label>上架</label></div>
+        <div class="field" style="grid-column:1/-1"><label>活動說明</label><textarea id="cs-desc" rows="4" maxlength="300">${esc(r.description || '')}</textarea></div>
+      </div>
+      <div><div class="field"><label>照片</label>
+        <div id="cs-prev" style="height:200px;border-radius:12px;background:var(--bg);display:grid;place-items:center;overflow:hidden;color:var(--muted);font-size:13px">
+          ${r.image_url ? `<img src="${esc(r.image_url)}" style="width:100%;height:100%;object-fit:cover">` : '沒有照片'}</div>
+        <div style="display:flex;gap:6px;margin-top:8px"><button class="btn btn-sm" onclick="$('cs-file').click()">📷 ${r.image_url ? '換照片' : '上傳照片'}</button>
+          ${r.image_url ? '<button class="btn btn-sm btn-danger" onclick="csRemove=true;csImage=null;$(\'cs-prev\').innerHTML=\'會移除照片\'">移除照片</button>' : ''}</div>
+        <input type="file" id="cs-file" accept="image/*" hidden onchange="pickCarouselImage(this)"></div></div>
+    </div>
+    <div id="cs-err" style="margin-top:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-green" id="cs-save" onclick="saveCarousel(${i == null ? 'null' : r.id})">💾 儲存</button></div>`);
+  if (innerWidth < 900) $('cs-grid').style.gridTemplateColumns = '1fr';
+}
+async function pickCarouselImage(input) {
+  const f = input.files[0]; input.value = '';
+  if (!f) return;
+  try { const url = await shrinkImage(f); csImage = url.split(',')[1]; csRemove = false; $('cs-prev').innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:cover">`; }
+  catch (e) { toast(e.message, true); }
+}
+function csValue() {
+  return { title: $('cs-title').value, artisan: $('cs-artisan').value, event_date: $('cs-date').value, price: $('cs-price').value,
+           capacity: $('cs-cap').value, description: $('cs-desc').value, active: $('cs-active').checked,
+           image: csImage, remove_image: csRemove };
+}
+async function saveCarousel(id) {
+  const btn = $('cs-save'); btn.disabled = true; btn.textContent = '儲存中…';
+  try { await send(id ? 'PUT' : 'POST', '/admin/api/carousel' + (id ? '/' + id : ''), csValue()); closeModal(); toast('已儲存，首頁會立即更新'); renderCarousel(); }
+  catch (e) { $('cs-err').innerHTML = `<div class="errors">${esc(e.message)}</div>`; btn.disabled = false; btn.textContent = '💾 儲存'; }
+}
+async function toggleCarousel(i, el) {
+  const r = CS.rows[i];
+  try { await send('PUT', '/admin/api/carousel/' + r.id, { ...r, active: el.checked }); r.active = el.checked; toast(el.checked ? '已上架' : '已下架'); renderCarousel(); }
+  catch (e) { el.checked = !el.checked; toast(e.message, true); }
+}
+async function deleteCarousel(id, title) {
+  if (!confirm(`確定要刪除「${title}」嗎？（只是暫時不想顯示的話，可以改用下架）`)) return;
+  try { await send('DELETE', '/admin/api/carousel/' + id); toast('已刪除'); renderCarousel(); } catch (e) { toast(e.message, true); }
+}
+
+// ═══════ 公告與 AI 指示 ═══════
+async function renderSite() {
+  loading('si');
+  let d; try { d = await api('/admin/api/site'); } catch (e) { return fail('si', e); }
+  const a = d.announcement;
+  $('si').innerHTML = `
+    <div class="grid g2" style="align-items:start">
+      <div class="card"><h3>📢 首頁公告列</h3><div class="q">顯示在首頁上方的浮動公告，訪客可以按 ✕ 關閉（同一則公告在同一次瀏覽中不會再出現）</div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:12px"><label class="switch"><input type="checkbox" id="si-on" ${a.enabled ? 'checked' : ''} onchange="sitePreview()"><span></span></label>顯示公告</label>
+        <div class="field"><label>公告內容（80 字內）</label><input id="si-text" maxlength="80" value="${esc(a.text)}" oninput="sitePreview()" placeholder="例如：颱風期間部分戶外體驗暫停，請留意商家通知"></div>
+        <div class="grid g2" style="margin-top:12px">
+          <div class="field"><label>連結（選填）</label><input id="si-link" value="${esc(a.link)}" placeholder="例如：/game 或 https://…" oninput="sitePreview()"></div>
+          <div class="field"><label>樣式</label><select id="si-style" onchange="sitePreview()">${[['info', '📢 一般（綠色）'], ['promo', '🎉 活動（金色）'], ['warning', '⚠️ 注意（橘色）']].map(([k, l]) => `<option value="${k}" ${a.style === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        </div>
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin:16px 0 8px">預覽</div>
+        <div id="si-prev" style="background:#e8ede9;border-radius:12px;padding:18px;display:grid;place-items:center;min-height:70px"></div>
+      </div>
+      <div class="card"><h3>🤖 AI 嚮導補充指示</h3><div class="q">會加在 AI 嚮導的系統指示最後面，用來告訴它本期的營運重點。1 分鐘內生效。</div>
+        <div class="field"><textarea id="si-ai" rows="9" maxlength="800" oninput="$('si-ai-n').textContent=this.value.length" placeholder="例如：&#10;・本週是茶莊週，旅客問推薦時優先介紹茶&amp;酒莊類商家。&#10;・溪頭福華渡假飯店整修中，暫時不要推薦。">${esc(d.ai_extra)}</textarea>
+          <small><span id="si-ai-n">${(d.ai_extra || '').length}</span> / 800 字。AI 仍然必須遵守原本的預約流程規則；請不要在這裡放價格承諾或個資。</small></div>
+        <div class="warns" style="margin-top:12px">這裡的文字會直接影響 AI 怎麼回答旅客。改完建議到首頁和緣投聊幾句，確認回答符合預期。</div>
+      </div>
+    </div>
+    <div id="si-err" style="margin-top:12px"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn btn-green" onclick="saveSite()">💾 儲存</button></div>`;
+  sitePreview();
+}
+function sitePreview() {
+  const on = $('si-on').checked, text = $('si-text').value.trim(), style = $('si-style').value, link = $('si-link').value.trim();
+  const colors = { info: 'background:#2d4a35;color:#fff', promo: 'background:linear-gradient(90deg,#d9b56f,#b88a3e);color:#fff', warning: 'background:#fff7ed;color:#9a3412;border:1px solid #fdba74' };
+  const ic = { info: '📢', promo: '🎉', warning: '⚠️' }[style];
+  $('si-prev').innerHTML = on && text
+    ? `<div style="${colors[style]};padding:10px 16px;border-radius:999px;font-weight:700;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.15)">${ic} ${esc(text)}${link ? ' →' : ''} <span style="opacity:.6;margin-left:6px">✕</span></div>`
+    : '<span style="color:var(--muted);font-size:13px">（公告關閉中，首頁不會顯示）</span>';
+}
+async function saveSite() {
+  const data = { announcement: { enabled: $('si-on').checked, text: $('si-text').value, link: $('si-link').value, style: $('si-style').value },
+                 ai_extra: $('si-ai').value };
+  try { await send('POST', '/admin/api/site', data); $('si-err').innerHTML = ''; toast('已儲存，1 分鐘內生效'); }
+  catch (e) { $('si-err').innerHTML = `<div class="errors">${esc(e.message)}</div>`; }
+}
+
+// ═══════ 操作紀錄 ═══════
+const ACTION_LABEL = {
+  login: '登入', logout: '登出', login_denied: '被拒絕登入', game_settings_update: '修改遊戲設定', certificates_backfill: '補寄證書',
+  question_create: '新增題目', question_update: '編輯題目', question_delete: '刪除題目', question_enable: '啟用題目', question_disable: '停用題目',
+  questions_import_builtin: '匯入內建題庫', questions_import_csv: 'CSV 匯入題目', questions_ai_generate: 'AI 出題',
+  post_hide: '隱藏貼文', post_unhide: '恢復貼文', post_pin: '置頂貼文', post_unpin: '取消置頂', post_approve: '核可貼文', post_reject: '駁回貼文', post_delete: '刪除貼文',
+  comment_hide: '隱藏留言', comment_unhide: '恢復留言', comment_approve: '核可留言', comment_reject: '駁回留言', comment_delete: '刪除留言',
+  event_create: '新增限時活動', event_update: '編輯限時活動', event_delete: '刪除限時活動',
+  player_xp_adjust: '調整玩家 XP', checkin_revoke: '撤銷打卡', player_mute: '暫停發言', player_unmute: '恢復發言', certificate_resend: '寄送證書',
+  booking_create: '補登預約', booking_update: '編輯預約', booking_delete: '刪除預約',
+  line_binding_create: '新增 LINE 綁定', line_binding_update: '編輯 LINE 綁定', line_binding_delete: '解除 LINE 綁定',
+  carousel_create: '新增輪播活動', carousel_update: '編輯輪播活動', carousel_delete: '刪除輪播活動', site_update: '修改公告／AI 指示',
+};
+const ACTION_GROUPS = [['', '全部'], ['login', '登入登出'], ['booking', '預約'], ['line_binding', 'LINE 綁定'], ['carousel', '首頁輪播'], ['site', '公告／AI'],
+                       ['game_settings', '遊戲設定'], ['question', '題目'], ['post', '貼文'], ['comment', '留言'], ['event', '限時活動'], ['player', '玩家'], ['checkin', '打卡']];
+async function renderAudit() {
+  if (!$('au-list')) {
+    $('au').innerHTML = `<div class="card"><div class="filters">
+      <select id="au-act" onchange="loadAudit()">${ACTION_GROUPS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
+      <select id="au-who" onchange="loadAudit()"><option value="">全部管理員</option></select></div><div id="au-list"></div></div>`;
+  }
+  await loadAudit();
+}
+async function loadAudit() {
+  $('au-list').innerHTML = '<div class="skeleton"></div>';
+  let d; try { d = await api(`/admin/api/audit?action=${$('au-act').value}&email=${encodeURIComponent($('au-who').value)}`); }
+  catch (e) { $('au-list').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  const sel = $('au-who'), cur = sel.value;
+  sel.innerHTML = '<option value="">全部管理員</option>' + d.admins.map(e => `<option ${e === cur ? 'selected' : ''}>${esc(e)}</option>`).join('');
+  const detail = x => { const s = JSON.stringify(x || {}); return s === '{}' ? '' : esc(s.length > 160 ? s.slice(0, 160) + '…' : s); };
+  $('au-list').innerHTML = `<div class="table-wrap" style="max-height:640px"><table><tr><th>時間</th><th>管理員</th><th>動作</th><th>內容</th></tr>
+    ${d.rows.map(r => `<tr><td>${new Date(r.created_at).toLocaleString('zh-TW')}</td><td>${esc(r.email)}</td>
+      <td><span class="tag ${/delete|denied|reject|revoke|mute$/.test(r.action) ? 't-bad' : 't-mute'}">${esc(ACTION_LABEL[r.action] || r.action)}</span></td>
+      <td style="white-space:normal;font-size:12px;color:var(--muted);max-width:520px"><code>${detail(r.detail)}</code></td></tr>`).join('') || '<tr><td colspan="4" class="empty">沒有紀錄</td></tr>'}</table></div>`;
 }
 
 // ═══════ 系統健康 ═══════
