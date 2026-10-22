@@ -160,14 +160,21 @@ Render 環境變數（在 Render dashboard 設定）：
 - **證書**：首次達到最高等級時（`certificate_sent` 為 false），`award_xp()` 開 thread POST 到 n8n `nantou-certificate` webhook（`n8n_certificate_workflow.json`），由 Gmail OAuth2 寄出 HTML 證書；`/game/certificate/<google_id>` 可線上查看
 - **圖片**：打卡與貼文照片上傳到 Supabase Storage `event-image` bucket 的 `checkins/`、`posts/` 資料夾
 - **動態**：`game_posts.hidden` 為 true 的貼文、`game_comments.hidden` 為 true 的留言玩家看不到；`pinned` 的貼文排在第一頁最上方
+- **內容審核**：發文、留言先比對禁用詞，再由 `moderate()` 呼叫 Gemini 判斷（AI 出錯時放行）。被標記的內容 `hidden=true`、`moderation` 設為 `keyword` / `ai`，不給 XP，回傳 `pending_review` 給前端
+- **檢舉**：`POST /api/game/report`，同一玩家對同一內容只算一次；累積達 `report_hide_threshold` 次自動隱藏（`moderation=reports`）。管理員核可後 `moderation=approved`，之後不會再被自動隱藏
+- **暫停發言**：`game_users.muted` 為 true 時不能發文、留言（403）
+- **限時活動**：`game_events` 表，`xp_multiplier(kind, category)` 取進行中活動的最高倍率（不相乘）；有指定商家類別的活動只套用在該類別打卡。活動時間以 UTC 存，後台以台灣時間輸入與顯示
+- **XP 最低為 0**：`award_xp()` 會把 XP 和計數欄位夾在 0 以上（後台可扣分）
 - **前端** `templates/game.html`：左側抽屜選單（≥1000px 預設展開）、6 個頁面（主頁/打卡/問答/動態/排行/證書）、緣投浮動對話、升級彩帶動畫；所有使用者內容都經 `esc()` 轉義
 
 ### 管理後台（`/admin`）
 
 - 後端在 `admin.py`（Flask Blueprint），前端 `templates/admin.html`（Chart.js 4.4.1 + Leaflet）
-- **登入**：Google 登入 → `POST /admin/api/login`，email 必須已驗證且在 `ADMIN_EMAILS`（管理員）或 `MODERATOR_EMAILS`（內容審核：遊戲分析、題目管理、動態管理）名單內；每次請求都重新比對名單，移出名單即失效
-- **頁面**：總覽、預約分析（含全部預約清單：搜尋、篩選、分頁、匯出 CSV）、商家表現、地圖視角、永續影響力、AI 嚮導、遊戲分析、遊戲設定、題目管理、動態管理、系統健康
-- **可編輯的資料**：遊戲設定（等級、XP、題數；可勾選立即補寄證書）、題目（新增 / 編輯 / 停用 / 刪除 / CSV 匯入）、貼文與留言（隱藏 / 置頂 / 刪除）。停用或刪除題目時，若啟用題數會少於每局題數會被擋下
+- **登入**：Google 登入 → `POST /admin/api/login`，email 必須已驗證且在 `ADMIN_EMAILS`（管理員）或 `MODERATOR_EMAILS`（內容審核：見下方權限說明）名單內；每次請求都重新比對名單，移出名單即失效
+- **頁面**：總覽、預約分析（含全部預約清單：搜尋、篩選、分頁、匯出 CSV）、商家表現、地圖視角、永續影響力、AI 嚮導、遊戲分析、遊戲設定、題目管理、動態管理（含待審核佇列）、玩家管理、限時活動、系統健康；側邊欄分「營運 / 遊戲 / 系統」可收合群組
+- **可編輯的資料**：遊戲設定（等級、XP、題數、檢舉門檻、AI 審核開關、禁用詞；可勾選立即補寄證書）、題目（新增 / 編輯 / 停用 / 刪除 / CSV 匯入 / AI 出題）、貼文與留言（核可 / 駁回 / 隱藏 / 置頂 / 刪除）、限時活動、玩家（調整 XP、撤銷打卡、暫停發言、補寄證書）。停用或刪除題目時，若啟用題數會少於每局題數會被擋下
+- **權限**：內容審核員可用遊戲分析、題目管理（含 AI 出題）、動態管理、玩家管理（只能暫停發言，看不到 Email）；遊戲設定、限時活動、調整 XP、撤銷打卡、補寄證書只有管理員能用
+- **AI 出題**：`/admin/api/questions/generate` 只用選定商家或類別在 `merchants_data` 的介紹當素材，產生的題目是草稿，管理員勾選後才透過 bulk API 寫入題庫
 - **AI 嚮導分析**：`/api/chat` 每次回覆後把語言、點選的類別、呼叫的工具、是否完成預約、耗時寫入 `chat_logs`（**不存對話內容**）；前端每次開頁產生一個 `session_id` 用來算對話數與轉換漏斗
 - **地圖圖示**：Font Awesome Free 6.5.1（cdnjs），每個類別一個圖示，對照表在 `admin.html` 的 `CAT_ICON`
 - **資料**：`load_data()` 分頁讀取 Supabase 全表（每頁 1000 筆），在 Flask 端統計，快取 60 秒；`?fresh=1`（右上角重新整理）略過快取
@@ -192,7 +199,9 @@ Render 環境變數（在 Render dashboard 設定）：
 
 **admin_audit_log**（RLS disabled）：`email`、`action`、`detail`（jsonb）、`created_at`
 
-**game_settings**（`key` 主鍵、`value` jsonb）/ **game_settings_history** / **game_questions** / **quiz_answers** / **chat_logs**（RLS disabled）：後台第二批用，欄位見 `admin.py`；`game_posts`、`game_comments` 另有 `hidden`、`pinned` 欄位
+**game_settings**（`key` 主鍵、`value` jsonb）/ **game_settings_history** / **game_questions** / **quiz_answers** / **chat_logs**（RLS disabled）：後台第二批用，欄位見 `admin.py`；`game_posts`、`game_comments` 另有 `hidden`、`pinned`、`report_count`、`moderation`、`moderation_reason` 欄位
+
+**game_reports** / **game_events** / **xp_adjustments**（RLS disabled）：檢舉、限時活動、XP 手動調整紀錄；`game_users.muted` 為暫停發言
 
 **Supabase Storage**：
 - bucket `event-image`（public）：商家透過 LINE Bot 上傳的活動照片

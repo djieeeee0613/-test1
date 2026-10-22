@@ -55,6 +55,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
 .nav-item.active { background: rgba(255,255,255,.15); color: #fff; font-weight: 700; box-shadow: inset 3px 0 0 var(--gold); }
 .nav-item .ic { width: 22px; text-align: center; }
+.nav-badge { margin-left: auto; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; }
 .nav-sep { width: 100%; display: flex; align-items: center; justify-content: space-between; font-size: 12px; letter-spacing: 2px; color: rgba(255,255,255,.55); padding: 12px 14px 6px; border-radius: 10px; font-weight: 700; }
 .nav-sep:hover { color: #fff; }
 .nav-sep .chev { font-size: 11px; transition: transform .25s; }
@@ -270,7 +271,9 @@ tr:hover td { background: #fafbf9; }
         <button class="nav-item" data-view="game" data-role="admin moderator"><span class="ic">🎮</span>遊戲分析</button>
         <button class="nav-item" data-view="settings" data-role="admin"><span class="ic">⚙️</span>遊戲設定</button>
         <button class="nav-item" data-view="questions" data-role="admin moderator"><span class="ic">🧠</span>題目管理</button>
-        <button class="nav-item" data-view="feed" data-role="admin moderator"><span class="ic">💬</span>動態管理</button>
+        <button class="nav-item" data-view="feed" data-role="admin moderator"><span class="ic">💬</span>動態管理<b class="nav-badge" id="review-badge" hidden></b></button>
+        <button class="nav-item" data-view="players" data-role="admin moderator"><span class="ic">👥</span>玩家管理</button>
+        <button class="nav-item" data-view="events" data-role="admin"><span class="ic">🎉</span>限時活動</button>
       </div>
     </div>
     <div class="nav-group" data-group="sys" data-role="admin">
@@ -329,6 +332,15 @@ tr:hover td { background: #fafbf9; }
     <div class="view" id="v-feed">
       <div class="page-head"><div><h1>💬 動態管理</h1><p>隱藏、置頂或刪除旅人動態與留言</p></div></div>
       <div id="fd"></div>
+    </div>
+    <div class="view" id="v-players">
+      <div class="page-head"><div><h1>👥 玩家管理</h1><p>查看玩家紀錄、調整 XP、撤銷打卡、暫停發言</p></div></div>
+      <div id="pl"></div>
+    </div>
+    <div class="view" id="v-events">
+      <div class="page-head"><div><h1>🎉 限時活動</h1><p>在指定期間提高 XP 倍率，例如「茶莊週：茶&amp;酒莊打卡 ×2」</p></div>
+        <button class="btn btn-green" onclick="editEvent()">＋ 新增活動</button></div>
+      <div id="ev"></div>
     </div>
     <div class="view" id="v-system">
       <div class="page-head"><div><h1>🩺 系統健康</h1><p>資料庫、n8n 工作流與環境設定狀態</p></div></div>
@@ -412,6 +424,7 @@ function start() {
   document.querySelectorAll('[data-role]').forEach(el => el.style.display = el.dataset.role.split(' ').includes(ME.role) ? '' : 'none');
   const allowed = [...document.querySelectorAll('.nav-item')].filter(b => b.style.display !== 'none').map(b => b.dataset.view);
   const want = location.hash.slice(1);
+  refreshReviewBadge();
   go(allowed.includes(want) ? want : allowed[0]);
 }
 document.querySelectorAll('.nav-item').forEach(b => b.onclick = () => go(b.dataset.view));
@@ -444,7 +457,8 @@ async function refresh() {
   try { await render(current); } finally { fresh = false; b.classList.remove('loading'); }
 }
 const RENDER = { overview: renderOverview, bookings: renderBookings, merchants: renderMerchants, map: renderMap, impact: renderImpact,
-                 ai: renderAI, game: renderGame, settings: renderSettings, questions: renderQuestions, feed: renderFeed, system: renderSystem };
+                 ai: renderAI, game: renderGame, settings: renderSettings, questions: renderQuestions, feed: renderFeed,
+                 players: renderPlayers, events: renderEvents, system: renderSystem };
 
 // ═══════ 共用：寫入、提示、彈窗 ═══════
 async function send(method, path, data) {
@@ -827,7 +841,8 @@ async function renderAI() {
 let SET = null, draft = null;
 const XP_HINT = { xp_checkin: '每家職人只能打卡一次', xp_quiz_correct: '每題答對', xp_quiz_wrong: '答錯的鼓勵分',
   xp_quiz_combo: '連續答對時，第 2 題起每題再加', xp_quiz_perfect: '一局全對額外加碼', xp_post: '每篇貼文',
-  post_daily_limit: '每天前幾篇貼文有 XP', quiz_round_size: '', quiz_seconds: '超過時間算答錯' };
+  post_daily_limit: '每天前幾篇貼文有 XP', quiz_round_size: '', quiz_seconds: '超過時間算答錯',
+  report_hide_threshold: '不同玩家檢舉達到這個次數，內容自動隱藏' };
 async function renderSettings() {
   loading('st');
   try { SET = await api('/admin/api/game/settings'); } catch (e) { return fail('st', e); }
@@ -839,7 +854,13 @@ async function renderSettings() {
           <div class="lv-row" style="border:none;font-size:11px;color:var(--muted);font-weight:700"><span>等級</span><span>圖示</span><span>名稱</span><span>所需 XP</span><span></span></div>
           <div id="lv-rows"></div>
           <button class="btn btn-sm" style="margin-top:10px" onclick="addLevel()">＋ 新增等級</button></div>
-        <div class="card" style="margin-top:14px"><h3>⭐ 經驗值與問答規則</h3><div class="q">修改後右側會即時試算</div><div class="grid g3" id="xp-fields"></div></div>
+        <div class="card" style="margin-top:14px"><h3>⭐ 數值設定</h3><div class="q">修改後右側會即時試算</div><div class="grid g3" id="xp-fields"></div></div>
+        <div class="card" style="margin-top:14px"><h3>🛡️ 內容審核</h3><div class="q">玩家發文、留言時的自動把關</div>
+          <label style="display:flex;gap:10px;align-items:center;font-size:13px;margin-bottom:12px"><label class="switch"><input type="checkbox" id="mod-ai" onchange="draft.ai_moderation=this.checked;previewSettings()"><span></span></label>
+            <span><b>AI 自動審核</b>：發文與留言先由 AI 檢查，疑似不當的內容會先隱藏，進入「動態管理 → 待審核」</span></label>
+          <div class="field"><label>禁用詞（一行一個）</label><textarea id="mod-words" rows="4" placeholder="例如：加賴&#10;代購" oninput="draft.blocked_words=this.value.split(String.fromCharCode(10)).map(w=>w.trim()).filter(Boolean);previewSettings()"></textarea>
+            <small>內容包含任何一個禁用詞，會直接進入待審核，不經 AI 判斷。「被檢舉幾次自動隱藏」在上方數值設定裡。</small></div>
+        </div>
         <div class="card" style="margin-top:14px"><h3>🕘 變更紀錄</h3><div class="q">可載入舊版本到編輯器，確認後再儲存</div><div id="st-hist"></div></div>
       </div>
       <div class="card" style="position:sticky;top:${76}px"><h3>⚖️ 平衡試算</h3><div class="q">依照目前編輯中的數值計算</div>
@@ -868,6 +889,8 @@ function drawSettingsForm() {
   $('xp-fields').innerHTML = SET.fields.map(([k, label]) => `<div class="field"><label>${esc(label)}</label>
     <input type="number" min="0" value="${draft[k]}" oninput="draft['${k}']=+this.value;previewSettings()">
     <small>${k === 'quiz_round_size' ? `目前啟用 ${SET.enabled_questions} 題` : XP_HINT[k] || ''}</small></div>`).join('');
+  $('mod-ai').checked = draft.ai_moderation !== false;
+  $('mod-words').value = (draft.blocked_words || []).join(String.fromCharCode(10));
 }
 function addLevel() {
   const last = draft.levels[draft.levels.length - 1];
@@ -940,6 +963,7 @@ async function renderQuestions() {
         <span style="flex:1"></span>
         ${builtin ? '' : `<button class="btn" onclick="downloadTemplate()">⬇ CSV 範本</button>
           <button class="btn" onclick="$('csv-file').click()">⬆ 匯入 CSV</button><input type="file" id="csv-file" accept=".csv,text/csv" hidden onchange="importCsv(this)">
+          <button class="btn" onclick="openGenerator()">✨ AI 出題</button>
           <button class="btn btn-green" onclick="editQuestion()">＋ 新增題目</button>`}
       </div>
       <div class="table-wrap" id="q-table"></div>
@@ -1068,13 +1092,71 @@ async function importCsv(input) {
   } catch (e) { toast(e.message, true); }
 }
 
+
+// ═══════ AI 出題 ═══════
+let DRAFTS = [];
+function openGenerator() {
+  const groups = QS.merchant_groups || [];
+  openModal(`<h2>✨ AI 出題</h2>
+    <div class="note" style="margin:0 0 14px">AI 只會根據你選的商家或類別的介紹資料出題。題目產生後<b>不會自動上線</b>，請逐題檢查內容與正解，勾選後才會加入題庫。</div>
+    <div class="grid g3" style="align-items:end">
+      <div class="field"><label>出題依據</label><select id="gen-src" onchange="genSourceChanged()">
+        <option value="category">整個商家類別</option><option value="merchant">單一商家</option></select></div>
+      <div class="field"><label id="gen-val-label">類別</label><select id="gen-val"></select></div>
+      <div class="field"><label>題數</label><select id="gen-n">${[3, 5, 8].map(n => `<option ${n === 5 ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label>出題方向（選填）</label><input id="gen-hint" maxlength="100" placeholder="例如：著重永續做法、適合親子的題目"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:14px"><button class="btn btn-green" id="gen-btn" onclick="runGenerator()">✨ 產生題目</button></div>
+    <div id="gen-out" style="margin-top:16px"></div>`);
+  genSourceChanged();
+}
+function genSourceChanged() {
+  const groups = QS.merchant_groups || [], merchant = $('gen-src').value === 'merchant';
+  $('gen-val-label').textContent = merchant ? '商家' : '類別';
+  $('gen-val').innerHTML = merchant
+    ? groups.map(g => `<optgroup label="${esc(g.emoji + ' ' + g.name)}">${g.merchants.map(m => `<option>${esc(m)}</option>`).join('')}</optgroup>`).join('')
+    : groups.map(g => `<option value="${esc(g.slug)}">${esc(g.emoji + ' ' + g.name)}（${g.merchants.length} 家）</option>`).join('');
+}
+async function runGenerator() {
+  const btn = $('gen-btn'); btn.disabled = true; btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite">⟳</span> AI 出題中，約 10–20 秒…';
+  $('gen-out').innerHTML = '';
+  try {
+    const d = await send('POST', '/admin/api/questions/generate', { source: $('gen-src').value, value: $('gen-val').value, count: +$('gen-n').value, hint: $('gen-hint').value });
+    DRAFTS = d.drafts.map(q => ({ ...q, pick: true }));
+    drawDrafts(d.skipped);
+  } catch (e) { $('gen-out').innerHTML = `<div class="errors">${esc(e.message)}</div>`; }
+  finally { btn.disabled = false; btn.textContent = '✨ 重新產生'; }
+}
+function drawDrafts(skipped) {
+  if (!DRAFTS.length) { $('gen-out').innerHTML = '<div class="warns">AI 沒有產生可用的題目（可能都和題庫重複），請換個商家或出題方向再試一次。</div>'; return; }
+  $('gen-out').innerHTML = `<div style="font-weight:700;margin-bottom:8px">產生了 ${DRAFTS.length} 題草稿${skipped ? `（另有 ${skipped} 題因格式錯誤或與題庫重複而略過）` : ''}，可以直接修改：</div>
+    ${DRAFTS.map((q, i) => `<div class="card" style="margin-bottom:10px;padding:14px;${q.pick ? '' : 'opacity:.5'}">
+      <label style="display:flex;gap:8px;align-items:center;font-size:13px;font-weight:700;margin-bottom:8px"><input type="checkbox" ${q.pick ? 'checked' : ''} onchange="DRAFTS[${i}].pick=this.checked;drawDrafts(${skipped})"> 加入題庫</label>
+      <div class="field"><textarea rows="2" oninput="DRAFTS[${i}].question=this.value">${esc(q.question)}</textarea></div>
+      ${q.options.map((o, k) => `<div class="opt-row" style="margin-top:6px"><input type="radio" name="d${i}" ${q.answer === k ? 'checked' : ''} onchange="DRAFTS[${i}].answer=${k}"><b style="width:16px">${'ABCD'[k]}</b>
+        <input value="${esc(o)}" maxlength="60" oninput="DRAFTS[${i}].options[${k}]=this.value" style="flex:1;font-family:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:8px"></div>`).join('')}
+      <div class="field" style="margin-top:8px"><textarea rows="2" maxlength="300" oninput="DRAFTS[${i}].fact=this.value" placeholder="補充說明">${esc(q.fact)}</textarea></div>
+    </div>`).join('')}
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-green" onclick="saveDrafts()">加入勾選的 ${DRAFTS.filter(q => q.pick).length} 題</button></div>`;
+}
+async function saveDrafts() {
+  const rows = DRAFTS.filter(q => q.pick).map(({ pick, ...q }) => q);
+  if (!rows.length) return toast('請至少勾選一題', true);
+  try {
+    const d = await send('POST', '/admin/api/questions/bulk', { rows });
+    if (d.errors.length) return toast(d.errors.map(e => `第 ${e.row} 題：${e.errors.join('、')}`).join('；'), true);
+    closeModal(); toast(`已加入 ${d.inserted} 題`); renderQuestions();
+  } catch (e) { toast(e.message, true); }
+}
+
 // ═══════ 動態管理 ═══════
 let fdStatus = '';
 async function renderFeed() {
   if (!$('fd-list')) {
-    $('fd').innerHTML = `<div class="card">
+    $('fd').innerHTML = `<div class="card" id="review-card" style="margin-bottom:14px"></div><div class="card">
       <div class="filters" style="align-items:center">
-        <div class="seg" id="fd-seg">${[['', '全部'], ['hidden', '已隱藏'], ['pinned', '置頂'], ['image', '有照片']].map(([k, l]) => `<button data-k="${k}" class="${k === fdStatus ? 'on' : ''}">${l}<span data-c="${k || 'all'}"></span></button>`).join('')}</div>
+        <div class="seg" id="fd-seg">${[['', '全部'], ['reported', '被檢舉'], ['hidden', '已隱藏'], ['pinned', '置頂'], ['image', '有照片']].map(([k, l]) => `<button data-k="${k}" class="${k === fdStatus ? 'on' : ''}">${l}<span data-c="${k || 'all'}"></span></button>`).join('')}</div>
         <input id="fd-q" placeholder="🔍 搜尋內容、玩家或商家" style="min-width:220px" oninput="loadFeedAdmin()">
       </div>
       <div class="note" style="margin:0 0 6px">「隱藏」可以隨時恢復，玩家看不到也不會被通知；「刪除」會連同按讚和留言永久移除。</div>
@@ -1084,7 +1166,7 @@ async function renderFeed() {
     });
     $('fd-q').oninput = debounce(loadFeedAdmin, 300);
   }
-  await loadFeedAdmin();
+  await Promise.all([loadFeedAdmin(), loadReview()]);
 }
 async function loadFeedAdmin() {
   $('fd-list').innerHTML = '<div class="skeleton" style="margin-top:10px"></div>';
@@ -1099,6 +1181,7 @@ function postAdminHtml(p) {
     <div class="body">
       <div style="font-size:13px"><b>${esc(p.user_name || '探索者')}</b> <span class="tag t-mute">Lv.${p.user_level || 1}</span>
         ${p.pinned ? '<span class="tag t-warn">📌 置頂</span>' : ''} ${p.hidden ? '<span class="tag t-bad">已隱藏</span>' : ''}
+        ${p.report_count ? `<span class="tag t-warn">⚑ 被檢舉 ${p.report_count} 次</span>` : ''} ${MOD_TAG[p.moderation] || ''}
         <span style="color:var(--muted);font-size:12px"> · ${new Date(p.created_at).toLocaleString('zh-TW')}${p.merchant_name ? ' · 📍' + esc(p.merchant_name) : ''} · ❤️ ${p.likes || 0} · 💬 ${p.comment_count || 0}</span></div>
       <div class="content">${esc(p.content)}</div>
       ${p.image_url ? `<img class="thumb" src="${esc(p.image_url)}" alt="" onclick="window.open(this.src)">` : ''}
@@ -1117,7 +1200,7 @@ async function modPost(id, action) {
 }
 async function delPost(id) {
   if (!confirm('確定要永久刪除這篇貼文嗎？按讚和留言會一起刪除，無法復原。\n（只是不想讓玩家看到的話，可以改用「隱藏」）')) return;
-  try { await send('DELETE', `/admin/api/feed/${id}`); toast('已刪除'); $('pa-' + id).remove(); } catch (e) { toast(e.message, true); }
+  try { await send('DELETE', `/admin/api/feed/${id}`); toast('已刪除'); $('pa-' + id)?.remove(); } catch (e) { toast(e.message, true); }
 }
 async function toggleAdminComments(pid) {
   const box = $('pc-' + pid);
@@ -1138,7 +1221,224 @@ async function modComment(cid, pid, action) {
 }
 async function delComment(cid, pid) {
   if (!confirm('確定要永久刪除這則留言嗎？')) return;
-  try { await send('DELETE', `/admin/api/comments/${cid}`); toast('留言已刪除'); $('ca-' + cid).remove(); } catch (e) { toast(e.message, true); }
+  try { await send('DELETE', `/admin/api/comments/${cid}`); toast('留言已刪除'); $('ca-' + cid)?.remove(); } catch (e) { toast(e.message, true); }
+}
+
+
+// ═══════ 待審核 ═══════
+const MOD_TAG = { ai: '<span class="tag t-bad">🤖 AI 標記</span>', keyword: '<span class="tag t-bad">🚫 禁用詞</span>',
+                  reports: '<span class="tag t-bad">⚑ 檢舉過多</span>', approved: '<span class="tag t-ok">✓ 已核可</span>',
+                  removed: '<span class="tag t-mute">已駁回</span>' };
+async function refreshReviewBadge() {
+  try {
+    const d = await send('GET', '/admin/api/review');
+    const b = $('review-badge'); b.hidden = !d.count; b.textContent = d.count;
+    return d;
+  } catch (e) { return null; }
+}
+async function loadReview() {
+  const box = $('review-card');
+  if (!box) return;
+  const d = await refreshReviewBadge();
+  if (!d) { box.innerHTML = '<div class="empty">待審核清單載入失敗</div>'; return; }
+  const reasons = r => r.reasons.length ? '<span style="font-size:12px;color:var(--muted)">檢舉原因：' + r.reasons.map(([k, n]) => `${esc(k)} ×${n}`).join('、') + '</span>' : '';
+  const why = r => `${MOD_TAG[r.moderation] || ''} <span style="font-size:12px;color:var(--bad)">${esc(r.moderation_reason || '')}</span>`;
+  box.innerHTML = `<h3>🛎 待審核（${d.count}）</h3><div class="q">AI 或禁用詞標記、或被檢舉太多次而自動隱藏的內容。核可後恢復顯示；駁回會保持隱藏。</div>
+    ${d.posts.map(p => `<div class="post-admin"><img class="av" src="${esc(p.user_avatar || '/static/images/mascot.jpg')}" onerror="this.src='/static/images/mascot.jpg'" alt="">
+      <div class="body"><div style="font-size:13px"><b>${esc(p.user_name || '探索者')}</b> · 貼文 · ${new Date(p.created_at).toLocaleString('zh-TW')} ${why(p)}</div>
+        <div class="content">${esc(p.content)}</div>
+        ${p.image_url ? `<img class="thumb" src="${esc(p.image_url)}" alt="" onclick="window.open(this.src)">` : ''}
+        <div style="margin-bottom:8px">${reasons(p)}</div>
+        <div class="acts"><button class="btn btn-sm btn-green" onclick="reviewAct('post', ${p.id}, 'approve')">✓ 核可並顯示</button>
+          <button class="btn btn-sm" onclick="reviewAct('post', ${p.id}, 'reject')">✕ 駁回（保持隱藏）</button>
+          <button class="btn btn-sm btn-danger" onclick="delPost(${p.id}).then(loadReview)">🗑 刪除</button></div></div></div>`).join('')}
+    ${d.comments.map(c => `<div class="post-admin"><img class="av" src="${esc(c.user_avatar || '/static/images/mascot.jpg')}" onerror="this.src='/static/images/mascot.jpg'" alt="">
+      <div class="body"><div style="font-size:13px"><b>${esc(c.user_name || '探索者')}</b> · 留言 · ${new Date(c.created_at).toLocaleString('zh-TW')} ${why(c)}</div>
+        <div class="content">${esc(c.content)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">回覆的貼文：${esc(c.post_content)}</div>
+        <div style="margin-bottom:8px">${reasons(c)}</div>
+        <div class="acts"><button class="btn btn-sm btn-green" onclick="reviewAct('comment', ${c.id}, 'approve')">✓ 核可並顯示</button>
+          <button class="btn btn-sm" onclick="reviewAct('comment', ${c.id}, 'reject')">✕ 駁回（保持隱藏）</button>
+          <button class="btn btn-sm btn-danger" onclick="delComment(${c.id}, ${c.post_id}).then(loadReview)">🗑 刪除</button></div></div></div>`).join('')}
+    ${d.count ? '' : '<div class="empty" style="padding:14px">沒有待審核的內容 🎉</div>'}`;
+}
+async function reviewAct(kind, id, action) {
+  try {
+    await send('POST', kind === 'post' ? `/admin/api/feed/${id}` : `/admin/api/comments/${id}`, { action });
+    toast(action === 'approve' ? '已核可，內容恢復顯示' : '已駁回');
+    await Promise.all([loadReview(), loadFeedAdmin()]);
+  } catch (e) { toast(e.message, true); }
+}
+
+
+// ═══════ 限時活動 ═══════
+let EV = null;
+const EV_STATUS = { active: ['進行中', 't-ok'], upcoming: ['即將開始', 't-warn'], ended: ['已結束', 't-mute'], disabled: ['已停用', 't-mute'] };
+function eventSummary(e) {
+  const cat = e.category ? EV.categories.find(c => c.slug === e.category) : null;
+  const what = cat ? `${cat.emoji} ${cat.name}打卡` : e.scope === 'all' ? '打卡、問答、發文' : EV.scopes[e.scope];
+  return `${what} XP ×${+e.multiplier}`;
+}
+async function renderEvents() {
+  loading('ev');
+  try { EV = await api('/admin/api/events'); } catch (e) { return fail('ev', e); }
+  const active = EV.rows.filter(e => e.status === 'active');
+  $('ev').innerHTML = `
+    ${active.length ? `<div class="banner" style="background:#ecfdf5;border-color:#a7f3d0"><span style="font-size:26px">🎉</span><div class="grow"><b>進行中：</b>${active.map(e => `${esc(e.name)}（${esc(eventSummary(e))}）`).join('、')}<br>
+      <span style="color:var(--muted)">多個活動同時進行時，取最高的倍率，不會相乘。</span></div></div>` : ''}
+    <div class="card"><div class="table-wrap"><table>
+      <tr><th>活動</th><th>效果</th><th>期間（台灣時間）</th><th>狀態</th><th></th></tr>
+      ${EV.rows.map((e, i) => `<tr>
+        <td class="q-text"><b>${esc(e.name)}</b>${e.description ? `<br><small style="color:var(--muted)">${esc(e.description)}</small>` : ''}</td>
+        <td>${esc(eventSummary(e))}</td>
+        <td>${esc(e.start_local.replace('T', ' '))}<br>→ ${esc(e.end_local.replace('T', ' '))}</td>
+        <td><span class="tag ${EV_STATUS[e.status][1]}">${EV_STATUS[e.status][0]}</span></td>
+        <td><button class="btn btn-sm" onclick="editEvent(${i})">編輯</button> <button class="btn btn-sm btn-danger" onclick="deleteEvent(${e.id})">刪除</button></td></tr>`).join('')
+        || '<tr><td colspan="5" class="empty">還沒有活動，按右上角「新增活動」開始</td></tr>'}
+    </table></div></div>`;
+}
+function editEvent(i) {
+  if (!EV) return renderEvents().then(() => editEvent(i));
+  const pad = n => String(n).padStart(2, '0');
+  const fmtLocal = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const now = new Date(); now.setMinutes(0, 0, 0);
+  const e = i == null ? { name: '', description: '', multiplier: 2, scope: 'all', category: '', enabled: true,
+                          start_local: fmtLocal(now), end_local: fmtLocal(new Date(now.getTime() + 7 * 864e5)) } : EV.rows[i];
+  openModal(`<h2>${i == null ? '＋ 新增限時活動' : '✏️ 編輯活動'}</h2>
+    <div class="grid g2">
+      <div class="field"><label>活動名稱</label><input id="ev-name" maxlength="30" value="${esc(e.name)}" placeholder="例如：茶莊週" oninput="evPreview()"></div>
+      <div class="field"><label>XP 倍率</label><select id="ev-mult" onchange="evPreview()">${[1.5, 2, 3].map(m => `<option value="${m}" ${+e.multiplier === m ? 'selected' : ''}>×${m}</option>`).join('')}
+        ${[1.5, 2, 3].includes(+e.multiplier) ? '' : `<option value="${+e.multiplier}" selected>×${+e.multiplier}</option>`}</select></div>
+      <div class="field"><label>適用範圍</label><select id="ev-scope" onchange="evPreview()">${Object.entries(EV.scopes).map(([k, v]) => `<option value="${k}" ${e.scope === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div class="field"><label>只限某類商家打卡（選填）</label><select id="ev-cat" onchange="evPreview()"><option value="">不限</option>${EV.categories.map(c => `<option value="${c.slug}" ${e.category === c.slug ? 'selected' : ''}>${c.emoji} ${esc(c.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>開始（台灣時間）</label><input type="datetime-local" id="ev-start" value="${esc(e.start_local)}"></div>
+      <div class="field"><label>結束（台灣時間）</label><input type="datetime-local" id="ev-end" value="${esc(e.end_local)}"></div>
+    </div>
+    <div class="field" style="margin-top:12px"><label>活動說明（會顯示在遊戲頁的活動橫幅）</label><input id="ev-desc" maxlength="100" value="${esc(e.description || '')}" placeholder="例如：秋茶季到了！走訪茶莊打卡雙倍經驗值" oninput="evPreview()"></div>
+    <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-top:12px"><label class="switch"><input type="checkbox" id="ev-en" ${e.enabled ? 'checked' : ''}><span></span></label>啟用</label>
+    <div id="ev-prev" style="margin-top:14px"></div><div id="ev-err" style="margin-top:10px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px"><button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-green" onclick="saveEvent(${i == null ? 'null' : e.id})">💾 儲存</button></div>`);
+  evPreview();
+}
+function evValue() {
+  return { name: $('ev-name').value, description: $('ev-desc').value, multiplier: +$('ev-mult').value, scope: $('ev-scope').value,
+           category: $('ev-cat').value || null, start: $('ev-start').value, end: $('ev-end').value, enabled: $('ev-en').checked };
+}
+function evPreview() {
+  const v = evValue(), m = v.multiplier, b = EV.base;
+  const lines = [];
+  if (v.category) lines.push(`${EV.categories.find(c => c.slug === v.category).name}打卡：${b.xp_checkin} → <b>${Math.round(b.xp_checkin * m)}</b> XP`);
+  else {
+    if (['all', 'checkin'].includes(v.scope)) lines.push(`打卡：${b.xp_checkin} → <b>${Math.round(b.xp_checkin * m)}</b> XP`);
+    if (['all', 'quiz'].includes(v.scope)) lines.push(`問答答對：${b.xp_quiz_correct} → <b>${Math.round(b.xp_quiz_correct * m)}</b> XP（連擊與全對加碼也一起加倍）`);
+    if (['all', 'post'].includes(v.scope)) lines.push(`發文：${b.xp_post} → <b>${Math.round(b.xp_post * m)}</b> XP`);
+  }
+  $('ev-prev').innerHTML = `<div class="okbox">🎉 <b>${esc(v.name || '活動')}</b>${v.description ? '：' + esc(v.description) : ''}<br>${lines.join('<br>')}</div>`
+    + (v.category && !['all', 'checkin'].includes(v.scope) ? '<div class="warns" style="margin-top:8px">指定商家類別時，適用範圍請選「全部」或「打卡」</div>' : '');
+}
+async function saveEvent(id) {
+  try {
+    await send(id ? 'PUT' : 'POST', '/admin/api/events' + (id ? '/' + id : ''), evValue());
+    closeModal(); toast('活動已儲存，1 分鐘內生效'); renderEvents();
+  } catch (e) { $('ev-err').innerHTML = `<div class="errors">${esc(e.message)}</div>`; }
+}
+async function deleteEvent(id) {
+  if (!confirm('確定要刪除這個活動嗎？（只想暫停的話可以改用「停用」）')) return;
+  try { await send('DELETE', '/admin/api/events/' + id); toast('已刪除'); renderEvents(); } catch (e) { toast(e.message, true); }
+}
+
+// ═══════ 玩家管理 ═══════
+async function renderPlayers() {
+  if (!$('pl-table')) {
+    $('pl').innerHTML = `<div class="card">
+      <div class="filters"><input id="pl-q" placeholder="🔍 搜尋玩家名稱${ME.role === 'admin' ? '或 Email' : ''}" style="min-width:240px">
+        <label style="display:flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" id="pl-muted"> 只看被暫停發言的玩家</label></div>
+      <div class="table-wrap" id="pl-table"></div><div id="pl-total" style="font-size:12px;color:var(--muted);margin-top:8px"></div></div>`;
+    $('pl-q').oninput = debounce(loadPlayers, 300);
+    $('pl-muted').onchange = loadPlayers;
+  }
+  await loadPlayers();
+}
+async function loadPlayers() {
+  $('pl-table').innerHTML = '<div class="skeleton"></div>';
+  let d; try { d = await api(`/admin/api/players?q=${encodeURIComponent($('pl-q').value)}&muted=${$('pl-muted').checked ? 1 : 0}`); }
+  catch (e) { $('pl-table').innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  window.PL = d.rows;
+  $('pl-table').innerHTML = `<table><tr><th>玩家</th>${ME.role === 'admin' ? '<th>Email</th>' : ''}<th>等級</th><th>XP</th><th>打卡</th><th>貼文</th><th>答對</th><th>狀態</th><th></th></tr>
+    ${d.rows.map((u, i) => `<tr>
+      <td style="display:flex;align-items:center;gap:8px"><img src="${esc(u.avatar_url || '/static/images/mascot.jpg')}" style="width:26px;height:26px;border-radius:50%;object-fit:cover" onerror="this.src='/static/images/mascot.jpg'">${esc(u.name)}</td>
+      ${ME.role === 'admin' ? `<td>${esc(u.email)}</td>` : ''}
+      <td>${esc(u.emoji)} Lv.${u.level} ${esc(u.title)}</td><td><b>${fmt(u.xp)}</b></td><td>${u.checkin_count || 0}</td><td>${u.post_count || 0}</td><td>${u.quiz_correct || 0}</td>
+      <td>${u.muted ? '<span class="tag t-bad">暫停發言</span>' : ''} ${u.certificate_sent ? '<span class="tag t-ok">已發證書</span>' : ''}</td>
+      <td><button class="btn btn-sm" onclick="openPlayer('${esc(u.google_id)}')">查看</button></td></tr>`).join('') || '<tr><td colspan="9" class="empty">沒有符合的玩家</td></tr>'}</table>`;
+  $('pl-total').textContent = d.total > d.rows.length ? `只顯示前 ${d.rows.length} 位，共 ${d.total} 位` : `共 ${d.total} 位玩家`;
+}
+async function openPlayer(gid) {
+  openModal('<div class="skeleton" style="height:300px"></div>');
+  let d; try { d = await send('GET', '/admin/api/players/' + encodeURIComponent(gid)); } catch (e) { $('modal-box').innerHTML = `<div class="errors">${esc(e.message)}</div>`; return; }
+  const u = d.user, admin = ME.role === 'admin', g = esc(u.google_id);
+  const rate = d.quiz.answers ? Math.round(d.quiz.correct / d.quiz.answers * 100) + '%' : '—';
+  $('modal-box').innerHTML = `
+    <div style="display:flex;gap:14px;align-items:center;margin-bottom:16px">
+      <img src="${esc(u.avatar_url || '/static/images/mascot.jpg')}" style="width:56px;height:56px;border-radius:50%;object-fit:cover" onerror="this.src='/static/images/mascot.jpg'">
+      <div style="flex:1"><h2 style="margin:0">${esc(u.name)}</h2><div style="font-size:13px;color:var(--muted)">${admin ? esc(u.email) + ' · ' : ''}${u.created_at ? '加入於 ' + new Date(u.created_at).toLocaleDateString('zh-TW') : ''}</div></div>
+      <button class="btn" onclick="closeModal()">✕</button>
+    </div>
+    <div class="grid g4" style="margin-bottom:14px">
+      <div class="card kpi"><div class="lbl">等級</div><div class="val" style="font-size:20px">${esc(u.emoji)} Lv.${u.level}</div><div class="sub">${esc(u.title)}</div></div>
+      <div class="card kpi"><div class="lbl">XP</div><div class="val" style="font-size:20px">${fmt(u.xp)}</div></div>
+      <div class="card kpi"><div class="lbl">問答答對率</div><div class="val" style="font-size:20px">${rate}</div><div class="sub">${d.quiz.answers} 題</div></div>
+      <div class="card kpi ${d.reports_received ? 'alert' : ''}"><div class="lbl">貼文被檢舉</div><div class="val" style="font-size:20px">${d.reports_received}</div><div class="sub">最近 10 篇</div></div>
+    </div>
+    <div class="grid g2">
+      <div>
+        ${admin ? `<div class="card" style="margin-bottom:12px"><h3>⭐ 調整 XP</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="pl-delta" type="number" placeholder="例如 100 或 -50" style="width:130px;padding:8px 10px;border:1px solid var(--line);border-radius:9px">
+            <input id="pl-reason" maxlength="100" placeholder="原因（必填）" style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--line);border-radius:9px">
+            <button class="btn btn-green" onclick="adjustXp('${g}')">套用</button></div>
+          <small style="color:var(--muted);font-size:11px">負數為扣分，XP 最低為 0。調整會留下紀錄。</small></div>` : ''}
+        <div class="card" style="margin-bottom:12px"><h3>🔇 發言權限</h3>
+          ${u.muted ? `<p style="font-size:13px;margin-bottom:10px">這位玩家目前<b style="color:var(--bad)">被暫停發言</b>，無法發文或留言。</p><button class="btn" onclick="setMute('${g}', false)">恢復發言</button>`
+            : `<div style="display:flex;gap:8px;flex-wrap:wrap"><input id="pl-mute-reason" maxlength="100" placeholder="暫停原因（必填）" style="flex:1;min-width:160px;padding:8px 10px;border:1px solid var(--line);border-radius:9px">
+               <button class="btn btn-danger" onclick="setMute('${g}', true)">暫停發言</button></div>`}</div>
+        ${admin && u.level >= u.max_level ? `<div class="card" style="margin-bottom:12px"><h3>📜 證書</h3><p style="font-size:13px;margin-bottom:10px">${u.certificate_sent ? '已寄出過證書。' : '尚未寄出證書。'}</p>
+          <button class="btn" onclick="resendCert('${g}')">${u.certificate_sent ? '重新寄送證書' : '寄送證書'}</button></div>` : ''}
+        <div class="card"><h3>🧾 XP 調整紀錄</h3>
+          ${d.adjustments.map(a => `<div class="list-row"><span class="tag ${a.delta > 0 ? 't-ok' : 't-bad'}">${a.delta > 0 ? '+' : ''}${a.delta}</span><span class="grow" style="white-space:normal">${esc(a.reason)}<br><small style="color:var(--muted)">${esc(a.admin_email)} · ${new Date(a.created_at).toLocaleString('zh-TW')}</small></span></div>`).join('') || '<div class="empty" style="padding:10px">沒有紀錄</div>'}</div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:12px"><h3>📸 打卡紀錄（${d.checkins.length}）</h3>
+          ${d.checkins.map(c => `<div class="list-row">${c.photo_url ? `<img src="${esc(c.photo_url)}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;cursor:zoom-in" onclick="window.open(this.src)">` : ''}
+            <span class="grow">${esc(c.merchant_name)}<br><small style="color:var(--muted)">${new Date(c.created_at).toLocaleString('zh-TW')} · +${c.xp_earned} XP</small></span>
+            ${admin ? `<button class="btn btn-sm btn-danger" onclick="revokeCheckin('${g}', ${c.id})">撤銷</button>` : ''}</div>`).join('') || '<div class="empty" style="padding:10px">沒有打卡</div>'}</div>
+        <div class="card"><h3>💬 最近貼文</h3>
+          ${d.posts.map(p => `<div class="list-row"><span class="grow" style="white-space:normal">${esc(p.content)}<br><small style="color:var(--muted)">${new Date(p.created_at).toLocaleDateString('zh-TW')}${p.hidden ? ' · 已隱藏' : ''}${p.report_count ? ` · 被檢舉 ${p.report_count} 次` : ''}</small></span></div>`).join('') || '<div class="empty" style="padding:10px">沒有貼文</div>'}</div>
+      </div>
+    </div>`;
+}
+async function adjustXp(gid) {
+  const delta = parseInt($('pl-delta').value, 10), reason = $('pl-reason').value.trim();
+  if (!delta) return toast('請輸入要調整的 XP', true);
+  if (!confirm(`確定要${delta > 0 ? '增加' : '扣除'} ${Math.abs(delta)} XP 嗎？`)) return;
+  try { await send('POST', `/admin/api/players/${encodeURIComponent(gid)}/xp`, { delta, reason }); toast('已調整'); openPlayer(gid); loadPlayers(); }
+  catch (e) { toast(e.message, true); }
+}
+async function revokeCheckin(gid, cid) {
+  const reason = prompt('撤銷這筆打卡的原因？（會扣回這次打卡的 XP）');
+  if (!reason) return;
+  try { await send('POST', `/admin/api/players/${encodeURIComponent(gid)}/checkins/${cid}/revoke`, { reason }); toast('已撤銷並扣回 XP'); openPlayer(gid); loadPlayers(); }
+  catch (e) { toast(e.message, true); }
+}
+async function setMute(gid, muted) {
+  const reason = muted ? $('pl-mute-reason').value.trim() : '';
+  try { await send('POST', `/admin/api/players/${encodeURIComponent(gid)}/mute`, { muted, reason }); toast(muted ? '已暫停發言' : '已恢復發言'); openPlayer(gid); loadPlayers(); }
+  catch (e) { toast(e.message, true); }
+}
+async function resendCert(gid) {
+  if (!confirm('確定要寄送證書到這位玩家的 Gmail 嗎？')) return;
+  try { await send('POST', `/admin/api/players/${encodeURIComponent(gid)}/certificate`); toast('證書寄送中'); openPlayer(gid); }
+  catch (e) { toast(e.message, true); }
 }
 
 // ═══════ 系統健康 ═══════

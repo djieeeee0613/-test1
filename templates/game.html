@@ -279,6 +279,23 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 .pin-badge { font-size: 11px; background: var(--gold-soft); color: #8a6a2a; padding: 1px 8px; border-radius: 8px; font-weight: 700; }
 .post-del { margin-left: auto; color: var(--muted); font-size: 13px; padding: 6px 8px; border-radius: 8px; }
 .post-del:hover { background: var(--bg); }
+.cmt-report { margin-left: auto; color: #b7bcb4; font-size: 12px; padding: 2px 6px; border-radius: 6px; align-self: center; }
+.cmt-report:hover { color: var(--ng); background: #fef2f2; }
+#report-modal { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 260; display: none; align-items: center; justify-content: center; padding: 20px; }
+#report-modal.show { display: flex; }
+#report-modal .box { background: #fff; border-radius: 20px; padding: 22px; width: 340px; max-width: 100%; animation: pop .35s var(--ease); }
+#report-modal h3 { color: var(--green); margin-bottom: 4px; }
+#report-modal .reasons { display: grid; gap: 8px; margin: 14px 0; }
+#report-modal .reasons button { text-align: left; padding: 11px 14px; border-radius: 12px; border: 1.5px solid var(--line); font-size: 14px; transition: border-color .2s, background .2s; }
+#report-modal .reasons button:hover { border-color: var(--ng); background: #fef2f2; }
+.event-banner { display: flex; gap: 12px; align-items: center; padding: 14px 18px; border-radius: 18px; margin-bottom: 16px; color: #fff;
+  background: linear-gradient(110deg, #e8590c, #C8A96E 55%, #e8590c); background-size: 200% 100%; animation: shimmer 6s linear infinite; box-shadow: 0 8px 22px rgba(232,89,12,.25); }
+.event-banner .ic { font-size: 30px; animation: wiggle 2.4s ease-in-out infinite; }
+.event-banner b { font-size: 16px; }
+.event-banner small { opacity: .9; display: block; font-size: 12px; margin-top: 2px; }
+.event-banner .mult { margin-left: auto; font-size: 26px; font-weight: 900; background: rgba(255,255,255,.2); padding: 4px 12px; border-radius: 14px; }
+.event-soon { font-size: 13px; color: var(--muted); background: #fff; border: 1px dashed var(--line); border-radius: 14px; padding: 10px 14px; margin-bottom: 16px; }
+.muted-note { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; border-radius: 12px; padding: 10px 14px; font-size: 13px; margin-bottom: 12px; }
 .post-tag { display: inline-block; margin: 0 18px 8px; background: var(--green-soft); color: var(--green); font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 10px; }
 .post-body { padding: 0 18px 12px; font-size: 15px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
 .post-img { width: 100%; max-height: 460px; object-fit: cover; cursor: zoom-in; }
@@ -438,6 +455,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 
     <!-- 主頁 -->
     <div class="view" id="v-home">
+      <div class="event-slot"></div>
       <div class="hello reveal">
         <div class="ring">
           <svg width="132" height="132" viewBox="0 0 132 132"><circle class="bg" cx="66" cy="66" r="56" fill="none" stroke-width="10"/><circle class="fg" id="ring-fg" cx="66" cy="66" r="56" fill="none" stroke-width="10" stroke-dasharray="351.86" stroke-dashoffset="351.86"/></svg>
@@ -480,6 +498,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 
     <!-- 打卡 -->
     <div class="view" id="v-checkin">
+      <div class="event-slot"></div>
       <div class="page-head"><h1>📸 職人打卡</h1><p>到職人工坊拍一張有你入鏡的照片，緣投確認後就幫你蓋章！</p></div>
       <div class="grid g2">
         <div class="card">
@@ -520,12 +539,14 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 
     <!-- 問答 -->
     <div class="view" id="v-quiz">
+      <div class="event-slot"></div>
       <div class="page-head"><h1>🧠 問答大挑戰</h1><p>每局 {{ cfg.quiz_round_size }} 題，想玩幾局就玩幾局！連續答對有連擊加分，全對再送 +{{ cfg.xp_quiz_perfect }} XP。</p></div>
       <div class="card" id="quiz-box"></div>
     </div>
 
     <!-- 動態 -->
     <div class="view" id="v-feed">
+      <div class="event-slot"></div>
       <div class="page-head"><h1>💬 旅人動態</h1><p>分享你在南投遇見的人、味道和風景。</p></div>
       <div class="feed">
         <div class="card">
@@ -582,6 +603,11 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<div id="report-modal" onclick="if(event.target===this)closeReport()"><div class="box">
+  <h3>⚑ 檢舉這則內容</h3><div style="font-size:13px;color:var(--muted)">管理員會看到你的檢舉，對方不會知道是誰檢舉的。</div>
+  <div class="reasons"></div>
+  <button class="btn btn-ghost" style="width:100%" onclick="closeReport()">取消</button>
+</div></div>
 <div id="lightbox" onclick="this.style.display='none'"><img id="lightbox-img" alt=""></div>
 
 <script>
@@ -697,6 +723,8 @@ function enterApp(user, li, fresh) {
   toggleMenu(window.innerWidth >= 1000);
   renderProfile();
   loadCheckins();
+  loadEvents();
+  if (user.muted) $('cp-text').closest('.card').insertAdjacentHTML('afterbegin', '<div class="muted-note">🔇 你的帳號目前被暫停發言，暫時無法發文或留言。</div>');
   const v = (location.hash || '#home').slice(1);
   go(['home','checkin','quiz','feed','rank','cert'].includes(v) ? v : 'home', true);
   setTimeout(() => say(fresh ? `歡迎你，${user.name || '探索者'}！一起出發吧 🌿` : `歡迎回來，${user.name || '探索者'}！`), 500);
@@ -967,7 +995,7 @@ function postHtml(p) {
     <div class="post-head">
       <img src="${esc(p.user_avatar || MASCOT)}" alt="" onerror="this.src='${MASCOT}'">
       <div><div class="nm">${esc(p.user_name || '探索者')} <span class="lv-badge">Lv.${p.user_level || 1}</span>${p.pinned ? ' <span class="pin-badge">📌 置頂</span>' : ''}</div><div class="meta">${timeAgo(p.created_at)}</div></div>
-      ${p.mine ? `<button class="post-del" onclick="deletePost(${p.id})">刪除</button>` : ''}
+      ${p.mine ? `<button class="post-del" onclick="deletePost(${p.id})">刪除</button>` : `<button class="post-del" title="檢舉" onclick="openReport('post', ${p.id})">⚑ 檢舉</button>`}
     </div>
     ${p.merchant_name ? `<span class="post-tag">📍 ${esc(p.merchant_name)}</span>` : ''}
     <div class="post-body">${esc(p.content)}</div>
@@ -990,6 +1018,7 @@ async function submitPost() {
   btn.disabled = false; btn.textContent = '發佈';
   if (!d.ok) return toast(d.error || '發佈失敗');
   $('cp-text').value = ''; $('cp-merchant').value = ''; clearAttach();
+  if (d.pending_review) { say('你的貼文需要管理員看一下，通過後就會出現在動態牆喔！', 5000); return toast('貼文已送出，審核通過後會顯示'); }
   const empty = $('feed-list').querySelector('.empty'); if (empty) empty.remove();
   $('feed-list').insertAdjacentHTML('afterbegin', postHtml(d.post));
   applyStats(d.new_stats, btn, { post_count: 1 });
@@ -1021,7 +1050,7 @@ async function toggleComments(id) {
   }
 }
 function cmtHtml(c) {
-  return `<div class="cmt"><img src="${esc(c.user_avatar || MASCOT)}" alt="" onerror="this.src='${MASCOT}'"><div class="b"><b>${esc(c.user_name || '探索者')}</b>${esc(c.content)}</div></div>`;
+  return `<div class="cmt"><img src="${esc(c.user_avatar || MASCOT)}" alt="" onerror="this.src='${MASCOT}'"><div class="b"><b>${esc(c.user_name || '探索者')}</b>${esc(c.content)}</div>${c.mine ? '' : `<button class="cmt-report" title="檢舉留言" onclick="openReport('comment', ${c.id})">⚑</button>`}</div>`;
 }
 async function addComment(id) {
   const inp = $('ci-' + id), content = inp.value.trim();
@@ -1029,6 +1058,7 @@ async function addComment(id) {
   inp.value = '';
   const d = await api(`/api/game/posts/${id}/comments`, { method: 'POST', body: { content } });
   if (!d.ok) return toast(d.error || '留言失敗');
+  if (d.pending_review) return toast('留言已送出，審核通過後會顯示');
   const list = $('cl-' + id); const muted = list.querySelector('.muted'); if (muted) muted.remove();
   list.insertAdjacentHTML('beforeend', cmtHtml(d));
   $('cc-' + id).textContent = +$('cc-' + id).textContent + 1;
@@ -1108,6 +1138,43 @@ function confetti() {
     if (++frames < 220 && $('levelup').classList.contains('show')) requestAnimationFrame(tick);
     else ctx.clearRect(0, 0, c.width, c.height);
   })();
+}
+
+
+// ═══════ 檢舉 ═══════
+const REPORT_REASONS = ['不當言論', '騷擾或攻擊', '廣告或垃圾訊息', '洩露個人隱私', '其他'];
+let reportTarget = null;
+function openReport(type, id) {
+  reportTarget = { type, id };
+  document.querySelector('#report-modal .reasons').innerHTML = REPORT_REASONS.map(r => `<button onclick="sendReport('${r}')">${r}</button>`).join('');
+  $('report-modal').classList.add('show');
+}
+function closeReport() { $('report-modal').classList.remove('show'); }
+async function sendReport(reason) {
+  closeReport();
+  const d = await api('/api/game/report', { method: 'POST', body: { ...reportTarget, reason } });
+  if (!d.ok) return toast(d.error || '檢舉失敗');
+  toast(d.already ? '你已經檢舉過這則內容了' : '謝謝你，管理員會盡快處理');
+}
+
+// ═══════ 限時活動 ═══════
+let EVENTS = { active: [], upcoming: [] };
+async function loadEvents() {
+  const d = await api('/api/game/events');
+  if (d.ok) EVENTS = d;
+  renderEventBanners();
+  if (EVENTS.active.length) setTimeout(() => say(`🎉 「${EVENTS.active[0].name}」進行中！XP ×${EVENTS.active[0].multiplier}`, 5000), 2500);
+}
+function eventTarget(e) { return e.category_name ? `${e.category_name}打卡` : e.scope === 'all' ? '打卡、問答、發文' : e.scope_name; }
+function timeLeft(iso) {
+  const ms = new Date(iso) - Date.now(), h = Math.floor(ms / 36e5);
+  return h >= 48 ? `剩 ${Math.floor(h / 24)} 天` : h >= 1 ? `剩 ${h} 小時` : '即將結束';
+}
+function renderEventBanners() {
+  const html = EVENTS.active.map(e => `<div class="event-banner"><span class="ic">🎉</span><div><b>${esc(e.name)}</b>
+      <small>${esc(e.description || '')}${e.description ? ' · ' : ''}${esc(eventTarget(e))} · ${timeLeft(e.end_at)}</small></div><span class="mult">×${e.multiplier}</span></div>`).join('')
+    + EVENTS.upcoming.slice(0, 1).map(e => `<div class="event-soon">⏳ 即將開始：<b>${esc(e.name)}</b>（${esc(eventTarget(e))} XP ×${e.multiplier}）· ${new Date(e.start_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 開始</div>`).join('');
+  document.querySelectorAll('.event-slot').forEach(el => el.innerHTML = html);
 }
 
 // ═══════ 啟動：檢查既有登入 ═══════

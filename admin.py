@@ -3,7 +3,7 @@ import re
 import time
 import difflib
 from collections import Counter, defaultdict
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from functools import wraps
 
 import requests
@@ -14,7 +14,10 @@ import threading
 from game import (SUPABASE_URL, SUPABASE_KEY, GOOGLE_CLIENT_ID, TW, DEFAULT_SETTINGS,
                   _h, sb_get, sb_insert, sb_patch, sb_delete, verify_google_token, level_info, levels,
                   settings as game_settings, invalidate_settings, invalidate_questions, question_bank,
-                  delete_post_cascade, send_certificate)
+                  delete_post_cascade, send_certificate, adjust_comment_count, award_xp, get_user,
+                  invalidate_events, MERCHANT_GROUPS, EVENT_SCOPES, _gemini_client)
+from google.genai import types as genai_types
+import json as json_mod
 from game_quiz import QUIZ_QUESTIONS
 
 admin_bp = Blueprint('admin', __name__)
@@ -555,6 +558,7 @@ INT_FIELDS = {
     "xp_quiz_perfect": ("全對加碼 XP", 0, 100000), "xp_post": ("發文 XP", 0, 100000),
     "post_daily_limit": ("每日發文給 XP 篇數", 0, 50), "quiz_round_size": ("每局題數", 1, 30),
     "quiz_seconds": ("每題秒數", 5, 120),
+    "report_hide_threshold": ("被檢舉幾次自動隱藏", 1, 50),
 }
 
 def validate_settings(raw):
@@ -590,6 +594,14 @@ def validate_settings(raw):
         if not lo <= v <= hi:
             errors.append(f"{label} 需介於 {lo}–{hi}")
         clean[k] = v
+    clean["ai_moderation"] = bool(raw.get("ai_moderation", True))
+    words = raw.get("blocked_words") or []
+    if isinstance(words, str):
+        words = re.split(r"[,，\n]", words)
+    words = list(dict.fromkeys(str(w).strip() for w in words if str(w).strip()))
+    if len(words) > 200 or any(len(w) > 20 for w in words):
+        errors.append("禁用詞最多 200 個，每個最多 20 字")
+    clean["blocked_words"] = words[:200]
     enabled = len(question_bank())
     if clean.get("quiz_round_size", 0) > enabled:
         errors.append(f"每局題數（{clean['quiz_round_size']}）不能多於目前啟用的題目數（{enabled}）")
@@ -741,7 +753,7 @@ def list_questions():
         s = stats.get(r["id"], {"n": 0, "correct": 0, "choices": [0, 0, 0, 0]})
         r["stats"] = {**s, "rate": round(s["correct"] / s["n"] * 100) if s["n"] else None}
         r["flags"] = question_flags(r, s)
-    return jsonify({"source": source, "rows": rows, "categories": QUESTION_CATEGORIES,
+    return jsonify({"source": source, "rows": rows, "categories": QUESTION_CATEGORIES, "merchant_groups": MERCHANT_GROUPS,
                     "round_size": game_settings()["quiz_round_size"], "min_answers": MIN_ANSWERS_FOR_FLAG})
 
 @admin_bp.route('/admin/api/questions/import-builtin', methods=['POST'])
@@ -822,10 +834,22 @@ def delete_question(qid):
     audit(who(), "question_delete", {"id": qid, "question": (row[0].get("question") or "")[:60]})
     return jsonify({"ok": True})
 
-# ───────── 動態管理 ─────────
+# ───────── 動態管理（含待審核與檢舉）─────────
+PENDING_MODERATION = ("ai", "keyword", "reports")
+
 def _public_post(p):
     return {k: p.get(k) for k in ("id", "user_name", "user_avatar", "user_level", "content", "merchant_name",
-                                  "image_url", "likes", "comment_count", "hidden", "pinned", "created_at")}
+                                  "image_url", "likes", "comment_count", "hidden", "pinned", "created_at",
+                                  "report_count", "moderation", "moderation_reason")}
+
+def _resolve_reports(kind, tid, status):
+    sb_patch("game_reports", {"target_type": f"eq.{kind}", "target_id": f"eq.{tid}", "status": "eq.open"}, {"status": status})
+
+def _open_report_reasons():
+    reasons = defaultdict(Counter)
+    for r in fetch_all("game_reports", "target_type,target_id,reason", {"status": "eq.open"}):
+        reasons[(r["target_type"], r["target_id"])][r.get("reason") or "其他"] += 1
+    return reasons
 
 @admin_bp.route('/admin/api/feed')
 @require_role("admin", "moderator")
@@ -833,26 +857,52 @@ def admin_feed():
     status, q = request.args.get("status", ""), (request.args.get("q") or "").strip().lower()
     posts = fetch_all("game_posts", "*", {"order": "id.desc"}, max_rows=3000)
     counts = {"all": len(posts), "hidden": sum(1 for p in posts if p.get("hidden")),
-              "pinned": sum(1 for p in posts if p.get("pinned"))}
+              "pinned": sum(1 for p in posts if p.get("pinned")),
+              "reported": sum(1 for p in posts if (p.get("report_count") or 0) > 0)}
     if status == "hidden":
         posts = [p for p in posts if p.get("hidden")]
     elif status == "pinned":
         posts = [p for p in posts if p.get("pinned")]
     elif status == "image":
         posts = [p for p in posts if p.get("image_url")]
+    elif status == "reported":
+        posts = [p for p in posts if (p.get("report_count") or 0) > 0]
     if q:
         posts = [p for p in posts if any(q in str(p.get(k) or "").lower() for k in ("content", "user_name", "merchant_name"))]
     return jsonify({"rows": [_public_post(p) for p in posts[:150]], "total": len(posts), "counts": counts})
+
+@admin_bp.route('/admin/api/review')
+@require_role("admin", "moderator")
+def review_queue():
+    flt = {"moderation": f"in.({','.join(PENDING_MODERATION)})", "order": "id.asc"}
+    posts = fetch_all("game_posts", "*", flt)
+    comments = fetch_all("game_comments", "id,post_id,user_name,user_avatar,content,created_at,report_count,moderation,moderation_reason", flt)
+    reasons = _open_report_reasons()
+    parents = {}
+    if comments:
+        ids = ",".join(sorted({str(c["post_id"]) for c in comments}))
+        parents = {p["id"]: p.get("content") for p in sb_get("game_posts", {"id": f"in.({ids})", "select": "id,content"})}
+    return jsonify({
+        "posts": [{**_public_post(p), "reasons": reasons.get(("post", p["id"]), Counter()).most_common()} for p in posts],
+        "comments": [{**{k: c.get(k) for k in ("id", "post_id", "user_name", "user_avatar", "content", "created_at",
+                                                "report_count", "moderation", "moderation_reason")},
+                      "post_content": (parents.get(c["post_id"]) or "")[:80],
+                      "reasons": reasons.get(("comment", c["id"]), Counter()).most_common()} for c in comments],
+        "count": len(posts) + len(comments)})
+
+POST_ACTIONS = {"hide": {"hidden": True}, "unhide": {"hidden": False}, "pin": {"pinned": True}, "unpin": {"pinned": False},
+                "approve": {"hidden": False, "moderation": "approved"}, "reject": {"hidden": True, "moderation": "removed"}}
 
 @admin_bp.route('/admin/api/feed/<int:pid>', methods=['POST'])
 @require_role("admin", "moderator")
 def moderate_post(pid):
     action = body().get("action")
-    patch = {"hide": {"hidden": True}, "unhide": {"hidden": False},
-             "pin": {"pinned": True}, "unpin": {"pinned": False}}.get(action)
+    patch = POST_ACTIONS.get(action)
     if not patch:
         return jsonify({"error": "未知的操作"}), 400
     sb_patch("game_posts", {"id": f"eq.{pid}"}, patch)
+    if action in ("approve", "reject"):
+        _resolve_reports("post", pid, "dismissed" if action == "approve" else "actioned")
     audit(who(), f"post_{action}", {"id": pid})
     return jsonify({"ok": True})
 
@@ -863,6 +913,7 @@ def admin_delete_post(pid):
     if not row:
         return jsonify({"error": "找不到這篇貼文"}), 404
     delete_post_cascade(pid)
+    _resolve_reports("post", pid, "actioned")
     audit(who(), "post_delete", {"id": pid, "user": row[0].get("user_name"), "content": (row[0].get("content") or "")[:80]})
     return jsonify({"ok": True})
 
@@ -870,26 +921,25 @@ def admin_delete_post(pid):
 @require_role("admin", "moderator")
 def admin_comments(pid):
     return jsonify(sb_get("game_comments", {"post_id": f"eq.{pid}", "order": "id.asc",
-                                            "select": "id,user_name,user_avatar,content,hidden,created_at"}))
-
-def _adjust_comment_count(pid, delta):
-    post = sb_get("game_posts", {"id": f"eq.{pid}", "select": "comment_count"})
-    if post:
-        sb_patch("game_posts", {"id": f"eq.{pid}"}, {"comment_count": max(0, (post[0].get("comment_count") or 0) + delta)})
+                                            "select": "id,user_name,user_avatar,content,hidden,created_at,report_count,moderation"}))
 
 @admin_bp.route('/admin/api/comments/<int:cid>', methods=['POST'])
 @require_role("admin", "moderator")
 def moderate_comment(cid):
     action = body().get("action")
-    if action not in ("hide", "unhide"):
+    if action not in ("hide", "unhide", "approve", "reject"):
         return jsonify({"error": "未知的操作"}), 400
     row = sb_get("game_comments", {"id": f"eq.{cid}", "select": "post_id,hidden"})
     if not row:
         return jsonify({"error": "找不到這則留言"}), 404
-    hide = action == "hide"
+    hide = action in ("hide", "reject")
+    patch = {"hidden": hide}
+    if action in ("approve", "reject"):
+        patch["moderation"] = "approved" if action == "approve" else "removed"
+        _resolve_reports("comment", cid, "dismissed" if action == "approve" else "actioned")
+    sb_patch("game_comments", {"id": f"eq.{cid}"}, patch)
     if bool(row[0].get("hidden")) != hide:
-        sb_patch("game_comments", {"id": f"eq.{cid}"}, {"hidden": hide})
-        _adjust_comment_count(row[0]["post_id"], -1 if hide else 1)
+        adjust_comment_count(row[0]["post_id"], -1 if hide else 1)
     audit(who(), f"comment_{action}", {"id": cid})
     return jsonify({"ok": True})
 
@@ -901,7 +951,8 @@ def admin_delete_comment(cid):
         return jsonify({"error": "找不到這則留言"}), 404
     sb_delete("game_comments", {"id": f"eq.{cid}"})
     if not row[0].get("hidden"):
-        _adjust_comment_count(row[0]["post_id"], -1)
+        adjust_comment_count(row[0]["post_id"], -1)
+    _resolve_reports("comment", cid, "actioned")
     audit(who(), "comment_delete", {"id": cid, "content": (row[0].get("content") or "")[:80]})
     return jsonify({"ok": True})
 
@@ -944,3 +995,270 @@ def stats_ai():
 
 admin_bp.add_url_rule('/admin/api/ai', 'ai', require_role("admin")(lambda: jsonify({**cached("ai", stats_ai),
                                                                                      "fetched_at": datetime.now(TW).isoformat()})))
+
+# ───────── 限時活動 ─────────
+def _parse_local(s):
+    """後台表單送來的台灣時間（YYYY-MM-DDTHH:MM）"""
+    try:
+        return datetime.strptime(str(s)[:16], "%Y-%m-%dT%H:%M").replace(tzinfo=TW)
+    except ValueError:
+        return None
+
+def validate_event(d):
+    errors = []
+    name = str(d.get("name") or "").strip()
+    desc = str(d.get("description") or "").strip()
+    start, end = _parse_local(d.get("start")), _parse_local(d.get("end"))
+    if not 1 <= len(name) <= 30:
+        errors.append("活動名稱需介於 1–30 字")
+    if len(desc) > 100:
+        errors.append("活動說明最多 100 字")
+    if not start or not end:
+        errors.append("請填寫開始與結束時間")
+    elif end <= start:
+        errors.append("結束時間必須晚於開始時間")
+    try:
+        mult = round(float(d.get("multiplier")), 2)
+    except (TypeError, ValueError):
+        mult = 0
+    if not 1.1 <= mult <= 5:
+        errors.append("XP 倍率需介於 1.1–5 倍")
+    scope = d.get("scope") if d.get("scope") in EVENT_SCOPES else None
+    if not scope:
+        errors.append("請選擇活動適用範圍")
+    slugs = {g["slug"] for g in MERCHANT_GROUPS}
+    cat = d.get("category") or None
+    if cat and cat not in slugs:
+        errors.append("商家類別不正確")
+    if cat and scope not in ("all", "checkin"):
+        errors.append("指定商家類別的活動只能套用在打卡")
+    return {"name": name, "description": desc, "multiplier": mult, "scope": scope, "category": cat,
+            "enabled": bool(d.get("enabled", True)),
+            "start_at": start.astimezone(timezone.utc).isoformat() if start else None,
+            "end_at": end.astimezone(timezone.utc).isoformat() if end else None}, errors
+
+def _event_row(e):
+    now = datetime.now(TW)
+    start, end = to_tw(e.get("start_at")), to_tw(e.get("end_at"))
+    status = ("disabled" if not e.get("enabled") else "upcoming" if start and now < start
+              else "ended" if end and now > end else "active")
+    return {**e, "status": status,
+            "start_local": start.strftime("%Y-%m-%dT%H:%M") if start else "",
+            "end_local": end.strftime("%Y-%m-%dT%H:%M") if end else ""}
+
+@admin_bp.route('/admin/api/events')
+@require_role("admin")
+def admin_events():
+    rows = [_event_row(e) for e in fetch_all("game_events", "*", {"order": "start_at.desc"})]
+    return jsonify({"rows": rows, "scopes": EVENT_SCOPES,
+                    "categories": [{"slug": g["slug"], "name": g["name"], "emoji": g["emoji"]} for g in MERCHANT_GROUPS],
+                    "base": {k: game_settings()[k] for k in ("xp_checkin", "xp_quiz_correct", "xp_post")}})
+
+@admin_bp.route('/admin/api/events', methods=['POST'])
+@require_role("admin")
+def create_event():
+    clean, errors = validate_event(body())
+    if errors:
+        return jsonify({"errors": errors}), 400
+    row = sb_insert("game_events", {**clean, "created_by": who()})
+    if not row:
+        return jsonify({"errors": ["儲存失敗，請確認已建立 game_events 資料表"]}), 500
+    invalidate_events()
+    audit(who(), "event_create", {"id": row.get("id"), "name": clean["name"], "multiplier": clean["multiplier"]})
+    return jsonify(row)
+
+@admin_bp.route('/admin/api/events/<int:eid>', methods=['PUT'])
+@require_role("admin")
+def update_event(eid):
+    clean, errors = validate_event(body())
+    if errors:
+        return jsonify({"errors": errors}), 400
+    sb_patch("game_events", {"id": f"eq.{eid}"}, clean)
+    invalidate_events()
+    audit(who(), "event_update", {"id": eid, "name": clean["name"]})
+    return jsonify({"ok": True})
+
+@admin_bp.route('/admin/api/events/<int:eid>', methods=['DELETE'])
+@require_role("admin")
+def delete_event(eid):
+    sb_delete("game_events", {"id": f"eq.{eid}"})
+    invalidate_events()
+    audit(who(), "event_delete", {"id": eid})
+    return jsonify({"ok": True})
+
+# ───────── AI 出題 ─────────
+GEN_PROMPT = """你是南投在地旅遊問答遊戲的出題老師。請根據下面提供的資料，出 __N__ 題繁體中文四選一選擇題。
+規則：
+1. 只能根據提供的資料出題，不可以加入資料裡沒有的事實或數字。
+2. 每題 4 個選項，只有 1 個正確；錯誤選項要合理，但必須明確是錯的。
+3. 題目要有趣，讓旅客認識在地職人、文化與永續精神；避免考冷門數字或電話地址。
+4. answer 是正確選項的索引（0–3），正確答案請平均分散在不同位置。
+5. fact 是答題後顯示的 1–2 句補充說明（60 字以內）。
+__HINT__
+只回傳 JSON 陣列，格式：[{"question": "...", "options": ["...", "...", "...", "..."], "answer": 0, "fact": "..."}]
+
+資料：
+__CONTEXT__"""
+
+def _merchant_context(m, cat):
+    return (f"【{m['name']}】類別：{cat['name']}；地點：{m.get('address', '')}；"
+            f"特色：{'、'.join(m.get('tags') or [])}\n{m.get('description', '')}")
+
+def _norm_q(s):
+    return re.sub(r"[\s？?。，,！!「」]", "", s or "")
+
+@admin_bp.route('/admin/api/questions/generate', methods=['POST'])
+@require_role("admin", "moderator")
+def generate_questions():
+    d = body()
+    source, value = d.get("source"), d.get("value")
+    try:
+        n = max(1, min(8, int(d.get("count") or 5)))
+    except (TypeError, ValueError):
+        n = 5
+    if source == "merchant":
+        found = [(m, CATEGORIES[s]) for s in CATEGORY_ORDER for m in CATEGORIES[s]["merchants"] if m["name"] == value]
+        if not found:
+            return jsonify({"error": "找不到這家商家"}), 400
+        context = _merchant_context(*found[0])
+    elif source == "category":
+        cat = CATEGORIES.get(value)
+        if not cat:
+            return jsonify({"error": "找不到這個類別"}), 400
+        context = f"類別介紹：{cat.get('description', '')}\n\n" + "\n\n".join(_merchant_context(m, cat) for m in cat["merchants"])
+    else:
+        return jsonify({"error": "請選擇出題依據"}), 400
+    hint = str(d.get("hint") or "").strip()[:100]
+    prompt = (GEN_PROMPT.replace("__N__", str(n)).replace("__CONTEXT__", context)
+              .replace("__HINT__", f"6. 出題方向：{hint}" if hint else ""))
+    try:
+        resp = _gemini_client().models.generate_content(
+            model='gemini-2.5-flash', contents=prompt,
+            config=genai_types.GenerateContentConfig(response_mime_type='application/json', temperature=0.7))
+        items = json_mod.loads(resp.text or "[]")
+        if isinstance(items, dict):
+            items = items.get("questions") or []
+    except Exception as e:
+        print(f"❌ AI 出題失敗：{e}")
+        return jsonify({"error": "AI 出題失敗，請稍後再試"}), 502
+    existing = {_norm_q(r.get("question")) for r in fetch_all("game_questions", "question")}
+    drafts, skipped = [], 0
+    for it in items if isinstance(items, list) else []:
+        clean, errors = validate_question({**(it if isinstance(it, dict) else {}), "category": "商家知識", "enabled": True})
+        key = _norm_q(clean["question"])
+        if errors or key in existing:
+            skipped += 1
+            continue
+        existing.add(key)
+        drafts.append(clean)
+    audit(who(), "questions_ai_generate", {"source": source, "value": value, "drafts": len(drafts)})
+    return jsonify({"drafts": drafts, "skipped": skipped})
+
+# ───────── 玩家管理 ─────────
+PLAYER_COLS = "google_id,name,email,avatar_url,xp,checkin_count,post_count,quiz_played,quiz_correct,muted,certificate_sent,created_at"
+
+def _player_row(u, role):
+    li = level_info(u.get("xp") or 0)
+    row = {**u, "level": li["level"], "title": li["title"], "emoji": li["emoji"], "max_level": li["max_level"]}
+    if role != "admin":
+        row.pop("email", None)
+    return row
+
+@admin_bp.route('/admin/api/players')
+@require_role("admin", "moderator")
+def list_players():
+    q = (request.args.get("q") or "").strip().lower()
+    role = current_admin()["role"]
+    users = fetch_all("game_users", PLAYER_COLS, {"order": "xp.desc"})
+    if q:
+        users = [u for u in users if q in (u.get("name") or "").lower() or (role == "admin" and q in (u.get("email") or "").lower())]
+    if request.args.get("muted") == "1":
+        users = [u for u in users if u.get("muted")]
+    return jsonify({"rows": [_player_row(u, role) for u in users[:200]], "total": len(users)})
+
+@admin_bp.route('/admin/api/players/<gid>')
+@require_role("admin", "moderator")
+def player_detail(gid):
+    rows = sb_get("game_users", {"google_id": f"eq.{gid}", "select": PLAYER_COLS})
+    if not rows:
+        return jsonify({"error": "找不到這位玩家"}), 404
+    role = current_admin()["role"]
+    posts = sb_get("game_posts", {"google_id": f"eq.{gid}", "select": "*", "order": "id.desc", "limit": "10"})
+    answers = fetch_all("quiz_answers", "correct", {"google_id": f"eq.{gid}"})
+    return jsonify({
+        "user": _player_row(rows[0], role),
+        "checkins": sb_get("checkins", {"google_id": f"eq.{gid}", "select": "id,merchant_name,photo_url,xp_earned,created_at",
+                                        "order": "created_at.desc"}),
+        "posts": [_public_post(p) for p in posts],
+        "reports_received": sum(p.get("report_count") or 0 for p in posts),
+        "quiz": {"answers": len(answers), "correct": sum(1 for a in answers if a.get("correct"))},
+        "adjustments": sb_get("xp_adjustments", {"google_id": f"eq.{gid}", "select": "*", "order": "id.desc", "limit": "20"}),
+    })
+
+def _log_adjustment(gid, delta, reason):
+    sb_insert("xp_adjustments", {"google_id": gid, "delta": delta, "reason": reason, "admin_email": who()})
+
+@admin_bp.route('/admin/api/players/<gid>/xp', methods=['POST'])
+@require_role("admin")
+def adjust_player_xp(gid):
+    d = body()
+    try:
+        delta = int(d.get("delta"))
+    except (TypeError, ValueError):
+        delta = 0
+    reason = str(d.get("reason") or "").strip()
+    if not delta or abs(delta) > 100000:
+        return jsonify({"error": "調整數值需介於 ±1–100000"}), 400
+    if not 2 <= len(reason) <= 100:
+        return jsonify({"error": "請填寫調整原因（2–100 字）"}), 400
+    if not get_user(gid):
+        return jsonify({"error": "找不到這位玩家"}), 404
+    stats = award_xp(gid, delta)
+    _log_adjustment(gid, delta, reason)
+    audit(who(), "player_xp_adjust", {"google_id": gid, "delta": delta, "reason": reason})
+    _cache.clear()
+    return jsonify({"ok": True, "stats": stats})
+
+@admin_bp.route('/admin/api/players/<gid>/checkins/<int:cid>/revoke', methods=['POST'])
+@require_role("admin")
+def revoke_checkin(gid, cid):
+    reason = str(body().get("reason") or "").strip()
+    if not 2 <= len(reason) <= 100:
+        return jsonify({"error": "請填寫撤銷原因（2–100 字）"}), 400
+    row = sb_get("checkins", {"id": f"eq.{cid}", "google_id": f"eq.{gid}", "select": "merchant_name,xp_earned"})
+    if not row:
+        return jsonify({"error": "找不到這筆打卡"}), 404
+    xp = row[0].get("xp_earned") or 0
+    sb_delete("checkins", {"id": f"eq.{cid}"})
+    stats = award_xp(gid, -xp, {"checkin_count": -1})
+    _log_adjustment(gid, -xp, f"撤銷打卡「{row[0].get('merchant_name')}」：{reason}")
+    audit(who(), "checkin_revoke", {"google_id": gid, "id": cid, "merchant": row[0].get("merchant_name"), "xp": -xp, "reason": reason})
+    _cache.clear()
+    return jsonify({"ok": True, "stats": stats})
+
+@admin_bp.route('/admin/api/players/<gid>/mute', methods=['POST'])
+@require_role("admin", "moderator")
+def mute_player(gid):
+    d = body()
+    muted = bool(d.get("muted"))
+    reason = str(d.get("reason") or "").strip()[:100]
+    if muted and len(reason) < 2:
+        return jsonify({"error": "請填寫暫停發言的原因"}), 400
+    sb_patch("game_users", {"google_id": f"eq.{gid}"}, {"muted": muted})
+    audit(who(), "player_mute" if muted else "player_unmute", {"google_id": gid, "reason": reason})
+    return jsonify({"ok": True})
+
+@admin_bp.route('/admin/api/players/<gid>/certificate', methods=['POST'])
+@require_role("admin")
+def resend_certificate(gid):
+    u = get_user(gid)
+    if not u:
+        return jsonify({"error": "找不到這位玩家"}), 404
+    li = level_info(u.get("xp") or 0)
+    if li["level"] < li["max_level"]:
+        return jsonify({"error": "這位玩家還沒到最高等級"}), 400
+    sb_patch("game_users", {"google_id": f"eq.{gid}"}, {"certificate_sent": True})
+    threading.Thread(target=send_certificate, args=(u.get("email"), u.get("name"), u.get("xp") or 0,
+                                                    u.get("checkin_count") or 0), daemon=True).start()
+    audit(who(), "certificate_resend", {"google_id": gid})
+    return jsonify({"ok": True})

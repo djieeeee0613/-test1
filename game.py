@@ -1,4 +1,5 @@
 import os
+import json
 import time
 import uuid
 import random
@@ -48,7 +49,11 @@ DEFAULT_SETTINGS = {
     "post_daily_limit": 3,
     "quiz_round_size": 10,
     "quiz_seconds": 20,
+    "report_hide_threshold": 3,   # 被檢舉幾次自動隱藏
+    "ai_moderation": True,        # 發文、留言先經 AI 審核
+    "blocked_words": [],          # 含這些字的內容直接進待審核
 }
+PRIVATE_SETTINGS = {"levels", "report_hide_threshold", "ai_moderation", "blocked_words"}
 SETTINGS_TTL = 60
 _settings_cache = {"at": 0, "value": None}
 
@@ -73,7 +78,7 @@ def levels(s=None):
 def public_cfg(s=None):
     s = s or settings()
     top = levels(s)[-1]
-    return {**{k: v for k, v in s.items() if k != "levels"},
+    return {**{k: v for k, v in s.items() if k not in PRIVATE_SETTINGS},
             "max_level": top[1], "max_level_xp": top[0], "max_title": top[2]}
 
 MERCHANT_GROUPS = [
@@ -82,6 +87,66 @@ MERCHANT_GROUPS = [
     for s in CATEGORY_ORDER
 ]
 ALL_MERCHANTS = {m for g in MERCHANT_GROUPS for m in g['merchants']}
+MERCHANT_CATEGORY = {m: g['slug'] for g in MERCHANT_GROUPS for m in g['merchants']}
+
+# ───────── 限時活動（game_events 表）─────────
+EVENT_SCOPES = {"all": "全部", "checkin": "打卡", "quiz": "問答", "post": "發文"}
+_events_cache = {"at": 0, "value": None}
+
+def active_events():
+    if _events_cache["value"] is not None and time.time() - _events_cache["at"] < SETTINGS_TTL:
+        return _events_cache["value"]
+    now = datetime.now(timezone.utc).isoformat()
+    try:
+        rows = sb_get("game_events", {"enabled": "is.true", "start_at": f"lte.{now}", "end_at": f"gte.{now}", "select": "*"})
+    except Exception as e:
+        print(f"⚠️ 讀取限時活動失敗：{e}")
+        rows = []
+    _events_cache.update(at=time.time(), value=rows)
+    return rows
+
+def invalidate_events():
+    _events_cache["at"] = 0
+
+def xp_multiplier(kind, category=None):
+    """取符合條件的進行中活動裡最高的倍率；有指定商家類別的活動只套用在該類別的打卡"""
+    best = 1.0
+    for e in active_events():
+        if e.get("scope") not in ("all", kind):
+            continue
+        if e.get("category") and (kind != "checkin" or e["category"] != category):
+            continue
+        best = max(best, float(e.get("multiplier") or 1))
+    return best
+
+# ───────── 內容審核 ─────────
+MODERATION_PROMPT = """你是南投在地旅遊社群的內容審核員。判斷下面這則使用者發布的內容，是否需要先隱藏、等管理員人工審核。
+需要標記的情況：仇恨或歧視、騷擾或人身攻擊、色情或裸露、暴力血腥、違法內容、廣告／詐騙／垃圾訊息、洩露他人個資（電話、住址、身分證字號）。
+一般旅遊心得、抱怨或負評、情緒性但沒有攻擊特定人的發言，都不需要標記。
+只回傳 JSON：{"flag": true 或 false, "reason": "簡短的中文原因"}"""
+
+def moderate(text, image_b64=None):
+    """回傳 (類型, 原因)；沒問題時回傳 (None, None)。AI 出錯時放行，避免影響發文"""
+    s = settings()
+    low = (text or "").lower()
+    for w in s.get("blocked_words") or []:
+        if w and w.lower() in low:
+            return "keyword", f"包含禁用詞「{w}」"
+    if not s.get("ai_moderation", True):
+        return None, None
+    try:
+        parts = [types.Part(text=f"{MODERATION_PROMPT}\n\n內容：\n{(text or '')[:1000]}")]
+        if image_b64:
+            parts.insert(0, types.Part(inline_data=types.Blob(mime_type='image/jpeg', data=base64.b64decode(image_b64))))
+        resp = _gemini_client().models.generate_content(
+            model='gemini-2.5-flash', contents=types.Content(role='user', parts=parts),
+            config=types.GenerateContentConfig(response_mime_type='application/json', temperature=0))
+        d = json.loads(resp.text or "{}")
+        if d.get("flag"):
+            return "ai", str(d.get("reason") or "AI 判定內容可能不適當")[:100]
+    except Exception as e:
+        print(f"⚠️ AI 審核失敗，先放行：{e}")
+    return None, None
 
 @game_bp.app_context_processor
 def _inject_game_cfg():
@@ -170,11 +235,11 @@ def award_xp(gid, delta, inc=None):
     if not user:
         return None
     old = level_info(user.get("xp") or 0)
-    new_xp = (user.get("xp") or 0) + delta
+    new_xp = max(0, (user.get("xp") or 0) + delta)
     new = level_info(new_xp)
     patch = {"xp": new_xp, "level": new["level"], "title": new["title"]}
     for col, n in (inc or {}).items():
-        patch[col] = (user.get(col) or 0) + n
+        patch[col] = max(0, (user.get(col) or 0) + n)
 
     if new["level"] == new["max_level"] and not user.get("certificate_sent"):
         patch["certificate_sent"] = True
@@ -320,7 +385,7 @@ def certificate_page(gid):
 def _user_payload(user):
     return {"user": {k: user.get(k) for k in
                      ("google_id", "name", "avatar_url", "xp", "checkin_count",
-                      "quiz_correct", "quiz_played", "post_count", "certificate_sent")},
+                      "quiz_correct", "quiz_played", "post_count", "certificate_sent", "muted")},
             "level_info": level_info(user.get("xp") or 0)}
 
 @game_bp.route('/api/game/login', methods=['POST'])
@@ -368,12 +433,13 @@ def checkin():
     if not photo_has_person(image):
         return jsonify({"error": "緣投在照片裡沒看到你耶！請拍一張有你本人入鏡的照片 📸"}), 400
 
-    xp = settings()["xp_checkin"]
+    mult = xp_multiplier("checkin", MERCHANT_CATEGORY.get(merchant))
+    xp = round(settings()["xp_checkin"] * mult)
     photo_url = upload_image(image, "checkins", gid)
     sb_insert("checkins", {"google_id": gid, "merchant_name": merchant,
                            "xp_earned": xp, "photo_url": photo_url})
     stats = award_xp(gid, xp, {"checkin_count": 1})
-    return jsonify({"xp_earned": xp, "photo_url": photo_url, "new_stats": stats})
+    return jsonify({"xp_earned": xp, "multiplier": mult, "photo_url": photo_url, "new_stats": stats})
 
 # ───────── 問答大挑戰 ─────────
 QUIZ_SESSIONS = {}
@@ -429,6 +495,8 @@ def quiz_answer():
     perfect = done and s["correct"] == len(s["qs"])
     if perfect:
         xp += cfg["xp_quiz_perfect"]
+    mult = xp_multiplier("quiz")
+    xp = round(xp * mult)
     s["xp"] += xp
 
     inc = {"quiz_correct": 1} if correct else {}
@@ -438,7 +506,7 @@ def quiz_answer():
     stats = award_xp(gid, xp, inc)
     return jsonify({"correct": correct, "correct_answer": q["answer"], "fact": q["fact"],
                     "xp_earned": xp, "streak": s["streak"], "done": done, "perfect": perfect,
-                    "round_correct": s["correct"], "round_xp": s["xp"], "new_stats": stats})
+                    "round_correct": s["correct"], "round_xp": s["xp"], "multiplier": mult, "new_stats": stats})
 
 # ───────── 旅人動態 ─────────
 @game_bp.route('/api/game/posts')
@@ -460,7 +528,8 @@ def list_posts():
             p["liked"] = p["id"] in liked
             p["mine"] = p["google_id"] == gid
     for p in posts:
-        p.pop("google_id", None)
+        for k in ("google_id", "moderation", "moderation_reason", "report_count"):
+            p.pop(k, None)
     return jsonify(posts)
 
 @game_bp.route('/api/game/posts', methods=['POST'])
@@ -473,30 +542,37 @@ def create_post():
     merchant = data.get("merchant_name") or None
     if merchant and merchant not in ALL_MERCHANTS:
         merchant = None
+    user = get_user(gid) or {}
+    if user.get("muted"):
+        return jsonify({"error": "你的帳號目前被暫停發言，如有疑問請聯絡我們"}), 403
 
+    flag, reason = moderate(content, data.get("image"))
     image_url = None
     if data.get("image"):
         image_url = upload_image(data["image"], "posts", gid)
     elif (data.get("image_url") or "").startswith(STORAGE_PUBLIC_PREFIX):
         image_url = data["image_url"]
 
-    user = get_user(gid) or {}
     post = sb_insert("game_posts", {
         "google_id": gid, "user_name": user.get("name"), "user_avatar": user.get("avatar_url"),
         "user_level": level_info(user.get("xp") or 0)["level"],
         "content": content, "merchant_name": merchant, "image_url": image_url,
-        "likes": 0, "comment_count": 0})
+        "likes": 0, "comment_count": 0, "hidden": bool(flag), "moderation": flag, "moderation_reason": reason})
     if not post:
         return jsonify({"error": "發文失敗，請稍後再試"}), 500
+    if flag:
+        return jsonify({"pending_review": True, "xp_earned": 0})
 
     today = datetime.now(TW).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
     posted_today = sb_get("game_posts", {"google_id": f"eq.{gid}", "created_at": f"gte.{today}", "select": "id"})
     s = settings()
-    xp = s["xp_post"] if len(posted_today) <= s["post_daily_limit"] else 0
+    mult = xp_multiplier("post")
+    xp = round(s["xp_post"] * mult) if len(posted_today) <= s["post_daily_limit"] else 0
     stats = award_xp(gid, xp, {"post_count": 1})
-    post.pop("google_id", None)
+    for k in ("google_id", "moderation", "moderation_reason", "report_count"):
+        post.pop(k, None)
     post.update({"liked": False, "mine": True})
-    return jsonify({"post": post, "xp_earned": xp, "new_stats": stats})
+    return jsonify({"post": post, "xp_earned": xp, "multiplier": mult, "new_stats": stats})
 
 @game_bp.route('/api/game/posts/<int:pid>', methods=['DELETE'])
 def delete_post(pid):
@@ -532,8 +608,11 @@ def toggle_like(pid):
 
 @game_bp.route('/api/game/posts/<int:pid>/comments')
 def list_comments(pid):
-    rows = sb_get("game_comments", {"post_id": f"eq.{pid}", "select": "id,user_name,user_avatar,content,created_at",
+    rows = sb_get("game_comments", {"post_id": f"eq.{pid}", "select": "id,google_id,user_name,user_avatar,content,created_at",
                                     "hidden": "not.is.true", "order": "id.asc", "limit": "50"})
+    gid = session.get("gid")
+    for r in rows:
+        r["mine"] = r.pop("google_id") == gid
     return jsonify(rows)
 
 @game_bp.route('/api/game/posts/<int:pid>/comments', methods=['POST'])
@@ -546,12 +625,72 @@ def add_comment(pid):
     if not post:
         return jsonify({"error": "貼文不存在"}), 404
     user = get_user(gid) or {}
+    if user.get("muted"):
+        return jsonify({"error": "你的帳號目前被暫停發言，如有疑問請聯絡我們"}), 403
+    flag, reason = moderate(content)
     row = sb_insert("game_comments", {"post_id": pid, "google_id": gid, "user_name": user.get("name"),
-                                      "user_avatar": user.get("avatar_url"), "content": content})
+                                      "user_avatar": user.get("avatar_url"), "content": content,
+                                      "hidden": bool(flag), "moderation": flag, "moderation_reason": reason})
+    if flag:
+        return jsonify({"pending_review": True})
     sb_patch("game_posts", {"id": f"eq.{pid}"}, {"comment_count": (post[0].get("comment_count") or 0) + 1})
     if row:
-        row.pop("google_id", None)
+        for k in ("google_id", "moderation", "moderation_reason", "report_count", "hidden"):
+            row.pop(k, None)
+        row["mine"] = True
     return jsonify(row or {})
+
+# ───────── 檢舉 ─────────
+REPORT_REASONS = ["不當言論", "騷擾或攻擊", "廣告或垃圾訊息", "洩露個人隱私", "其他"]
+
+def adjust_comment_count(pid, delta):
+    post = sb_get("game_posts", {"id": f"eq.{pid}", "select": "comment_count"})
+    if post:
+        sb_patch("game_posts", {"id": f"eq.{pid}"}, {"comment_count": max(0, (post[0].get("comment_count") or 0) + delta)})
+
+@game_bp.route('/api/game/report', methods=['POST'])
+def report_content():
+    gid = current_gid()
+    d = request.json or {}
+    kind, tid = d.get("type"), d.get("id")
+    if kind not in ("post", "comment") or not isinstance(tid, int):
+        return jsonify({"error": "檢舉資料不正確"}), 400
+    reason = d.get("reason") if d.get("reason") in REPORT_REASONS else "其他"
+    table = "game_posts" if kind == "post" else "game_comments"
+    cols = "google_id,report_count,moderation,hidden" + (",post_id" if kind == "comment" else "")
+    row = sb_get(table, {"id": f"eq.{tid}", "select": cols})
+    if not row:
+        return jsonify({"error": "找不到這則內容"}), 404
+    row = row[0]
+    if row.get("google_id") == gid:
+        return jsonify({"error": "不能檢舉自己的內容"}), 400
+    if sb_get("game_reports", {"target_type": f"eq.{kind}", "target_id": f"eq.{tid}", "google_id": f"eq.{gid}", "select": "id"}):
+        return jsonify({"ok": True, "already": True})
+    sb_insert("game_reports", {"target_type": kind, "target_id": tid, "google_id": gid, "reason": reason, "status": "open"})
+    count = (row.get("report_count") or 0) + 1
+    patch = {"report_count": count}
+    if count >= settings()["report_hide_threshold"] and row.get("moderation") != "approved" and not row.get("hidden"):
+        patch.update(hidden=True, moderation="reports", moderation_reason=f"被檢舉 {count} 次")
+        if kind == "comment":
+            adjust_comment_count(row["post_id"], -1)
+    sb_patch(table, {"id": f"eq.{tid}"}, patch)
+    return jsonify({"ok": True})
+
+# ───────── 限時活動（玩家端）─────────
+def public_event(e):
+    cat = next((g for g in MERCHANT_GROUPS if g["slug"] == e.get("category")), None)
+    return {"name": e.get("name"), "description": e.get("description"), "multiplier": float(e.get("multiplier") or 1),
+            "scope": e.get("scope"), "scope_name": EVENT_SCOPES.get(e.get("scope"), ""),
+            "category_name": f"{cat['emoji']} {cat['name']}" if cat else None,
+            "start_at": e.get("start_at"), "end_at": e.get("end_at")}
+
+@game_bp.route('/api/game/events')
+def list_events():
+    now = datetime.now(timezone.utc)
+    soon = (now + timedelta(days=7)).isoformat()
+    upcoming = sb_get("game_events", {"enabled": "is.true", "start_at": f"gt.{now.isoformat()}", "select": "*", "order": "start_at.asc"})
+    upcoming = [e for e in upcoming if (e.get("start_at") or "") <= soon][:3]
+    return jsonify({"active": [public_event(e) for e in active_events()], "upcoming": [public_event(e) for e in upcoming]})
 
 # ───────── 排行榜 ─────────
 @game_bp.route('/api/game/leaderboard')
