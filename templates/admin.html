@@ -50,12 +50,18 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .me { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .me img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
 .role { font-size: 11px; padding: 2px 8px; border-radius: 8px; background: var(--green-soft); color: var(--green); font-weight: 700; }
-.sidebar { position: fixed; top: var(--topbar); bottom: 0; left: 0; width: var(--sidebar); background: var(--green); color: #fff; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; z-index: 40; transition: transform .35s; }
+.sidebar { position: fixed; top: var(--topbar); bottom: 0; left: 0; width: var(--sidebar); background: var(--green); color: #fff; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; z-index: 40; transition: transform .35s; overflow-y: auto; }
 .nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 12px; font-size: 14px; color: rgba(255,255,255,.78); text-align: left; transition: background .2s; }
 .nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
 .nav-item.active { background: rgba(255,255,255,.15); color: #fff; font-weight: 700; box-shadow: inset 3px 0 0 var(--gold); }
 .nav-item .ic { width: 22px; text-align: center; }
-.nav-sep { font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,.4); padding: 14px 14px 6px; }
+.nav-sep { width: 100%; display: flex; align-items: center; justify-content: space-between; font-size: 12px; letter-spacing: 2px; color: rgba(255,255,255,.55); padding: 12px 14px 6px; border-radius: 10px; font-weight: 700; }
+.nav-sep:hover { color: #fff; }
+.nav-sep .chev { font-size: 11px; transition: transform .25s; }
+.nav-group.collapsed .chev { transform: rotate(-90deg); }
+.nav-items { display: flex; flex-direction: column; gap: 2px; overflow: hidden; max-height: 600px; transition: max-height .3s ease, opacity .25s; }
+.nav-group.collapsed .nav-items { max-height: 0; opacity: 0; }
+.nav-group.has-active.collapsed .nav-sep { color: var(--gold); }
 .side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 4px; }
 .side-foot a, .side-foot button { color: rgba(255,255,255,.7); font-size: 13px; padding: 9px 14px; border-radius: 10px; text-decoration: none; text-align: left; }
 .side-foot a:hover, .side-foot button:hover { background: rgba(255,255,255,.08); color: #fff; }
@@ -247,20 +253,32 @@ tr:hover td { background: #fafbf9; }
   </header>
 
   <aside class="sidebar">
-    <div class="nav-sep" data-role="admin">營運</div>
-    <button class="nav-item" data-view="overview" data-role="admin"><span class="ic">📊</span>總覽</button>
-    <button class="nav-item" data-view="bookings" data-role="admin"><span class="ic">📅</span>預約分析</button>
-    <button class="nav-item" data-view="merchants" data-role="admin"><span class="ic">🏪</span>商家表現</button>
-    <button class="nav-item" data-view="map" data-role="admin"><span class="ic">🗺️</span>地圖視角</button>
-    <button class="nav-item" data-view="impact" data-role="admin"><span class="ic">🌱</span>永續影響力</button>
-    <button class="nav-item" data-view="ai" data-role="admin"><span class="ic">🤖</span>AI 嚮導</button>
-    <div class="nav-sep">遊戲</div>
-    <button class="nav-item" data-view="game" data-role="admin moderator"><span class="ic">🎮</span>遊戲分析</button>
-    <button class="nav-item" data-view="settings" data-role="admin"><span class="ic">⚙️</span>遊戲設定</button>
-    <button class="nav-item" data-view="questions" data-role="admin moderator"><span class="ic">🧠</span>題目管理</button>
-    <button class="nav-item" data-view="feed" data-role="admin moderator"><span class="ic">💬</span>動態管理</button>
-    <div class="nav-sep" data-role="admin">系統</div>
-    <button class="nav-item" data-view="system" data-role="admin"><span class="ic">🩺</span>系統健康</button>
+    <div class="nav-group" data-group="ops" data-role="admin">
+      <button class="nav-sep" onclick="toggleGroup('ops')">營運<span class="chev">▾</span></button>
+      <div class="nav-items">
+        <button class="nav-item" data-view="overview" data-role="admin"><span class="ic">📊</span>總覽</button>
+        <button class="nav-item" data-view="bookings" data-role="admin"><span class="ic">📅</span>預約分析</button>
+        <button class="nav-item" data-view="merchants" data-role="admin"><span class="ic">🏪</span>商家表現</button>
+        <button class="nav-item" data-view="map" data-role="admin"><span class="ic">🗺️</span>地圖視角</button>
+        <button class="nav-item" data-view="impact" data-role="admin"><span class="ic">🌱</span>永續影響力</button>
+        <button class="nav-item" data-view="ai" data-role="admin"><span class="ic">🤖</span>AI 嚮導</button>
+      </div>
+    </div>
+    <div class="nav-group" data-group="game">
+      <button class="nav-sep" onclick="toggleGroup('game')">遊戲<span class="chev">▾</span></button>
+      <div class="nav-items">
+        <button class="nav-item" data-view="game" data-role="admin moderator"><span class="ic">🎮</span>遊戲分析</button>
+        <button class="nav-item" data-view="settings" data-role="admin"><span class="ic">⚙️</span>遊戲設定</button>
+        <button class="nav-item" data-view="questions" data-role="admin moderator"><span class="ic">🧠</span>題目管理</button>
+        <button class="nav-item" data-view="feed" data-role="admin moderator"><span class="ic">💬</span>動態管理</button>
+      </div>
+    </div>
+    <div class="nav-group" data-group="sys" data-role="admin">
+      <button class="nav-sep" onclick="toggleGroup('sys')">系統<span class="chev">▾</span></button>
+      <div class="nav-items">
+        <button class="nav-item" data-view="system" data-role="admin"><span class="ic">🩺</span>系統健康</button>
+      </div>
+    </div>
     <div class="side-foot">
       <a href="/">🏠 回網站首頁</a>
       <button onclick="logout()">🚪 登出</button>
@@ -344,7 +362,7 @@ const softGrid = { grid: { color: '#f0f1ee' }, beginAtZero: true, ticks: { preci
 async function api(path) {
   const r = await fetch(path + (fresh ? (path.includes('?') ? '&' : '?') + 'fresh=1' : ''), { credentials: 'same-origin' });
   if (r.status === 401) { location.reload(); throw new Error('unauth'); }
-  const d = await r.json();
+  const d = await r.json().catch(() => { throw new Error(`伺服器錯誤（${r.status}），請稍後再試或通知技術人員`); });
   if (!r.ok) throw new Error(d.error || r.status);
   if (d.fetched_at) $('updated').textContent = '資料更新於 ' + new Date(d.fetched_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
   return d;
@@ -397,10 +415,24 @@ function start() {
   go(allowed.includes(want) ? want : allowed[0]);
 }
 document.querySelectorAll('.nav-item').forEach(b => b.onclick = () => go(b.dataset.view));
+function navCollapsed() { try { return JSON.parse(localStorage.getItem('admin-nav-collapsed') || '[]'); } catch (e) { return []; } }
+function toggleGroup(name) {
+  const g = document.querySelector(`.nav-group[data-group="${name}"]`);
+  g.classList.toggle('collapsed');
+  const set = new Set(navCollapsed());
+  g.classList.contains('collapsed') ? set.add(name) : set.delete(name);
+  try { localStorage.setItem('admin-nav-collapsed', JSON.stringify([...set])); } catch (e) {}
+}
+navCollapsed().forEach(n => document.querySelector(`.nav-group[data-group="${n}"]`)?.classList.add('collapsed'));
 function go(view) {
   current = view;
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'v-' + view));
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  document.querySelectorAll('.nav-group').forEach(g => {
+    const has = !!g.querySelector(`.nav-item[data-view="${view}"]`);
+    g.classList.toggle('has-active', has);
+    if (has && g.classList.contains('collapsed')) toggleGroup(g.dataset.group);
+  });
   history.replaceState(null, '', '#' + view);
   document.body.classList.remove('nav-open');
   if (!loaded[view]) render(view);

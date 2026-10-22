@@ -387,8 +387,8 @@ def stats_impact(d):
 def stats_game(d):
     users = d["users"]
     by_level = Counter(level_info(u.get("xp") or 0)["level"] for u in users)
-    levels = [{"level": lv, "title": title, "emoji": emoji, "min_xp": xp, "count": by_level.get(lv, 0),
-               "reached": sum(c for l, c in by_level.items() if l >= lv)} for xp, lv, title, emoji in levels()]
+    level_rows = [{"level": lv, "title": title, "emoji": emoji, "min_xp": xp, "count": by_level.get(lv, 0),
+                   "reached": sum(c for l, c in by_level.items() if l >= lv)} for xp, lv, title, emoji in levels()]
     labels, reg = daily_series([to_tw(u.get("created_at")) for u in users])
     _, ck = daily_series([to_tw(c.get("created_at")) for c in d["checkins"]])
     _, posts = daily_series([to_tw(p.get("created_at")) for p in d["posts"]])
@@ -404,7 +404,7 @@ def stats_game(d):
                    "checkins": len(d["checkins"]), "posts": len(d["posts"]), "comments": len(d["comments"]),
                    "likes": sum(p.get("likes") or 0 for p in d["posts"]),
                    "quiz_rounds": played, "quiz_correct": correct},
-        "levels": levels,
+        "levels": level_rows,
         "trend": {"labels": labels, "players": reg, "checkins": ck, "posts": posts, "comments": cmts},
         "checkin_vs_booking": [{"name": r["name"], "checkins": r["checkins"], "bookings": r["bookings"]} for r in top_ck],
         "top_players": [{"name": u.get("name"), "avatar": u.get("avatar_url"), "xp": u.get("xp") or 0,
