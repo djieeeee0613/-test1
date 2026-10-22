@@ -10,8 +10,7 @@ import traceback
 import requests
 from datetime import datetime, date, timezone, timedelta
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify, render_template, render_template_string, Response
-from functools import wraps
+from flask import Flask, request, jsonify, render_template, render_template_string
 from google import genai
 from merchants_data import CATEGORIES, CATEGORY_ORDER
 from google.genai import types
@@ -53,39 +52,6 @@ def load_bookings():
             return json.load(f)
     return []
 
-def load_bookings_from_supabase():
-    """從 Supabase 讀取預約記錄，失敗時 fallback 到本機 JSON"""
-    try:
-        resp = requests.get(
-            f"{SUPABASE_URL}/rest/v1/bookings",
-            params={"select": "*", "order": "id.desc"},
-            headers={"apikey": SUPABASE_KEY},
-            timeout=8
-        )
-        if resp.status_code == 200:
-            rows = resp.json()
-            result = []
-            for r in rows:
-                created = r.get('created_at', '')
-                timestamp = created[:16].replace('T', ' ') if created else '—'
-                result.append({
-                    'id': r.get('booking_id', str(r.get('id', ''))),
-                    'timestamp': timestamp,
-                    'artisan': r.get('artisan', ''),
-                    'date': r.get('booking_date', ''),
-                    'pax': r.get('people_count', ''),
-                    'customer': r.get('customer_name', ''),
-                    'phone': r.get('phone', ''),
-                    'email': r.get('email', ''),
-                    'status': r.get('status', '待確認'),
-                    'rating': r.get('rating'),
-                    'rating_comment': r.get('rating_comment', ''),
-                })
-            return result
-    except Exception as e:
-        print(f"❌ Supabase 讀取預約失敗：{e}")
-    return load_bookings()
-
 def save_bookings(bookings):
     with open(BOOKINGS_FILE, 'w', encoding='utf-8') as f:
         json.dump(bookings, f, ensure_ascii=False, indent=2)
@@ -112,21 +78,10 @@ client = genai.Client(api_key=GEMINI_API_KEY)
 N8N_WEBHOOK_URL = os.getenv("N8N_WEBHOOK_URL", "https://nantoutravel.app.n8n.cloud/webhook/nantou-booking")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "https://gbffodvtfirdtecsespm.supabase.co")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-MERCHANT_PASSWORD = os.getenv("MERCHANT_PASSWORD", "nantou2026")
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(32)
 app.permanent_session_lifetime = timedelta(days=30)
 app.config.update(SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_HTTPONLY=True)
-
-def require_auth(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth = request.authorization
-        if not auth or auth.password != MERCHANT_PASSWORD:
-            return Response("請輸入密碼", 401,
-                {'WWW-Authenticate': 'Basic realm="商家後台"'})
-        return f(*args, **kwargs)
-    return decorated
 
 # ==========================================
 # 2. AI 工具函式
@@ -500,89 +455,6 @@ def view_plan(plan_id):
 </div>
 </body>
 </html>""", plan_id=plan_id, created_at=plan['created_at'], content=text)
-
-# --- 商家管理後台 ---
-@app.route('/merchant')
-@require_auth
-def merchant_dashboard():
-    bookings = load_bookings_from_supabase()
-    rows = ""
-    status_colors = {"待確認": "#f59e0b", "已確認": "#10b981", "已婉拒": "#ef4444"}
-    for b in reversed(bookings):
-        color = status_colors.get(b.get("status", ""), "#6b7280")
-        stars = "⭐" * int(b["rating"]) if b.get("rating") else "—"
-        rows += f"""<tr>
-            <td><code>{b.get('id','')}</code></td>
-            <td>{b.get('timestamp','')}</td>
-            <td><strong>{b.get('artisan','')}</strong></td>
-            <td>{b.get('date','')}</td>
-            <td style="text-align:center">{b.get('pax','')}人</td>
-            <td>{b.get('customer','')}</td>
-            <td>{b.get('phone','')}</td>
-            <td style="color:{color};font-weight:bold">{b.get('status','')}</td>
-            <td>{stars}</td>
-            <td style="font-size:12px;color:#999">{b.get('rating_comment','')}</td>
-        </tr>"""
-    total = len(bookings)
-    confirmed = sum(1 for b in bookings if b.get('status') == '已確認')
-    pending = sum(1 for b in bookings if b.get('status') == '待確認')
-    avg_rating = None
-    rated = [b['rating'] for b in bookings if b.get('rating')]
-    if rated:
-        avg_rating = round(sum(rated) / len(rated), 1)
-    return render_template_string("""<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>南投職人平台 — 商家後台</title>
-<style>
-  :root{--primary:#4A5D4E;}
-  *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Helvetica Neue',Arial,sans-serif;background:#f5f5f0;color:#333;}
-  header{background:var(--primary);color:white;padding:18px 32px;display:flex;justify-content:space-between;align-items:center;}
-  header h1{font-size:18px;letter-spacing:1px;}
-  .refresh-btn{background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);padding:6px 16px;border-radius:16px;cursor:pointer;font-size:13px;}
-  .stats{display:flex;gap:16px;padding:24px 32px;}
-  .stat{background:white;border-radius:14px;padding:20px 28px;flex:1;box-shadow:0 2px 10px rgba(0,0,0,0.06);}
-  .stat .num{font-size:38px;font-weight:900;color:var(--primary);line-height:1;}
-  .stat .num.green{color:#10b981;}
-  .stat .num.amber{color:#f59e0b;}
-  .stat .num.star{color:#f59e0b;}
-  .stat .label{font-size:13px;color:#888;margin-top:6px;}
-  .wrap{margin:0 32px 32px;background:white;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,0.06);}
-  table{width:100%;border-collapse:collapse;font-size:13px;}
-  th{background:var(--primary);color:white;padding:11px 14px;text-align:left;font-weight:600;white-space:nowrap;}
-  td{padding:11px 14px;border-bottom:1px solid #f3f3f0;}
-  tr:hover td{background:#fafaf7;}
-  code{background:#f0f0e8;padding:2px 6px;border-radius:4px;font-size:12px;}
-  .empty{text-align:center;padding:48px;color:#aaa;font-size:15px;}
-</style>
-</head>
-<body>
-<header>
-  <h1>🌿 南投職人旅遊平台 — 商家管理後台</h1>
-  <button class="refresh-btn" onclick="location.reload()">⟳ 刷新</button>
-</header>
-<div class="stats">
-  <div class="stat"><div class="num">{{ total }}</div><div class="label">總預約數</div></div>
-  <div class="stat"><div class="num green">{{ confirmed }}</div><div class="label">已確認</div></div>
-  <div class="stat"><div class="num amber">{{ pending }}</div><div class="label">待確認</div></div>
-  <div class="stat"><div class="num star">{{ avg_rating or '—' }}</div><div class="label">平均評分（滿 5 分）</div></div>
-</div>
-<div class="wrap">
-{% if rows %}
-<table>
-  <tr><th>編號</th><th>預約時間</th><th>職人商家</th><th>體驗日期</th><th>人數</th><th>旅客姓名</th><th>電話</th><th>狀態</th><th>評分</th><th>旅客評語</th></tr>
-  {{ rows|safe }}
-</table>
-{% else %}
-<div class="empty">尚無預約記錄</div>
-{% endif %}
-</div>
-<script>setTimeout(()=>location.reload(), 30000);</script>
-</body>
-</html>""", rows=rows, total=total, confirmed=confirmed, pending=pending, avg_rating=avg_rating)
 
 # --- 旅客評價頁 ---
 @app.route('/rate/<booking_id>')

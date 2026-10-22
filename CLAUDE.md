@@ -32,12 +32,10 @@ python app.py
 `.env`（不進 git，本機開發用）：
 ```
 GEMINI_API_KEY=你的金鑰
-MERCHANT_PASSWORD=商家後台密碼（預設 nantou2026）
 ```
 
 Render 環境變數（在 Render dashboard 設定）：
 - `GEMINI_API_KEY`
-- `MERCHANT_PASSWORD`
 - `N8N_WEBHOOK_URL`（預設 https://nantoutravel.app.n8n.cloud/webhook/nantou-booking）
 - `SUPABASE_URL`（https://gbffodvtfirdtecsespm.supabase.co）
 - `SUPABASE_KEY`（Supabase anon key）
@@ -76,8 +74,8 @@ Render 環境變數（在 Render dashboard 設定）：
                                          → Gmail OAuth2 寄信給旅客
                              → 陌生訊息：回覆介紹文案
 
-商家後台（基本驗證）
-  → GET /merchant → HTTP Basic Auth（MERCHANT_PASSWORD）→ 從 Supabase bookings 讀取預約記錄
+管理後台
+  → GET /admin → Google 登入（ADMIN_EMAILS / MODERATOR_EMAILS）→ 從 Supabase 統計預約、商家、遊戲資料 + n8n API 狀態
 ```
 
 ### `app.py` 關鍵細節
@@ -88,7 +86,6 @@ Render 環境變數（在 Render dashboard 設定）：
 - **容錯**：`candidate.parts` 可能為 `None`（Gemini 偶發），已加 guard；503 自動指數退避重試，fallback 到 `gemini-2.0-flash`
 - **對話記憶**：前端維護 `conversationHistory[]`，每次請求帶 `history` 陣列（最多 20 輪），後端 rebuild `contents`
 - **速率限制**：`check_rate(ip, limit=20, window=60)`，超過 20 req/min 回傳 429
-- **商家後台**：`/merchant` 路由加 `require_auth` decorator，讀取 `MERCHANT_PASSWORD` 環境變數，從 Supabase bookings 撈資料
 - **日期解析**：`_parse_booking_date()` 先嘗試含年份格式，再嘗試無年份格式（自動補當年，若已過期則補明年）
 - **預約驗證規則**：AI 絕對不可呼叫 `search_local_merchants` 驗證店名；日期字串原樣傳入，年份由後端處理
 - **活動 API**：`GET /api/events` 從 Supabase events 撈 active=true 的活動，前端輪播用
@@ -168,7 +165,8 @@ Render 環境變數（在 Render dashboard 設定）：
 
 - 後端在 `admin.py`（Flask Blueprint），前端 `templates/admin.html`（Chart.js 4.4.1 + Leaflet）
 - **登入**：Google 登入 → `POST /admin/api/login`，email 必須已驗證且在 `ADMIN_EMAILS`（管理員）或 `MODERATOR_EMAILS`（內容審核，只能看遊戲分析）名單內；每次請求都重新比對名單，移出名單即失效
-- **頁面**：總覽、預約分析、商家表現、地圖視角、永續影響力、遊戲分析、系統健康
+- **頁面**：總覽、預約分析（含全部預約清單：搜尋、篩選、分頁、匯出 CSV）、商家表現、地圖視角、永續影響力、遊戲分析、系統健康
+- **地圖圖示**：Font Awesome Free 6.5.1（cdnjs），每個類別一個圖示，對照表在 `admin.html` 的 `CAT_ICON`
 - **資料**：`load_data()` 分頁讀取 Supabase 全表（每頁 1000 筆），在 Flask 端統計，快取 60 秒；`?fresh=1`（右上角重新整理）略過快取
 - **商家名稱比對**：`match_merchant()` 依序做完全比對、包含比對、`difflib` 模糊比對（cutoff 0.7），把 AI 送出的店名對應回 `merchants_data` 的 46 家；對不到的列在「商家表現」頁
 - **地圖座標**：商家座標放在 `static/js/locations.js`（首頁與後台共用），後台前端用 bigram 相似度把座標對應到統計資料
@@ -196,10 +194,10 @@ Render 環境變數（在 Render dashboard 設定）：
 
 ## 安全性注意事項
 
-- `.env` 不進 git（含 `GEMINI_API_KEY`、`MERCHANT_PASSWORD`）
+- `.env` 不進 git（含 `GEMINI_API_KEY`）
 - `n8n_*.json` 含 LINE Channel Access Token，已加入 `.gitignore`
 - 速率限制保護 `/api/chat`（20 req/min per IP）
-- `/merchant` 後台以 HTTP Basic Auth 保護
+- `/admin` 管理後台以 Google 登入 + email 白名單保護（舊的 `/merchant` 共用密碼後台已移除）
 
 ## 資料庫商家清單（46 筆）
 

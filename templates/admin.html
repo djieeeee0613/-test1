@@ -7,6 +7,7 @@
 <title>管理後台 — 南投職人旅遊</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://accounts.google.com/gsi/client" async></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -140,6 +141,19 @@ tr:hover td { background: #fafbf9; }
 .meter { height: 10px; background: var(--bg); border-radius: 6px; overflow: hidden; margin-top: 10px; }
 .meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--gold)); border-radius: 6px; }
 #map-admin { height: 560px; border-radius: 14px; }
+.pin { width: var(--s); height: var(--s); border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+  background: var(--c); border: 2px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,.3);
+  display: grid; place-items: center; position: relative; transition: transform .2s; }
+.pin:hover { transform: rotate(-45deg) scale(1.12); }
+.pin i { transform: rotate(45deg); color: #fff; font-size: calc(var(--s) * .44); }
+.pin .cnt { position: absolute; top: -8px; right: -8px; transform: rotate(45deg); min-width: 20px; height: 20px;
+  padding: 0 5px; border-radius: 10px; background: #fff; color: var(--c); font: 700 11px/16px 'Noto Sans TC', sans-serif;
+  border: 2px solid var(--c); text-align: center; }
+.pin.zero { background: #fff; border: 2px dashed #9ca3af; box-shadow: none; opacity: .9; }
+.pin.zero i { color: #9ca3af; }
+.map-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 12px 8px 4px; font-size: 12px; color: var(--muted); }
+.map-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.map-legend .dot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 11px; }
 .post-mini { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f1ee; }
 .post-mini img { width: 54px; height: 54px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
 .post-mini .c { font-size: 13px; line-height: 1.6; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
@@ -184,7 +198,6 @@ tr:hover td { background: #fafbf9; }
     <div class="nav-sep" data-role="admin">系統</div>
     <button class="nav-item" data-view="system" data-role="admin"><span class="ic">🩺</span>系統健康</button>
     <div class="side-foot">
-      <a href="/merchant">🧾 舊版商家後台</a>
       <a href="/">🏠 回網站首頁</a>
       <button onclick="logout()">🚪 登出</button>
     </div>
@@ -207,7 +220,7 @@ tr:hover td { background: #fafbf9; }
       <div class="page-head"><div><h1>🗺️ 地圖視角</h1><p>旅客去了哪裡？哪些職人還沒被看見？</p></div>
         <div class="seg" id="map-seg"><button data-k="visits" class="on">全部造訪</button><button data-k="bookings">只看預約</button><button data-k="checkins">只看打卡</button></div></div>
       <div class="grid" style="grid-template-columns: minmax(0,1fr) 300px" id="map-grid">
-        <div class="card" style="padding:8px"><div id="map-admin"></div></div>
+        <div class="card" style="padding:8px"><div id="map-admin"></div><div class="map-legend" id="map-legend"></div></div>
         <div class="card"><h3>🧊 冷門商家</h3><div class="q">還沒有任何預約或打卡，下一波推廣的對象</div><div id="map-cold"></div></div>
       </div>
     </div>
@@ -390,10 +403,17 @@ async function renderBookings() {
       <div class="card"><h3>📆 提前多久預訂</h3><div class="q">臨時起意還是提早規劃？</div><div class="chart-box short"><canvas id="ch-lead"></canvas></div></div>
       <div class="card"><h3>👥 團體人數</h3><div class="q">多是情侶、家庭還是團體？</div><div class="chart-box short"><canvas id="ch-pax"></canvas></div></div>
     </div>
-    <div class="card" style="margin-top:14px"><h3>🧾 最新 20 筆預約</h3><div class="table-wrap"><table>
-      <tr><th>下單時間</th><th>編號</th><th>商家</th><th>體驗日期</th><th>人數</th><th>旅客</th><th>狀態</th></tr>
-      ${d.recent.map(b => `<tr><td>${esc(b.created)}</td><td><code>${esc(b.id)}</code></td><td>${esc(b.artisan)}</td><td>${esc(b.date)}</td><td>${b.pax}</td><td>${esc(b.customer)}</td><td><span class="tag ${b.status === '已確認' ? 't-ok' : b.status === '已婉拒' ? 't-bad' : 't-warn'}">${esc(b.status)}</span></td></tr>`).join('') || '<tr><td colspan="7" class="empty">尚無預約</td></tr>'}
-    </table></div></div>`;
+    <div class="card" style="margin-top:14px" id="booking-list"><h3>🧾 全部預約</h3><div class="q">可搜尋旅客、電話、編號或商家；匯出 CSV 可用 Excel 開啟</div>
+      <div class="filters">
+        <input id="bl-q" placeholder="🔍 搜尋旅客 / 電話 / 編號 / 商家" oninput="blPage=0;drawBookingList()" style="min-width:240px">
+        <select id="bl-status" onchange="blPage=0;drawBookingList()"><option value="">全部狀態</option><option>待確認</option><option>已確認</option><option>已婉拒</option></select>
+        <select id="bl-when" onchange="blPage=0;drawBookingList()"><option value="">全部日期</option><option value="upcoming">即將到來</option><option value="past">已過去</option></select>
+        <button class="refresh" onclick="exportBookings()">⬇ 匯出 CSV</button>
+      </div>
+      <div class="table-wrap" id="bl-table"><div class="skeleton"></div></div>
+      <div id="bl-pager" style="display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:13px"></div>
+    </div>`;
+  loadBookingList();
   const st = Object.entries(d.status);
   chart('ch-status', { type: 'doughnut', data: { labels: st.map(s => s[0]), datasets: [{ data: st.map(s => s[1]), backgroundColor: st.map(s => sColor[s[0]]), borderWidth: 2 }] },
     options: { cutout: '62%', plugins: { legend: { position: 'bottom' } } } });
@@ -423,6 +443,46 @@ async function renderBookings() {
   let hh = `<div class="heat" style="grid-template-columns: 24px repeat(24, minmax(0,1fr))"><span></span>${Array.from({ length: 24 }, (_, h) => `<span style="text-align:center">${h % 3 === 0 ? h : ''}</span>`).join('')}`;
   d.heatmap.forEach((row, r) => { hh += `<span>${days[r]}</span>` + row.map((v, h) => `<div class="cell" style="background:${heatColor(v, hmax)}" onmousemove="showTip(event,'星期${days[r]} ${h}:00–${h}:59：${v} 筆')" onmouseleave="hideTip()"></div>`).join(''); });
   $('hourheat').innerHTML = hh + '</div>' + legend();
+}
+
+let BL = [], blPage = 0;
+const BL_PER_PAGE = 25;
+async function loadBookingList() {
+  try { BL = (await api('/admin/api/bookings/list')).rows; } catch (e) { $('bl-table').innerHTML = `<div class="empty">載入失敗：${esc(e.message)}</div>`; return; }
+  drawBookingList();
+}
+function filteredBookings() {
+  const q = $('bl-q').value.trim().toLowerCase(), st = $('bl-status').value, when = $('bl-when').value;
+  const today = new Date().toISOString().slice(0, 10);
+  return BL.filter(b => (!st || b.status === st)
+    && (!when || (b.date_iso && (when === 'upcoming' ? b.date_iso >= today : b.date_iso < today)))
+    && (!q || [b.customer, b.phone, b.email, b.id, b.artisan, b.merchant].some(x => String(x || '').toLowerCase().includes(q))));
+}
+function drawBookingList() {
+  const rows = filteredBookings(), pages = Math.max(1, Math.ceil(rows.length / BL_PER_PAGE));
+  blPage = Math.min(blPage, pages - 1);
+  const show = rows.slice(blPage * BL_PER_PAGE, (blPage + 1) * BL_PER_PAGE);
+  const tag = s => `<span class="tag ${s === '已確認' ? 't-ok' : s === '已婉拒' ? 't-bad' : 't-warn'}">${esc(s)}</span>`;
+  $('bl-table').innerHTML = `<table><tr><th>下單時間</th><th>編號</th><th>商家</th><th>體驗日期</th><th>人數</th><th>旅客</th><th>電話</th><th>Email</th><th>狀態</th><th>評分</th></tr>
+    ${show.map(b => `<tr><td>${esc(b.created)}</td><td><code>${esc(b.id)}</code></td>
+      <td>${esc(b.artisan)}${b.merchant ? '' : ' <span class="tag t-warn" title="對不到 46 家商家名單">?</span>'}</td>
+      <td>${esc(b.date)}</td><td>${b.pax}</td><td>${esc(b.customer)}</td><td>${esc(b.phone)}</td><td>${esc(b.email)}</td>
+      <td>${tag(b.status)}</td><td title="${esc(b.comment)}">${b.rating ? '⭐'.repeat(Math.round(b.rating)) : '—'}</td></tr>`).join('')
+      || '<tr><td colspan="10" class="empty">沒有符合的預約</td></tr>'}</table>`;
+  $('bl-pager').innerHTML = `<span style="color:var(--muted)">共 ${rows.length} 筆</span>
+    <button class="refresh" ${blPage === 0 ? 'disabled' : ''} onclick="blPage--;drawBookingList()">‹</button>
+    <span>${blPage + 1} / ${pages}</span>
+    <button class="refresh" ${blPage >= pages - 1 ? 'disabled' : ''} onclick="blPage++;drawBookingList()">›</button>`;
+}
+function exportBookings() {
+  const cols = [['created', '下單時間'], ['id', '編號'], ['artisan', '商家'], ['date', '體驗日期'], ['pax', '人數'], ['customer', '旅客'],
+                ['phone', '電話'], ['email', 'Email'], ['status', '狀態'], ['rating', '評分'], ['comment', '評語']];
+  const cell = v => { let s = String(v ?? ''); if (/^[=+\-@]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
+  const csv = '﻿' + [cols.map(c => c[1]).join(','), ...filteredBookings().map(b => cols.map(c => cell(b[c[0]])).join(','))].join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `預約紀錄_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click(); URL.revokeObjectURL(a.href);
 }
 
 // ═══════ 商家表現 ═══════
@@ -490,6 +550,9 @@ async function renderMap() {
   $('map-cold').innerHTML = mapData.merchants.filter(m => !m.visits).map(m => `<div class="list-row"><span class="status-dot" style="background:${m.color}"></span><span class="grow">${esc(m.name)}</span><span class="muted" style="font-size:11px">${esc(m.cat_name)}</span></div>`).join('') || '<div class="empty">每一家都有人造訪 🎉</div>';
   setTimeout(() => mapObj.invalidateSize(), 80);
 }
+const CAT_ICON = { coffee: 'fa-mug-hot', tea: 'fa-leaf', craft: 'fa-palette', farm: 'fa-wheat-awn', spa: 'fa-hot-tub-person',
+                   dining: 'fa-utensils', stay: 'fa-house-chimney', tribe: 'fa-mountain', culture: 'fa-place-of-worship' };
+const MAP_KEY_LABEL = { visits: '預約＋打卡', bookings: '預約數', checkins: '打卡數' };
 function drawMap() {
   if (mapLayer) mapLayer.remove();
   mapLayer = L.layerGroup().addTo(mapObj);
@@ -499,12 +562,18 @@ function drawMap() {
     mapData.merchants.forEach(m => { const s = similar(loc.label, m.name); if (s > score) { score = s; best = m; } });
     if (!best || score < .45) return;
     const v = best[mapKey];
-    const marker = v
-      ? L.circleMarker([loc.lat, loc.lng], { radius: 6 + Math.sqrt(v / max) * 22, color: '#fff', weight: 2, fillColor: best.color, fillOpacity: .78 })
-      : L.circleMarker([loc.lat, loc.lng], { radius: 6, color: '#9ca3af', weight: 2, dashArray: '3 3', fillOpacity: 0 });
-    marker.bindPopup(`<b>${esc(best.name)}</b><br>${esc(best.cat_name)}<br>預約 ${best.bookings} · 打卡 ${best.checkins}`);
-    marker.addTo(mapLayer);
+    const size = v ? Math.round(30 + Math.sqrt(v / max) * 24) : 26;
+    const icon = L.divIcon({
+      className: '', iconSize: [size, size], iconAnchor: [size / 2, size * 1.4], popupAnchor: [0, -size * 1.3],
+      html: `<div class="pin ${v ? '' : 'zero'}" style="--c:${best.color};--s:${size}px"><i class="fa-solid ${CAT_ICON[best.cat] || 'fa-location-dot'}"></i>${v ? `<b class="cnt">${v}</b>` : ''}</div>`,
+    });
+    L.marker([loc.lat, loc.lng], { icon, zIndexOffset: v * 10, title: best.name })
+      .bindPopup(`<b>${esc(best.name)}</b><br>${esc(best.cat_name)}<br>預約 ${best.bookings} · 打卡 ${best.checkins}`)
+      .addTo(mapLayer);
   });
+  const cats = [...new Map(mapData.merchants.map(m => [m.cat, m])).values()];
+  $('map-legend').innerHTML = cats.map(c => `<span><b class="dot" style="background:${c.color}"><i class="fa-solid ${CAT_ICON[c.cat] || 'fa-location-dot'}"></i></b>${esc(c.cat_name)}</span>`).join('')
+    + `<span><b class="dot" style="background:#fff;border:2px dashed #9ca3af;color:#9ca3af"><i class="fa-solid fa-location-dot"></i></b>尚無造訪</span><span>數字＝${MAP_KEY_LABEL[mapKey]}，圖示越大越熱門</span>`;
 }
 
 // ═══════ 永續影響力 ═══════

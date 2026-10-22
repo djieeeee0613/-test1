@@ -269,7 +269,6 @@ def stats_bookings(d):
             lead[bucket(max(0, (b["_date"] - b["_created"].date()).days), LEAD_EDGES)] += 1
     pax = Counter(bucket(b["_pax"], PAX_EDGES) for b in bks if b["_pax"])
 
-    recent = sorted(bks, key=lambda b: b["_created"] or datetime.min.replace(tzinfo=TW), reverse=True)[:20]
     return {
         "total": len(bks), "people": sum(b["_pax"] for b in bks),
         "status": {k: status.get(k, 0) for k in ("待確認", "已確認", "已婉拒")},
@@ -279,9 +278,6 @@ def stats_bookings(d):
         "heatmap": heat,
         "lead_time": [[lbl, lead.get(lbl, 0)] for lbl, _, _ in LEAD_EDGES],
         "party_size": [[lbl, pax.get(lbl, 0)] for lbl, _, _ in PAX_EDGES],
-        "recent": [{"id": b.get("booking_id"), "created": b["_created"].strftime("%m/%d %H:%M") if b["_created"] else "",
-                    "artisan": b.get("artisan"), "date": b.get("booking_date"), "pax": b["_pax"],
-                    "customer": b.get("customer_name"), "status": b["_status"]} for b in recent],
     }
 
 def merchant_table(d):
@@ -523,6 +519,19 @@ admin_bp.add_url_rule('/admin/api/merchants', 'merchants', require_role("admin")
 admin_bp.add_url_rule('/admin/api/map', 'map', require_role("admin")(_endpoint(stats_map)))
 admin_bp.add_url_rule('/admin/api/impact', 'impact', require_role("admin")(_endpoint(stats_impact)))
 admin_bp.add_url_rule('/admin/api/game', 'game', require_role("admin", "moderator")(_endpoint(stats_game)))
+
+@admin_bp.route('/admin/api/bookings/list')
+@require_role("admin")
+def admin_booking_list():
+    bks = sorted(enrich_bookings(load_data()["bookings"]),
+                 key=lambda b: b["_created"] or datetime.min.replace(tzinfo=TW), reverse=True)
+    return jsonify({"rows": [{
+        "id": b.get("booking_id"), "created": b["_created"].strftime("%Y-%m-%d %H:%M") if b["_created"] else "",
+        "artisan": b.get("artisan"), "merchant": b["_m"]["name"] if b["_m"] else None,
+        "date": b.get("booking_date"), "date_iso": b["_date"].isoformat() if b["_date"] else None,
+        "pax": b["_pax"], "customer": b.get("customer_name"), "phone": b.get("phone"), "email": b.get("email"),
+        "status": b["_status"], "rating": b.get("rating"), "comment": b.get("rating_comment"),
+    } for b in bks]})
 
 @admin_bp.route('/admin/api/system')
 @require_role("admin")
