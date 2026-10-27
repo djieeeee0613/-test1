@@ -14,7 +14,7 @@ from flask import Flask, request, jsonify, render_template, render_template_stri
 from google import genai
 from merchants_data import CATEGORIES, CATEGORY_ORDER
 import merchant_directory as md
-from game import sb_get, sb_insert, sb_patch
+from game import sb_get, sb_insert, sb_patch, n8n_headers
 from google.genai import types
 
 load_dotenv()
@@ -171,7 +171,8 @@ def book_experience(artisan_name: str, date: str, pax: int,
         "customer_name": customer_name, "phone": phone, "email": email, "booking_id": booking_id,
     }
     try:
-        response = requests.post(N8N_WEBHOOK_URL, json={**row, "status": "new_booking"}, timeout=10)
+        response = requests.post(N8N_WEBHOOK_URL, json={**row, "status": "new_booking"},
+                                 headers=n8n_headers(), timeout=10)
         if response.status_code == 200:
             return f"預約資料已成功送出！商家：{artisan_name}，您的預約編號為 **{booking_id}**。"
         print(f"❌ n8n 預約 webhook {response.status_code}: {response.text[:200]}")

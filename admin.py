@@ -15,7 +15,7 @@ from game import (SUPABASE_URL, SUPABASE_KEY, GOOGLE_CLIENT_ID, TW, DEFAULT_SETT
                   settings as game_settings, invalidate_settings, invalidate_questions, question_bank,
                   delete_post_cascade, send_certificate, adjust_comment_count, award_xp, get_user,
                   invalidate_events, MERCHANT_GROUPS, EVENT_SCOPES, _gemini_client,
-                  send_email, upload_image, site_settings, invalidate_site)
+                  send_email, upload_image, site_settings, invalidate_site, n8n_headers)
 import uuid
 from html import escape as html_escape
 from google.genai import types as genai_types
@@ -1311,7 +1311,7 @@ def create_booking():
                    "customer_name": clean["customer_name"], "phone": clean["phone"], "email": clean["email"],
                    "booking_id": booking_id, "status": "new_booking"}
         try:
-            r = requests.post(N8N_BOOKING_URL, json=payload, timeout=15)
+            r = requests.post(N8N_BOOKING_URL, json=payload, headers=n8n_headers(), timeout=15)
             if r.status_code >= 400:
                 return jsonify({"errors": [f"n8n 回應錯誤（{r.status_code}），預約沒有建立"]}), 502
         except Exception as e:

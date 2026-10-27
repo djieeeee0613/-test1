@@ -51,6 +51,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - `N8N_CERT_WEBHOOK_URL`（預設 https://nantoutravel.app.n8n.cloud/webhook/nantou-certificate）
 - `ADMIN_EMAILS`（管理後台管理員，逗號分隔）、`MODERATOR_EMAILS`（內容審核員，選填）
 - `N8N_API_KEY`（後台讀取 n8n 工作流狀態，選填）
+- `N8N_WEBHOOK_SECRET`（n8n `nantou-booking`、`nantou-certificate` webhook 的 Header Auth 密鑰，Flask 以 `X-Webhook-Secret` header 送出；n8n 端憑證要設同一個值）
 
 ## 架構
 
@@ -107,7 +108,7 @@ Render 環境變數（在 Render dashboard 設定）：
 
 ### `app.py` 關鍵細節
 
-- **單一資料來源**：AI 嚮導、網站、遊戲、後台都以 `merchants_data.py` 為準，透過 `merchant_directory.py` 存取（`MERCHANTS` 索引、`match_merchant()` 店名比對、`search()` 檢索、`format_for_ai()`）。`南投深度游資源 (1).docx` 只是原始資料，**程式已不再讀取**
+- **單一資料來源**：AI 嚮導、網站、遊戲、後台都以 `merchants_data.py` 為準，透過 `merchant_directory.py` 存取（`MERCHANTS` 索引、`match_merchant()` 店名比對、`search()` 檢索、`format_for_ai()`）（原始資料 docx 已從專案移除）
 - **結構化檢索**：`search_local_merchants(category, township, keyword)` 依類別、鄉鎮、關鍵字篩選，結果隨機排序避免永遠推薦同幾家；會附上首頁輪播上架中的活動（快取 5 分鐘）。名錄沒有價格資料，系統指示要求 AI 不可編造金額
 - **正式店名**：`check_availability`、`book_experience` 先用 `official_name()` 把 AI 送出的店名校正成名錄正式名稱，n8n 才查得到商家的 LINE ID
 - **Agent 循環**：`/api/chat` 只做速率限制與記錄，實際對話在 `run_chat(user_message, history, lang, state)`（**必須**設定 `automatic_function_calling=AutomaticFunctionCallingConfig(disable=True)`，否則 google-genai 會自動執行工具，手動迴圈與 `chat_logs` 的工具紀錄都收不到呼叫）：`while True` 跑 `generate_content` → 有 `function_call` 就執行並回送結果 → 無 `function_call` 才回傳文字；回傳 `(回覆, 是否錯誤)`，`state` 記下呼叫過的工具與是否完成預約
@@ -161,12 +162,12 @@ Render 環境變數（在 Render dashboard 設定）：
 
 ### n8n 工作流（n8n.cloud）
 
-`n8n_booking_workflow.json`（預約流程，webhook path: `nantou-booking`）：
+**預約流程**（n8n 工作流，webhook path: `nantou-booking`；本機沒有最新匯出檔，要改請直接在 n8n 介面操作）：
 - Webhook → POST Supabase bookings → GET Supabase merchants（依 artisan 查 line_id）→ LINE push message
 - 商家收到通知後有 **LINE Quick Reply 按鈕**：「✅ 確認預約」/ 「❌ 婉拒預約」（`確認/婉拒 {booking_id}` 訊息格式）
 - Supabase merchants 的 `artisan` 必須與 AI 送出的 `artisan` 值**完全一致**，否則查不到 line_id
 
-`n8n_merchant_onboarding.json`（商家加入 + 活動管理，webhook path: `line-merchant`）：
+**商家加入 LINE Bot**（`n8n_merchant_secure.json` 為加上確認／婉拒權限檢查的版本，`n8n_merchant_live.json.json` 為 2026-10-27 線上備份；webhook path: `line-merchant`）：
 - `商家：[名稱]` → POST Supabase merchants（artisan + line_id）
 - `活動登錄\n名稱：...\n日期：...\n名額：...\n費用：...\n描述：...` → POST Supabase events
 - 圖片訊息 → GET LINE Content API（binary）→ POST Supabase Storage `event-image/{userId}_{eventId}_{ts}.jpg` → PATCH events.image_url
@@ -277,11 +278,12 @@ Render 環境變數（在 Render dashboard 設定）：
 - 遊戲與後台 API 一律從 Flask session 取得身分，不信任前端傳來的使用者 ID
 - 使用者產生的內容（貼文、留言、公告、通知信）在前端用 `esc()`、在 Jinja 用自動轉義、在 Python 用 `html.escape` 處理；公告連結只接受 `https://` 或 `/` 開頭
 - `chat_logs` 不存對話內容；內容審核員看不到玩家 Email
-- `FLASK_SECRET_KEY`、`N8N_API_KEY` 只放 Render 環境變數，不進程式碼
+- `FLASK_SECRET_KEY`、`N8N_API_KEY`、`N8N_WEBHOOK_SECRET` 只放 Render 環境變數，不進程式碼
+- n8n 預約、寄信 webhook 用 Header Auth 驗證；LINE 確認 / 婉拒只能更新該 LINE 帳號綁定商家、且狀態為待確認的預約（步驟見 `n8n安全修正步驟.md`）
 
 ## 資料庫商家清單（46 筆）
 
-商家資料在 `merchants_data.py`（原始資料整理自 `南投深度游資源 (1).docx`），共 9 大類別 46 筆，涵蓋：
+商家資料在 `merchants_data.py`，共 9 大類別 46 筆，涵蓋：
 - **咖啡職人**（5）：向陽咖啡莊園、日晨咖啡烘焙、佳芳咖啡、山豬衝吧咖啡館、百勝村咖啡莊園
 - **茶&酒莊**（8）：威石東葡萄酒莊、台灣菸酒南投酒廠、蔡氏釀酒、吉臣茶廠、和菓森林茶廠、山中茶學、連勝茶廠、煜倫茶業
 - **工藝手作**（9）：元泰竹藝社、武岫竹炭窯、龍南天然漆博物館、毓秀美術館、添興窯、水里蛇窯、葉寶蓮竹編、攻玉山房、大禾竹藝工坊（+ 林喜美賽德克織布）

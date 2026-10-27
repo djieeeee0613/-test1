@@ -23,6 +23,12 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 N8N_CERT_WEBHOOK_URL = os.getenv("N8N_CERT_WEBHOOK_URL",
                                  "https://nantoutravel.app.n8n.cloud/webhook/nantou-certificate")
+# n8n webhook 的 Header Auth 密鑰；n8n 端設定同一個值後，沒帶這個 header 的請求會被拒絕
+N8N_WEBHOOK_SECRET = os.getenv("N8N_WEBHOOK_SECRET", "")
+
+def n8n_headers():
+    return {"X-Webhook-Secret": N8N_WEBHOOK_SECRET} if N8N_WEBHOOK_SECRET else {}
+
 SITE_URL = os.getenv("SITE_URL", "https://nantoutravel.com")
 STORAGE_BUCKET = "event-image"
 STORAGE_PUBLIC_PREFIX = f"{SUPABASE_URL}/storage/v1/object/public/{STORAGE_BUCKET}/"
@@ -317,7 +323,7 @@ def send_email(email, subject, html, name=None):
         return False
     try:
         r = requests.post(N8N_CERT_WEBHOOK_URL, json={"email": email, "name": name, "subject": subject, "html": html},
-                          timeout=15)
+                          headers=n8n_headers(), timeout=15)
         print(f"✉️ 寄信 {email}：{r.status_code}")
         return r.status_code < 400
     except Exception as e:
