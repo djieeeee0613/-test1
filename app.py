@@ -14,14 +14,12 @@ from flask import Flask, request, jsonify, render_template, render_template_stri
 from google import genai
 from merchants_data import CATEGORIES, CATEGORY_ORDER
 import merchant_directory as md
+from game import sb_get, sb_insert, sb_patch
 from google.genai import types
 
 load_dotenv()
 sys.stdout.reconfigure(encoding='utf-8')
 sys.stderr.reconfigure(encoding='utf-8')
-
-BOOKINGS_FILE = os.path.join(os.path.dirname(__file__), 'bookings.json')
-PLANS = {}  # plan_id -> {text, created_at}
 
 # 速率限制：每個 IP 每分鐘最多 20 次
 _rate = {}
@@ -31,28 +29,6 @@ def check_rate(ip, limit=20, window=60):
     hits.append(now)
     _rate[ip] = hits
     return len(hits) <= limit
-
-def load_bookings():
-    if os.path.exists(BOOKINGS_FILE):
-        with open(BOOKINGS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
-
-def save_bookings(bookings):
-    with open(BOOKINGS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(bookings, f, ensure_ascii=False, indent=2)
-
-def log_booking(data: dict) -> str:
-    bookings = load_bookings()
-    booking_id = str(uuid.uuid4())[:8].upper()
-    data['id'] = booking_id
-    data['timestamp'] = datetime.now().strftime('%Y-%m-%d %H:%M')
-    data['status'] = '待確認'
-    data['rating'] = None
-    data['rating_comment'] = ''
-    bookings.append(data)
-    save_bookings(bookings)
-    return booking_id
 
 # ==========================================
 # 1. 設定
@@ -144,6 +120,13 @@ def _today_tw() -> date:
     """回傳台灣時間今天的日期"""
     return datetime.now(timezone(timedelta(hours=8))).date()
 
+def _tw_time(iso: str | None) -> str:
+    """Supabase 的 timestamptz 轉成台灣時間字串"""
+    try:
+        return datetime.fromisoformat((iso or "").replace("Z", "+00:00")).astimezone(timezone(timedelta(hours=8))).strftime('%Y-%m-%d %H:%M')
+    except ValueError:
+        return ""
+
 def _check_date_not_past(date_str: str) -> str | None:
     """若日期已過去，回傳錯誤訊息；否則回傳 None"""
     d = _parse_booking_date(date_str)
@@ -181,22 +164,25 @@ def book_experience(artisan_name: str, date: str, pax: int,
         return err
     artisan_name = official_name(artisan_name)
     print(f"🚀 發送預約單：{artisan_name}, {date}, {pax}人, 旅客：{customer_name}")
-    booking_id = log_booking({
-        "artisan": artisan_name, "date": date, "pax": pax,
-        "customer": customer_name, "phone": phone, "email": email,
-    })
-    payload = {
-        "artisan": artisan_name, "booking_date": date, "people_count": pax,
-        "customer_name": customer_name, "phone": phone, "email": email,
-        "booking_id": booking_id, "status": "new_booking"
+    d = _parse_booking_date(date)
+    booking_id = uuid.uuid4().hex[:8].upper()
+    row = {
+        "artisan": artisan_name, "booking_date": d.isoformat() if d else date, "people_count": pax,
+        "customer_name": customer_name, "phone": phone, "email": email, "booking_id": booking_id,
     }
     try:
-        response = requests.post(N8N_WEBHOOK_URL, json=payload, timeout=10)
+        response = requests.post(N8N_WEBHOOK_URL, json={**row, "status": "new_booking"}, timeout=10)
         if response.status_code == 200:
             return f"預約資料已成功送出！商家：{artisan_name}，您的預約編號為 **{booking_id}**。"
-        return f"系統錯誤 ({response.status_code})，預約編號 {booking_id} 已暫存。"
+        print(f"❌ n8n 預約 webhook {response.status_code}: {response.text[:200]}")
     except Exception as e:
-        return f"連線異常（預約已記錄，編號 **{booking_id}**）：{str(e)}"
+        print(f"❌ n8n 預約 webhook 連線失敗：{e}")
+    # n8n 失敗：直接寫進 Supabase，管理員在後台看得到這筆待確認的預約，可再聯繫商家
+    # n8n 可能已寫入 bookings 後才在推播 LINE 時失敗，先查避免重複
+    if sb_get("bookings", {"booking_id": f"eq.{booking_id}", "select": "id"}) or sb_insert("bookings", {**row, "status": "待確認"}):
+        return (f"預約已收到，預約編號 **{booking_id}**。目前無法即時通知商家，"
+                f"平台人員會協助聯繫 {artisan_name}，確認後以 Email 通知您。")
+    return "抱歉，預約系統暫時無法使用，這筆預約沒有送出，請稍後再試或直接聯絡商家。"
 
 _events_cache = {"at": 0, "value": {}}
 
@@ -409,31 +395,21 @@ def get_events():
     except Exception:
         return jsonify([])
 
-@app.route('/webhook/line-merchant', methods=['POST', 'GET'])
-def line_merchant_proxy():
-    try:
-        resp = requests.post(
-            os.getenv('N8N_LINE_WEBHOOK_URL', 'https://nantoutravel.app.n8n.cloud/webhook/line-merchant'),
-            json=request.get_json(silent=True),
-            headers={'Content-Type': 'application/json'},
-            timeout=10
-        )
-        return jsonify(resp.json() if resp.content else {}), resp.status_code
-    except Exception as e:
-        print(f"❌ LINE webhook 代理錯誤：{e}")
-        return jsonify({}), 200
-
 # --- 行程分享 ---
 @app.route('/api/share-plan', methods=['POST'])
 def share_plan():
-    plan_text = request.json.get('plan', '')
-    plan_id = str(uuid.uuid4())[:8]
-    PLANS[plan_id] = {'text': plan_text, 'created_at': datetime.now().strftime('%Y-%m-%d %H:%M')}
+    plan_text = ((request.get_json(silent=True) or {}).get('plan') or '').strip()
+    if not plan_text or len(plan_text) > 10000:
+        return jsonify({"error": "行程內容不正確"}), 400
+    plan_id = uuid.uuid4().hex[:8]
+    if not sb_insert("shared_plans", {"plan_id": plan_id, "text": plan_text}):
+        return jsonify({"error": "分享失敗，請稍後再試"}), 500
     return jsonify({"plan_id": plan_id, "url": f"/plan/{plan_id}"})
 
 @app.route('/plan/<plan_id>')
 def view_plan(plan_id):
-    plan = PLANS.get(plan_id)
+    rows = sb_get("shared_plans", {"plan_id": f"eq.{plan_id}", "select": "text,created_at"})         if re.fullmatch(r'[0-9a-f]{8}', plan_id) else []
+    plan = rows[0] if rows else None
     if not plan:
         return "<h2 style='font-family:sans-serif;text-align:center;margin-top:80px'>行程不存在或已過期</h2>", 404
     import html as html_mod
@@ -471,15 +447,32 @@ def view_plan(plan_id):
   </div>
 </div>
 </body>
-</html>""", plan_id=plan_id, created_at=plan['created_at'], content=text)
+</html>""", plan_id=plan_id, created_at=_tw_time(plan.get('created_at')), content=text)
 
 # --- 旅客評價頁 ---
+def _rating_state(booking_id: str):
+    """回傳 (預約, 狀態)：missing 找不到 / rejected 已婉拒 / rated 已評價 / early 體驗日還沒到 / open 可評價"""
+    if not re.fullmatch(r'[A-Z0-9]{8}', booking_id or ''):
+        return None, 'missing'
+    rows = sb_get("bookings", {"booking_id": f"eq.{booking_id}", "select": "artisan,booking_date,status,rating"})
+    if not rows:
+        return None, 'missing'
+    b = rows[0]
+    if b.get('status') == '已婉拒':
+        return b, 'rejected'
+    if b.get('rating'):
+        return b, 'rated'
+    # 只認含年份的日期；舊資料沒有年份時無法判斷，直接開放評價
+    raw = str(b.get('booking_date') or '')
+    d = _parse_booking_date(raw) if re.match(r'\d{4}', raw) else None
+    if d and d > _today_tw():
+        return b, 'early'
+    return b, 'open'
+
 @app.route('/rate/<booking_id>')
 def rate_page(booking_id):
-    bookings = load_bookings()
-    booking = next((b for b in bookings if b.get('id') == booking_id), None)
+    booking, state = _rating_state(booking_id)
     artisan = booking.get('artisan', '') if booking else ''
-    already_rated = bool(booking and booking.get('rating'))
     return render_template_string("""<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -507,9 +500,15 @@ def rate_page(booking_id):
 <body>
 <div class="card">
   <div class="icon">🌿</div>
-  {% if already_rated %}
+  {% if state == 'rated' %}
   <h2>已收到您的評價</h2>
   <div class="already">感謝您的回饋！</div>
+  {% elif state == 'early' %}
+  <h2>體驗還沒開始喔</h2>
+  <div class="sub">{{ artisan }}的體驗日期是 {{ booking_date }}<br>體驗當天之後再回來這裡評價吧！</div>
+  {% elif state != 'open' %}
+  <h2>無法評價這筆預約</h2>
+  <div class="sub">{{ '這筆預約已被婉拒' if state == 'rejected' else '找不到這筆預約，請確認連結是否正確' }}</div>
   {% else %}
   <h2>感謝您的南投體驗！</h2>
   <div class="sub">{{ artisan }}的服務如何？<br>您的回饋幫助更多旅客發現南投的美好<br><small style="color:#bbb">預約編號：{{ booking_id }}</small></div>
@@ -541,7 +540,8 @@ function submitRating() {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({ booking_id: '{{ booking_id }}', rating, comment: document.getElementById('comment').value })
-  }).then(() => {
+  }).then(r => r.json()).then(d => {
+    if (d.error) { alert(d.error); return; }
     document.getElementById('success').style.display = 'block';
     document.querySelector('.btn').style.display = 'none';
     document.getElementById('stars').style.pointerEvents = 'none';
@@ -549,18 +549,23 @@ function submitRating() {
 }
 </script>
 </body>
-</html>""", booking_id=booking_id, artisan=artisan, already_rated=already_rated)
+</html>""", booking_id=booking_id, artisan=artisan, state=state,
+       booking_date=booking.get('booking_date', '') if booking else '')
 
 @app.route('/api/rate', methods=['POST'])
 def submit_rate():
-    data = request.json
-    bookings = load_bookings()
-    for b in bookings:
-        if b.get('id') == data.get('booking_id'):
-            b['rating'] = data.get('rating')
-            b['rating_comment'] = data.get('comment', '')
-            break
-    save_bookings(bookings)
+    data = request.get_json(silent=True) or {}
+    booking_id = str(data.get('booking_id') or '')
+    rating = data.get('rating')
+    if not isinstance(rating, int) or not 1 <= rating <= 5:
+        return jsonify({"error": "請選擇 1–5 顆星"}), 400
+    _, state = _rating_state(booking_id)
+    if state != 'open':
+        msg = {"rated": "這筆預約已經評價過了", "early": "體驗日期之後才能評價",
+               "rejected": "這筆預約已被婉拒，無法評價"}.get(state, "找不到這筆預約")
+        return jsonify({"error": msg}), 400
+    sb_patch("bookings", {"booking_id": f"eq.{booking_id}", "rating": "is.null"},
+             {"rating": rating, "rating_comment": str(data.get('comment') or '')[:500]})
     return jsonify({"ok": True})
 
 # ==========================================

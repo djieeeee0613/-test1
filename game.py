@@ -197,7 +197,10 @@ def _h(extra=None):
 
 def sb_get(table, params):
     r = requests.get(f"{SUPABASE_URL}/rest/v1/{table}", params=params, headers=_h(), timeout=8)
-    return r.json() if r.status_code == 200 else []
+    if r.status_code == 200:
+        return r.json()
+    print(f"❌ Supabase get {table} {r.status_code}: {r.text[:200]}")
+    return []
 
 def sb_insert(table, row):
     r = requests.post(f"{SUPABASE_URL}/rest/v1/{table}", json=row,
@@ -460,8 +463,9 @@ def checkin():
     mult = xp_multiplier("checkin", MERCHANT_CATEGORY.get(merchant))
     xp = round(settings()["xp_checkin"] * mult)
     photo_url = upload_image(image, "checkins", gid)
-    sb_insert("checkins", {"google_id": gid, "merchant_name": merchant,
-                           "xp_earned": xp, "photo_url": photo_url})
+    if not sb_insert("checkins", {"google_id": gid, "merchant_name": merchant,
+                                  "xp_earned": xp, "photo_url": photo_url}):
+        return jsonify({"error": "打卡失敗，請稍後再試"}), 500
     stats = award_xp(gid, xp, {"checkin_count": 1})
     return jsonify({"xp_earned": xp, "multiplier": mult, "photo_url": photo_url, "new_stats": stats})
 

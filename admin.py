@@ -1284,6 +1284,8 @@ def booking_email_html(b, status, note):
     body = ("商家已確認您的預約，期待與您見面！" if ok else
             "很抱歉，商家這次無法接受您的預約。歡迎回到網站，請 AI 嚮導緣投幫您推薦其他職人體驗。")
     esc = html_escape
+    rate_html = (f'<p>體驗結束後，歡迎<a href="https://nantoutravel.com/rate/{esc(b.get("booking_id") or "")}" style="color:#2d4a35;font-weight:bold">為這次體驗評分</a>，'
+                 f'您的回饋能幫助更多旅人認識南投職人。</p>') if ok and b.get("booking_id") else ""
     note_html = f'<p style="background:#fbf5e8;border-left:3px solid #C8A96E;padding:10px 14px;border-radius:0 8px 8px 0">{esc(note)}</p>' if note else ""
     return f"""<div style="font-family:'Noto Sans TC',Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1f2a22">
   <h2 style="color:#2d4a35">{title}</h2>
@@ -1293,7 +1295,7 @@ def booking_email_html(b, status, note):
     <tr><td style="padding:10px 14px;color:#888">職人商家</td><td style="padding:10px 14px">{esc(b.get('artisan') or '')}</td></tr>
     <tr><td style="padding:10px 14px;color:#888">體驗日期</td><td style="padding:10px 14px">{esc(str(b.get('booking_date') or ''))}</td></tr>
     <tr><td style="padding:10px 14px;color:#888">人數</td><td style="padding:10px 14px">{esc(str(b.get('people_count') or ''))} 位</td></tr>
-  </table>
+  </table>{rate_html}
   <p style="color:#888;font-size:13px">南投職人旅遊 · <a href="https://nantoutravel.com" style="color:#2d4a35">nantoutravel.com</a></p></div>"""
 
 @admin_bp.route('/admin/api/bookings', methods=['POST'])

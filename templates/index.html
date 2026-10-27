@@ -736,21 +736,6 @@
             margin-bottom: 8px;
         }
 
-        .rating-widget .rw-stars {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 8px;
-        }
-
-        .rating-widget .rw-star {
-            font-size: 24px;
-            cursor: pointer;
-            opacity: 0.3;
-            transition: opacity 0.15s;
-        }
-
-        .rating-widget .rw-star.lit { opacity: 1; }
-
         .rating-widget .rw-link {
             color: var(--primary);
             font-size: 12px;
@@ -2059,7 +2044,7 @@ function sendMessage(text) {
                 return;
             }
 
-            // 偵測預約成功 → 顯示評分 widget
+            // 偵測預約成功 → 顯示評價頁連結
             const bookingMatch = text.match(/預約編號[：:]\s*\*?\*?([A-Z0-9]{8})\*?\*?/);
             if (bookingMatch) {
                 const ratingWidget = buildRatingWidget(bookingMatch[1]);
@@ -2105,37 +2090,13 @@ function sendMessage(text) {
         return bar;
     }
 
-    // ===== 評分 Widget =====
+    // ===== 評分提示（體驗日之後才能在評價頁評分）=====
     function buildRatingWidget(bookingId) {
         const widget = document.createElement('div');
         widget.className = 'rating-widget';
         widget.innerHTML = `
-            <div class="rw-title">🌟 體驗後歡迎給我們評分！</div>
-            <div class="rw-stars" id="rw-${bookingId}">
-                <span class="rw-star" data-v="1">⭐</span>
-                <span class="rw-star" data-v="2">⭐</span>
-                <span class="rw-star" data-v="3">⭐</span>
-                <span class="rw-star" data-v="4">⭐</span>
-                <span class="rw-star" data-v="5">⭐</span>
-            </div>
-            <a class="rw-link" href="/rate/${bookingId}" target="_blank">或前往完整評價頁面 →</a>`;
-        let rating = 0;
-        widget.querySelectorAll('.rw-star').forEach((s, i) => {
-            s.addEventListener('mouseenter', () =>
-                widget.querySelectorAll('.rw-star').forEach((x, j) => x.classList.toggle('lit', j <= i)));
-            s.addEventListener('mouseleave', () =>
-                widget.querySelectorAll('.rw-star').forEach((x, j) => x.classList.toggle('lit', j < rating)));
-            s.addEventListener('click', async () => {
-                rating = i + 1;
-                widget.querySelectorAll('.rw-star').forEach((x, j) => x.classList.toggle('lit', j < rating));
-                await fetch('/api/rate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ booking_id: bookingId, rating, comment: '' })
-                });
-                widget.innerHTML = `<div style="color:#10b981;font-weight:bold">謝謝您給出 ${'⭐'.repeat(rating)} 的評分！</div>`;
-            });
-        });
+            <div class="rw-title">🌟 體驗結束後，歡迎回來評分！</div>
+            <a class="rw-link" href="/rate/${bookingId}" target="_blank">預約 ${bookingId} 的評價頁面 →</a>`;
         return widget;
     }
 

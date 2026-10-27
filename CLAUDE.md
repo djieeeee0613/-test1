@@ -119,6 +119,9 @@ Render 環境變數（在 Render dashboard 設定）：
 - **速率限制**：`check_rate(ip, limit=20, window=60)`，超過 20 req/min 回傳 429
 - **日期解析**：`_parse_booking_date()` 先嘗試含年份格式，再嘗試無年份格式（自動補當年，若已過期則補明年）
 - **預約驗證規則**：AI 絕對不可呼叫 `search_local_merchants` 驗證店名；日期字串原樣傳入，年份由後端處理
+- **預約寫入**：`book_experience()` 把日期轉成 `YYYY-MM-DD` 後送 n8n（由 n8n 寫入 bookings）；n8n 失敗時 Flask 直接寫入 Supabase（先查 `booking_id` 避免重複），旅客會被告知「平台會協助聯繫」。Flask 不再使用本機 `bookings.json`（Render 重啟會清空）
+- **評價**：`/rate/<booking_id>` 與 `/api/rate` 讀寫 Supabase `bookings.rating` / `rating_comment`；`_rating_state()` 判斷是否可評價（已婉拒、已評價、體驗日還沒到都不行）。聊天室預約成功後只顯示評價頁連結；後台把預約改成「已確認」並寄信時，信裡會附評價連結
+- **行程分享**：存在 Supabase `shared_plans`，不放記憶體
 - **活動 API**：`GET /api/events` 從 Supabase events 撈 active=true 的活動，前端輪播用
 
 ### System Prompt 關鍵行為規則
@@ -234,7 +237,9 @@ Render 環境變數（在 Render dashboard 設定）：
 ### Supabase 資料表
 
 **bookings**（RLS disabled）：
-- `id`（int8, primary key）、`booking_id`、`artisan`、`booking_date`、`people_count`、`customer_name`、`phone`、`email`、`status`（text, 預設「待確認」）
+- `id`（int8, primary key）、`booking_id`、`artisan`、`booking_date`、`people_count`、`customer_name`、`phone`、`email`、`status`（text, 預設「待確認」）、`rating`（int）、`rating_comment`（text）
+
+**shared_plans**（RLS disabled）：`plan_id`（text 主鍵）、`text`、`created_at`，`/api/share-plan` 的行程分享
 
 **merchants**（RLS disabled）：
 - `id`（int8, primary key）、`artisan`（text）、`line_id`（text）
