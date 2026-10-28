@@ -1296,7 +1296,7 @@ def booking_email_html(b, status, note):
     <tr><td style="padding:10px 14px;color:#888">體驗日期</td><td style="padding:10px 14px">{esc(str(b.get('booking_date') or ''))}</td></tr>
     <tr><td style="padding:10px 14px;color:#888">人數</td><td style="padding:10px 14px">{esc(str(b.get('people_count') or ''))} 位</td></tr>
   </table>{rate_html}
-  <p style="color:#888;font-size:13px">南投職人旅遊 · <a href="https://nantoutravel.com" style="color:#2d4a35">nantoutravel.com</a></p></div>"""
+  <p style="color:#888;font-size:13px">深度與美學旅遊研究室 · <a href="https://nantoutravel.com" style="color:#2d4a35">nantoutravel.com</a></p></div>"""
 
 @admin_bp.route('/admin/api/bookings', methods=['POST'])
 @require_role("admin")

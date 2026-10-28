@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<title>管理後台 — 南投職人旅遊</title>
+<title>管理後台 — 深度與美學旅遊研究室</title>
+<link rel="icon" type="image/png" href="/static/images/favicon.png">
+<link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -231,8 +233,8 @@ tr:hover td { background: #fafbf9; }
 
 <section id="login">
   <div class="login-card">
-    <img src="/static/images/mascot.jpg" alt="緣投">
-    <h1>南投職人旅遊 管理後台</h1>
+    <img src="/static/images/logo-full.jpg" alt="深度與美學旅遊研究室" style="width:170px;height:auto;border-radius:16px;border:none">
+    <h1>深度與美學旅遊研究室 管理後台</h1>
     <p>請使用已授權的 Google 帳號登入。<br>未在管理員名單中的帳號無法進入。</p>
     <div class="gbtn">
       <div id="g_id_onload" data-client_id="{{ google_client_id }}" data-callback="handleLogin" data-auto_prompt="false"></div>
@@ -245,7 +247,7 @@ tr:hover td { background: #fafbf9; }
 <section id="app">
   <header class="topbar">
     <button class="burger" onclick="document.body.classList.toggle('nav-open')" aria-label="選單">☰</button>
-    <div class="brand"><img src="/static/images/mascot.jpg" alt="">管理後台 <small>南投職人旅遊</small></div>
+    <div class="brand"><img src="/static/images/logo-mark.png" alt="" style="border-radius:7px">管理後台 <small>深度與美學旅遊研究室</small></div>
     <div class="top-right">
       <span class="updated" id="updated"></span>
       <button class="refresh" id="refresh" onclick="refresh()"><span>⟳</span> 重新整理</button>

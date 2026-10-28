@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ cat.emoji }} {{ cat.name }} — 南投職人旅遊</title>
+<title>{{ cat.emoji }} {{ cat.name }} — 深度與美學旅遊研究室</title>
+<link rel="icon" type="image/png" href="/static/images/favicon.png">
+<link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 <meta name="description" content="{{ cat.description }}">
 <style>
   :root {
@@ -180,7 +182,7 @@
 <body>
 
 <nav>
-  <a href="/" class="nav-logo"><img src="/static/images/mascot.jpg" alt="緣投" style="width:26px;height:26px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:6px;"> <span>南投</span>職人旅遊</a>
+  <a href="/" class="nav-logo"><img src="/static/images/logo-mark.png" alt="深度與美學旅遊研究室" style="width:28px;height:28px;border-radius:6px;object-fit:cover;vertical-align:middle;margin-right:6px;"> <span>深度與美學</span>旅遊研究室</a>
   <div class="nav-cats">
     {% for c in categories %}
     <a href="/category/{{ c.slug }}" class="nav-cat {% if c.slug == cat.slug %}active{% endif %}">
@@ -239,7 +241,7 @@
 </div>
 
 <footer>
-  <p>© 2026 南投職人旅遊 &nbsp;|&nbsp; <a href="/">回首頁</a> &nbsp;|&nbsp; <a href="/category">所有分類</a></p>
+  <p>© 2026 深度與美學旅遊研究室 &nbsp;|&nbsp; <a href="/">回首頁</a> &nbsp;|&nbsp; <a href="/category">所有分類</a></p>
 </footer>
 
 <script>

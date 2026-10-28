@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案說明
 
-南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Supabase 並推播 LINE 通知給商家。商家確認或婉拒後，系統自動寄 email 通知旅客。商家可透過 LINE Bot 登錄活動、上傳活動照片，照片自動顯示在網站輪播。吉祥物「緣投」圓形頭像用於 nav logo、FAB 按鈕、聊天視窗標頭（圖檔：`static/images/mascot.jpg`）。
+南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Supabase 並推播 LINE 通知給商家。商家確認或婉拒後，系統自動寄 email 通知旅客。商家可透過 LINE Bot 登錄活動、上傳活動照片，照片自動顯示在網站輪播。品牌名稱是「深度與美學旅遊研究室」：網站導覽列、頁尾、分頁圖示、後台與信件用新 logo（原圖 `new_icon.jpg`；`static/images/logo-mark.png` 是裁掉文字的方形圖示、`logo-full.jpg` 是含文字的完整版、`favicon.png` / `apple-touch-icon.png`）。吉祥物「緣投」（`static/images/mascot.jpg`）只用在 AI 相關功能與遊戲角色：AI 嚮導 FAB 與聊天視窗、後台「問緣投」、緣投探索者遊戲內的角色與入口按鈕、使用者沒有頭像時的預設圖。
 
 另有兩個子系統：
 - **緣投探索者遊戲**（`/game`）：Google 登入，打卡（AI 驗人臉）、問答大挑戰、旅人動態、排行榜、升到最高等級寄永續達人證書

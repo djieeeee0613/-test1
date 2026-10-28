@@ -306,7 +306,7 @@ def certificate_html(name, xp, checkins, date_str):
 <tr><td style="padding:28px 40px 12px;">
   <table width="100%" cellpadding="0" cellspacing="0"><tr>
     <td align="center" width="50%" style="border-right:1px solid #eee;"><div style="font-size:11px;color:#aaa;">發證日期</div><div style="font-size:14px;color:#333;margin-top:4px;">{date_str}</div></td>
-    <td align="center" width="50%"><div style="font-size:11px;color:#aaa;">發證單位</div><div style="font-size:14px;color:#333;margin-top:4px;">南投職人旅遊平台</div></td>
+    <td align="center" width="50%"><div style="font-size:11px;color:#aaa;">發證單位</div><div style="font-size:14px;color:#333;margin-top:4px;">深度與美學旅遊研究室</div></td>
   </tr></table>
 </td></tr>
 <tr><td align="center" style="padding:20px 40px 40px;">

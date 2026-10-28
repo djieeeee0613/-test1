@@ -424,6 +424,8 @@ def view_plan(plan_id):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>南投旅遊行程 {{ plan_id }}</title>
+<link rel="icon" type="image/png" href="/static/images/favicon.png">
+<link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 <style>
   body { font-family:'Helvetica Neue',Arial,sans-serif; background:#F4F1EA; margin:0; padding:20px; }
   .card { max-width:600px; margin:40px auto; background:white; border-radius:20px; padding:36px; box-shadow:0 8px 32px rgba(0,0,0,0.1); }
@@ -439,7 +441,7 @@ def view_plan(plan_id):
 </head>
 <body>
 <div class="card">
-  <div class="logo">🌿 南投職人旅遊平台</div>
+  <div class="logo"><img src="/static/images/logo-mark.png" alt="" style="width:26px;height:26px;border-radius:6px;vertical-align:middle;margin-right:8px">深度與美學旅遊研究室</div>
   <h2>我的南投深度行程</h2>
   <div class="meta">建立時間：{{ created_at }} ｜ 行程編號：{{ plan_id }}</div>
   <div class="content">{{ content|safe }}</div>
@@ -480,6 +482,8 @@ def rate_page(booking_id):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>體驗評價</title>
+<link rel="icon" type="image/png" href="/static/images/favicon.png">
+<link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 <style>
   body{font-family:'Helvetica Neue',Arial,sans-serif;background:#F4F1EA;min-height:100vh;display:flex;align-items:center;justify-content:center;}
   .card{background:white;border-radius:24px;padding:44px 36px;max-width:420px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.1);text-align:center;}
@@ -500,7 +504,7 @@ def rate_page(booking_id):
 </head>
 <body>
 <div class="card">
-  <div class="icon">🌿</div>
+  <div class="icon"><img src="/static/images/logo-mark.png" alt="深度與美學旅遊研究室" style="width:64px;height:64px;border-radius:14px"></div>
   {% if state == 'rated' %}
   <h2>已收到您的評價</h2>
   <div class="already">感謝您的回饋！</div>
@@ -618,9 +622,11 @@ def chat_category(msg):
 
 def log_chat(row):
     try:
-        requests.post(f"{SUPABASE_URL}/rest/v1/chat_logs", json=row,
-                      headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
-                               "Content-Type": "application/json"}, timeout=5)
+        r = requests.post(f"{SUPABASE_URL}/rest/v1/chat_logs", json=row,
+                          headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}",
+                                   "Content-Type": "application/json"}, timeout=5)
+        if r.status_code >= 300:
+            print(f"⚠️ chat log {r.status_code}: {r.text[:200]}")
     except Exception as e:
         print(f"⚠️ chat log failed: {e}")
 
