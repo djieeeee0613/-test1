@@ -1,0 +1,38 @@
+/* 全站字體：標題用思源宋體（書卷氣、工藝感），內文用思源黑體（手機好讀），緣投說的話用霞鶩文楷（手寫溫度）。
+   字型由各頁 <head> 從 Google Fonts 載入；這個檔要放在頁面自己的 <style> 之後，才能蓋過原本的字體設定。 */
+:root {
+  --font-serif: 'Noto Serif TC', 'Songti TC', 'PMingLiU', serif;
+  --font-sans: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  --font-kai: 'LXGW WenKai TC', 'Kaiti TC', 'DFKai-SB', serif;
+}
+
+body { font-family: var(--font-sans); }
+button, input, select, textarea { font-family: inherit; }
+
+/* 標題：宋體、字重 600～700、字距拉開 */
+h1, h2, h3,
+.nav-logo, .brand,
+.section-title, .card-title, .cat-name, .timeline-title, .value-title, .map-popup-title,
+.hero h1, .gb-text h2,
+.login-hero h1, .page-head h1, .lu-card .tt {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+h1, .hero h1, .section-title, .login-hero h1 { letter-spacing: 0.12em; }
+.nav-logo, .brand { letter-spacing: 0.04em; }
+h3, .card-title, .cat-name, .timeline-title, .value-title, .map-popup-title { font-weight: 600; }
+
+/* 內文：行高放寬到 1.8 */
+p,
+.section-sub, .cat-desc, .card-desc, .timeline-desc, .value-desc, .hero p,
+.merchant-desc, .desc {
+  line-height: 1.8;
+}
+
+/* 緣投說的話（遊戲裡的對話框、每日小知識） */
+.side-bubble, .buddy .say, .tip .t {
+  font-family: var(--font-kai);
+  font-size: 15px;
+  line-height: 1.8;
+}

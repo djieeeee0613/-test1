@@ -170,6 +170,8 @@
         .nav-game em { font-style: normal; }
         .ng-short { display: none; }
         @media (max-width: 1100px) { .nav-links { gap: 20px; } .nav-game-new { display: none; } }
+        /* 品牌名稱變長、改成宋體後，中等寬度放不下整排選單，提早改用漢堡選單 */
+        .nav-logo, .nav-links a { white-space: nowrap; }
         @media (max-width: 768px) {
             .nav-game { margin-left: auto; margin-right: 12px; }
             .nav-game > span { padding: 5px 12px 5px 5px; font-size: 13px; }
@@ -214,6 +216,50 @@
         }
         .hero-circle.c1 { width: 500px; height: 500px; top: -100px; right: -100px; }
         .hero-circle.c2 { width: 300px; height: 300px; bottom: 50px; left: -50px; }
+
+        /* 背景輪播：6 大分類照片，點照片進入該分類的商家頁 */
+        .hero-slides { position: absolute; inset: 0; z-index: 0; }
+        .hero-slide {
+            position: absolute; inset: 0; display: block;
+            background-size: cover; background-position: center;
+            opacity: 0; transform: scale(1.06);
+            transition: opacity 1.4s ease, transform 7s ease-out;
+            pointer-events: none;
+        }
+        .hero-slide.active { opacity: 1; transform: scale(1); pointer-events: auto; }
+        .hero-slides::after {
+            content: ''; position: absolute; inset: 0; pointer-events: none;
+            background:
+                radial-gradient(ellipse at center, rgba(20,32,24,.45) 0%, rgba(20,32,24,.70) 70%),
+                linear-gradient(180deg, rgba(20,32,24,.55) 0%, rgba(20,32,24,.15) 30%, rgba(20,32,24,.60) 100%);
+        }
+        .hero.has-slides::before, .hero.has-slides .hero-circle { display: none; }
+        .hero.has-slides { cursor: pointer; min-height: 680px; }  /* 螢幕很矮時，下方分類標籤才不會壓到按鈕 */
+        .hero.has-slides .hero-content { pointer-events: none; text-shadow: 0 2px 18px rgba(0,0,0,.35); }
+        .hero.has-slides .hero-content a, .hero.has-slides .hero-content button { pointer-events: auto; }
+
+        .hero-slide-nav {
+            position: absolute; left: 50%; bottom: 104px; transform: translateX(-50%); z-index: 2;
+            display: flex; flex-direction: column; align-items: center; gap: 12px;
+        }
+        .hero-slide-caption {
+            color: #fff; text-decoration: none; font-size: 14px; letter-spacing: .08em;
+            background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35);
+            backdrop-filter: blur(6px); padding: 6px 16px; border-radius: 20px; transition: background .2s;
+        }
+        .hero-slide-caption:hover { background: rgba(255,255,255,.26); }
+        .hero-slide-caption { white-space: nowrap; }
+        @media (max-width: 480px) {
+            .hero.has-slides .hero-scroll { display: none; }
+            .hero-slide-nav { bottom: 36px; }
+        }
+        .hero-dots { display: flex; gap: 8px; }
+        .hero-dot {
+            width: 8px; height: 8px; border-radius: 4px; border: none; padding: 0; cursor: pointer;
+            background: rgba(255,255,255,.45); transition: width .3s, background .3s;
+        }
+        .hero-dot.active { width: 26px; background: var(--accent); }
+        @media (prefers-reduced-motion: reduce) { .hero-slide { transition: opacity .6s; transform: none !important; } }
 
         .hero-content { position: relative; z-index: 1; }
 
@@ -490,6 +536,21 @@
             position: relative;
         }
 
+        .cat-photo {
+            height: 150px;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .cat-photo::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.18), rgba(0,0,0,0) 45%);
+        }
+
+        .cat-count { z-index: 1; }
+
         .cat-emoji {
             font-size: 52px;
             filter: drop-shadow(0 2px 8px rgba(0,0,0,0.25));
@@ -643,7 +704,7 @@
             box-shadow: 0 2px 12px rgba(0,0,0,0.05);
         }
 
-        .value-icon { font-size: 40px; margin-bottom: 16px; }
+        .value-icon { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; margin-bottom: 16px; background: #f3efe6; }
 
         .value-title {
             font-size: 16px;
@@ -653,6 +714,27 @@
         }
 
         .value-desc { font-size: 14px; color: #666; line-height: 1.6; }
+        .value-item { position: relative; }
+        .value-num { position: absolute; top: 14px; left: 18px; font-family: var(--font-serif, serif); font-size: 64px; font-weight: 700; line-height: 1; color: #EAE5D8; pointer-events: none; }
+        .value-title::before { content: ""; display: block; width: 28px; height: 3px; background: var(--accent); border-radius: 2px; margin: 0 auto 14px; }
+
+        /* 照片卡片：深色漸層蒙版 + 白字，圖示放在毛玻璃圓圈裡 */
+        .value-item { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 260px; }
+        .value-photo {
+            position: relative; overflow: hidden; isolation: isolate;
+            background-size: cover; background-position: center;
+            box-shadow: 0 10px 28px rgba(20,32,24,0.18);
+        }
+        .value-photo::before {
+            content: ''; position: absolute; inset: 0; z-index: -1;
+            background: linear-gradient(180deg, rgba(18,30,22,0.45) 0%, rgba(18,30,22,0.62) 45%, rgba(18,30,22,0.82) 100%);
+        }
+        .value-photo .value-icon {
+            width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 30px;
+            background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); backdrop-filter: blur(6px);
+        }
+        .value-photo .value-title { color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.45); }
+        .value-photo .value-desc { color: rgba(255,255,255,0.92); text-shadow: 0 1px 8px rgba(0,0,0,0.5); }
 
         /* ===== CTA ===== */
         .cta-section {
@@ -1091,6 +1173,11 @@
         }
 
         /* ===== 響應式 ===== */
+        /* 要放在 .nav-hamburger 基本樣式之後，才蓋得過它的 display: none */
+        @media (max-width: 1180px) {
+            .nav-links, .lang-switcher { display: none; }
+            .nav-hamburger { display: flex; }
+        }
         @media (max-width: 900px) {
             .cards-grid { grid-template-columns: repeat(2, 1fr); }
             .values-grid { grid-template-columns: repeat(2, 1fr); }
@@ -1227,6 +1314,10 @@
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/typography.css">
 </head>
 <body>
 
@@ -1287,18 +1378,32 @@ function closeAnnouncement() {
 </div>
 
 <!-- ===== Hero ===== -->
-<div class="hero">
+<div class="hero{% if categories %} has-slides{% endif %}" id="hero">
+    <div class="hero-slides">
+        {% for c in categories %}<a class="hero-slide{% if loop.first %} active{% endif %}" href="/category/{{ c.slug }}"
+           style="background-image: url('/static/images/hero/{{ c.slug }}.jpg')" aria-label="查看{{ c.name }}的商家"
+           data-label="{{ c.emoji }} {{ c.name }}"></a>
+        {% endfor %}
+    </div>
     <div class="hero-circle c1"></div>
     <div class="hero-circle c2"></div>
     <div class="hero-content">
         <div class="hero-badge">✦ 南投縣永續旅遊推薦平台 ✦</div>
-        <h1>探索南投<br><em>職人深度體驗</em></h1>
-        <p>從埔里冠軍咖啡到布農族部落文化，與在地職人面對面，感受最真實的台灣山林溫度。</p>
+        <h1>職人帶路<br><em>南投永續深度旅行</em></h1>
+        <p>不只路過。從百年蛇窯、手工紙寮到部落織布，與職人面對面，留下只屬於你的南投記憶。</p>
         <div class="hero-btns">
             <a href="#experiences" class="btn-primary">探索體驗</a>
             <a href="#" onclick="openChat()" class="btn-outline">AI 幫我規劃 →</a>
         </div>
     </div>
+    {% if categories %}
+    <div class="hero-slide-nav">
+        <a class="hero-slide-caption" id="hero-caption" href="/category/{{ categories[0].slug }}">{{ categories[0].emoji }} {{ categories[0].name }}　查看商家 →</a>
+        <div class="hero-dots">
+            {% for c in categories %}<button class="hero-dot{% if loop.first %} active{% endif %}" aria-label="{{ c.name }}" data-i="{{ loop.index0 }}"></button>{% endfor %}
+        </div>
+    </div>
+    {% endif %}
     <div class="hero-scroll">向下滾動</div>
 </div>
 
@@ -1309,7 +1414,7 @@ function closeAnnouncement() {
         <div class="label">在地職人商家</div>
     </div>
     <div class="stat-item">
-        <div class="num">7</div>
+        <div class="num">{{ categories|length }}</div>
         <div class="label">體驗類別</div>
     </div>
     <div class="stat-item">
@@ -1325,150 +1430,27 @@ function closeAnnouncement() {
 <!-- ===== 體驗分類 ===== -->
 <section id="experiences">
     <div class="section-tag">EXPERIENCES</div>
-    <div class="section-title">七大體驗分類</div>
+    <div class="section-title">六大體驗分類</div>
     <div class="section-sub">選擇您感興趣的類別，AI 嚮導立即介紹精選商家並協助預約。</div>
     <div class="cat-grid">
-
-        <div class="cat-card" onclick="location.href='/category/coffee'">
-            <div class="cat-header" style="background: linear-gradient(135deg, #5D4037, #8D6E63)">
-                <div class="cat-emoji">☕</div>
-                <span class="cat-count">5 家</span>
+        {% for c in categories %}
+        <div class="cat-card" onclick="location.href='/category/{{ c.slug }}'">
+            <div class="cat-header cat-photo" style="background-color: {{ c.color }}; background-image: url('/static/images/categories/{{ c.image }}')">
+                <span class="cat-count">{% if c.merchants %}{{ c.merchants|length }} 家{% else %}即將推出{% endif %}</span>
             </div>
             <div class="cat-body">
-                <div class="cat-name">咖啡職人</div>
-                <div class="cat-desc">從產地到杯中，感受冠軍手沖的溫度</div>
+                <div class="cat-name">{{ c.emoji }} {{ c.name }}</div>
+                <div class="cat-desc">{{ c.tagline }}</div>
                 <div class="cat-tags">
-                    <span class="cat-tag">手沖體驗</span>
-                    <span class="cat-tag">莊園導覽</span>
-                    <span class="cat-tag">烘焙工坊</span>
+                    {% for t in c.tags %}<span class="cat-tag">{{ t }}</span>{% endfor %}
                 </div>
                 <div class="cat-footer-row">
                     <div class="cat-explore">查看商家 →</div>
-                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「☕ 咖啡職人」類別感興趣，請介紹南投有哪些咖啡相關的商家與體驗。')">問問 AI</span>
+                    <span class="cat-ask-ai" data-msg="【分類探索】我對「{{ c.emoji }} {{ c.name }}」類別感興趣，請介紹南投有哪些相關的商家與體驗。" onclick="event.stopPropagation(); openChatWithMsg(this.dataset.msg)">問問 AI</span>
                 </div>
             </div>
         </div>
-
-        <div class="cat-card" onclick="location.href='/category/farm'">
-            <div class="cat-header" style="background: linear-gradient(135deg, #558B2F, #7CB342)">
-                <div class="cat-emoji">🌾</div>
-                <span class="cat-count">3 家</span>
-            </div>
-            <div class="cat-body">
-                <div class="cat-name">農業休閒</div>
-                <div class="cat-desc">採茶、種稻、走梅園，親土親水的慢活體驗</div>
-                <div class="cat-tags">
-                    <span class="cat-tag">採茶製茶</span>
-                    <span class="cat-tag">有機農場</span>
-                    <span class="cat-tag">梅園走讀</span>
-                </div>
-                <div class="cat-footer-row">
-                    <div class="cat-explore">查看商家 →</div>
-                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「🌾 農業休閒」類別感興趣，請介紹南投有哪些農業體驗商家。')">問問 AI</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="cat-card" onclick="location.href='/category/spa'">
-            <div class="cat-header" style="background: linear-gradient(135deg, #b71c1c, #e53935)">
-                <div class="cat-emoji">♨️</div>
-                <span class="cat-count">3 家</span>
-            </div>
-            <div class="cat-body">
-                <div class="cat-name">秘境溫泉</div>
-                <div class="cat-desc">隱藏山中的美人湯，讓身心徹底放鬆歸零</div>
-                <div class="cat-tags">
-                    <span class="cat-tag">廬山溫泉</span>
-                    <span class="cat-tag">碳酸氫鈉泉</span>
-                    <span class="cat-tag">私人湯屋</span>
-                </div>
-                <div class="cat-footer-row">
-                    <div class="cat-explore">查看商家 →</div>
-                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「♨️ 秘境溫泉」類別感興趣，請介紹南投有哪些溫泉體驗商家。')">問問 AI</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="cat-card" onclick="location.href='/category/dining'">
-            <div class="cat-header" style="background: linear-gradient(135deg, #E65100, #FF8F00)">
-                <div class="cat-emoji">🍽️</div>
-                <span class="cat-count">4 家</span>
-            </div>
-            <div class="cat-body">
-                <div class="cat-name">永續餐飲</div>
-                <div class="cat-desc">在地食材上桌，原住民風味與創意料理</div>
-                <div class="cat-tags">
-                    <span class="cat-tag">原住民料理</span>
-                    <span class="cat-tag">在地食材</span>
-                    <span class="cat-tag">創意蔬食</span>
-                </div>
-                <div class="cat-footer-row">
-                    <div class="cat-explore">查看商家 →</div>
-                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「🍽️ 永續餐飲」類別感興趣，請介紹南投有哪些特色餐廳或飲食體驗。')">問問 AI</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="cat-card" onclick="location.href='/category/stay'">
-            <div class="cat-header" style="background: linear-gradient(135deg, #4527A0, #7E57C2)">
-                <div class="cat-emoji">🏡</div>
-                <span class="cat-count">8 家</span>
-            </div>
-            <div class="cat-body">
-                <div class="cat-name">永續住宿</div>
-                <div class="cat-desc">竹林、農場、星空帳篷，過一晚不一樣的夜</div>
-                <div class="cat-tags">
-                    <span class="cat-tag">竹林民宿</span>
-                    <span class="cat-tag">農場莊園</span>
-                    <span class="cat-tag">環保認證</span>
-                </div>
-                <div class="cat-footer-row">
-                    <div class="cat-explore">查看商家 →</div>
-                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「🏡 永續住宿」類別感興趣，請介紹南投有哪些特色住宿。')">問問 AI</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="cat-card" onclick="location.href='/category/tribe'">
-            <div class="cat-header" style="background: linear-gradient(135deg, #3E2723, #6D4C41)">
-                <div class="cat-emoji">🏔️</div>
-                <span class="cat-count">3 家</span>
-            </div>
-            <div class="cat-body">
-                <div class="cat-name">部落文化</div>
-                <div class="cat-desc">跟著獵人走森林，體驗最真實的原住民生活</div>
-                <div class="cat-tags">
-                    <span class="cat-tag">賽德克族</span>
-                    <span class="cat-tag">布農族</span>
-                    <span class="cat-tag">獵人學校</span>
-                </div>
-                <div class="cat-footer-row">
-                    <div class="cat-explore">查看商家 →</div>
-                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「🏔️ 部落文化」類別感興趣，請介紹南投有哪些部落文化體驗。')">問問 AI</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="cat-card" onclick="location.href='/category/craft'">
-            <div class="cat-header" style="background: linear-gradient(135deg, #00695C, #26A69A)">
-                <div class="cat-emoji">🎨</div>
-                <span class="cat-count">10 家</span>
-            </div>
-            <div class="cat-body">
-                <div class="cat-name">工藝手作</div>
-                <div class="cat-desc">用雙手感受在地材料，帶走一件屬於自己的作品</div>
-                <div class="cat-tags">
-                    <span class="cat-tag">竹編工藝</span>
-                    <span class="cat-tag">天然染布</span>
-                    <span class="cat-tag">陶藝創作</span>
-                </div>
-                <div class="cat-footer-row">
-                    <div class="cat-explore">查看商家 →</div>
-                    <span class="cat-ask-ai" onclick="event.stopPropagation(); openChatWithMsg('【分類探索】我對「🎨 工藝手作」類別感興趣，請介紹南投有哪些工藝手作體驗。')">問問 AI</span>
-                </div>
-            </div>
-        </div>
-
+        {% endfor %}
     </div>
 </section>
 
@@ -1480,16 +1462,8 @@ function closeAnnouncement() {
         <div class="section-sub">點擊地圖上的標記，查看各地職人介紹，或讓 AI 嚮導幫你推薦。</div>
         <div id="nantou-map"></div>
         <div class="map-legend" id="map-legend">
-            <div class="map-legend-item" onclick="filterMap('coffee')"><div class="legend-dot" style="background:#4A5D4E"></div>☕ 咖啡職人</div>
-            <div class="map-legend-item" onclick="filterMap('tea')"><div class="legend-dot" style="background:#2D6A4F"></div>🍃 茶&amp;酒莊</div>
-            <div class="map-legend-item" onclick="filterMap('craft')"><div class="legend-dot" style="background:#D85A30"></div>🎨 工藝手作</div>
-            <div class="map-legend-item" onclick="filterMap('farm')"><div class="legend-dot" style="background:#C8A96E"></div>🌾 農業休閒</div>
-            <div class="map-legend-item" onclick="filterMap('hot_spring')"><div class="legend-dot" style="background:#3B82F6"></div>♨️ 秘境溫泉</div>
-            <div class="map-legend-item" onclick="filterMap('food')"><div class="legend-dot" style="background:#E85D04"></div>🍽️ 永續餐飲</div>
-            <div class="map-legend-item" onclick="filterMap('stay')"><div class="legend-dot" style="background:#0F6E56"></div>🏡 永續住宿</div>
-            <div class="map-legend-item" onclick="filterMap('tribal')"><div class="legend-dot" style="background:#7C3AED"></div>🏔️ 部落文化</div>
-            <div class="map-legend-item" onclick="filterMap('temple')"><div class="legend-dot" style="background:#92400E"></div>🏛️ 宗教文化</div>
-            <div class="map-legend-item" onclick="filterMap('all')" style="font-weight:600; color:var(--primary);">全部顯示</div>
+            {% for c in map_categories %}<div class="map-legend-item" onclick="filterMap('{{ c.slug }}')"><div class="legend-dot" style="background:{{ c.color }}"></div>{{ c.emoji }} {{ c.name }}</div>
+            {% endfor %}<div class="map-legend-item" onclick="filterMap('all')" style="font-weight:600; color:var(--primary);">全部顯示</div>
         </div>
     </div>
 </div>
@@ -1504,20 +1478,20 @@ function closeAnnouncement() {
             <div class="timeline-item">
                 <div class="timeline-emoji">🌅</div>
                 <div class="timeline-time">上午 9:00 - 12:00</div>
-                <div class="timeline-title">埔里冠軍咖啡師</div>
-                <div class="timeline-desc">清晨空氣最宜品味咖啡，親眼見證手沖職人技藝，一杯百香果淺焙開啟一天。</div>
+                <div class="timeline-title">日月老茶廠</div>
+                <div class="timeline-desc">清晨走進魚池鄉的百年製茶廠，跟著茶師認識友善有機農法，一杯在地紅茶開啟一天。</div>
             </div>
             <div class="timeline-item">
                 <div class="timeline-emoji">🌞</div>
                 <div class="timeline-time">下午 13:00 - 17:00</div>
-                <div class="timeline-title">達魯獵人學校</div>
-                <div class="timeline-desc">午後陽光下走讀仁愛鄉森林，學習賽德克族傳統知識，享用部落特色風味餐。</div>
+                <div class="timeline-title">地利遊客資訊站＆丹大布農生態旅遊</div>
+                <div class="timeline-desc">午後來到信義鄉布農族部落，走雙龍吊橋、體驗獵人智慧，親手做一瓶馬告香氛。</div>
             </div>
             <div class="timeline-item">
                 <div class="timeline-emoji">🌙</div>
                 <div class="timeline-time">傍晚 18:00 以後</div>
-                <div class="timeline-title">玉山星空酒莊</div>
-                <div class="timeline-desc">黃昏時分走入信義鄉梅園，品嚐國際金牌梅酒，在星空下聽莊主說布農族故事。</div>
+                <div class="timeline-title">慢午廚房x野食</div>
+                <div class="timeline-desc">傍晚在望鄉部落享用從土地到餐桌的原民風味餐，吃一頓野菜與野花入菜的晚餐。</div>
             </div>
         </div>
     </div>
@@ -1527,27 +1501,23 @@ function closeAnnouncement() {
 <section id="values">
     <div class="section-tag">SUSTAINABILITY</div>
     <div class="section-title">我們的永續承諾</div>
-    <div class="section-sub">每一筆預約，都直接回饋在地職人，守護南投的山林與文化。</div>
+    <div class="section-sub">以文化為核心，讓每一趟旅行都能支持南投的職人、社區與山林。</div>
     <div class="values-grid">
-        <div class="value-item">
-            <div class="value-icon">🌱</div>
-            <div class="value-title">在地生產</div>
-            <div class="value-desc">所有合作商家皆採用當地食材與原料，減少碳足跡。</div>
+        <div class="value-item value-photo" style="background-image: url('/static/images/values/culture.jpg')">
+            <div class="value-title">文化傳承</div>
+            <div class="value-desc">職人故事經本人確認後，以中、英、日文介紹；部落內容由族人詮釋。</div>
         </div>
-        <div class="value-item">
-            <div class="value-icon">👨‍🌾</div>
-            <div class="value-title">職人傳承</div>
-            <div class="value-desc">支持年輕一代返鄉，讓傳統技藝繼續在土地上生根。</div>
+        <div class="value-item"><span class="value-num" aria-hidden="true">02</span>
+            <div class="value-title">在地受益</div>
+            <div class="value-desc">旅客直接向職人預約，縮短中間通路，讓消費留在南投。</div>
         </div>
-        <div class="value-item">
-            <div class="value-icon">🏔️</div>
-            <div class="value-title">環境守護</div>
-            <div class="value-desc">小規模深度旅遊，避免過度開發，讓山林自然呼吸。</div>
+        <div class="value-item value-photo" style="background-image: url('/static/images/values/environment.jpg')">
+            <div class="value-title">友善環境</div>
+            <div class="value-desc">優先推薦具環保標章與綠色餐飲認證的店家，並建議搭乘大眾運輸如台灣好行。</div>
         </div>
-        <div class="value-item">
-            <div class="value-icon">🤝</div>
-            <div class="value-title">部落共榮</div>
-            <div class="value-desc">文化體驗收入直接回饋原住民社區，促進族群文化延續。</div>
+        <div class="value-item"><span class="value-num" aria-hidden="true">04</span>
+            <div class="value-title">看見成效</div>
+            <div class="value-desc">記錄到訪與人流、分散熱門景點，並規劃職人回饋機制，持續改善。</div>
         </div>
     </div>
 </section>
@@ -1696,7 +1666,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="gb-text">
       <span class="gb-chip">🎮 互動遊戲</span>
       <h2>緣投<span>探索者</span></h2>
-      <p>和吉祥物緣投一起走訪南投 46 間在地職人：AI 驗證打卡收集印章、挑戰問答、分享旅程，升到 Lv.{{ game_cfg.max_level }}「{{ game_cfg.max_title }}」就能領取專屬證書！</p>
+      <p>和吉祥物緣投一起走訪南投 {{ total_merchants }} 間在地職人：AI 驗證打卡收集印章、挑戰問答、分享旅程，升到 Lv.{{ game_cfg.max_level }}「{{ game_cfg.max_title }}」就能領取專屬證書！</p>
       <div class="gb-feats">
         <div><b>📸 職人打卡</b><small>+{{ game_cfg.xp_checkin }} XP</small></div>
         <div><b>🧠 問答大挑戰</b><small>每局 {{ game_cfg.quiz_round_size }} 題・無限挑戰</small></div>
@@ -1732,7 +1702,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const _SAMPLE_HTML = `
     <img src="/static/images/ad-sample.jpg" alt="阿傑老闆的咖啡工作坊" style="width:100%;border-radius:20px 20px 0 0;display:block;max-height:300px;object-fit:cover;">
     <div style="padding:24px 28px 28px;">
-        <div style="display:inline-block;background:#f0f7f0;color:#4A5D4E;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px;">☕ 咖啡職人 · 限定體驗</div>
+        <div style="display:inline-block;background:#f0f7f0;color:#4A5D4E;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px;">🌾 農業永續 · 限定體驗</div>
         <h2 style="font-size:24px;font-weight:800;color:#1a1a1a;margin:0 0 6px;">阿傑老闆的咖啡工作坊</h2>
         <p style="color:#888;font-size:14px;margin:0 0 20px;">手作體驗 × 職人手沖 × 豆品販售</p>
         <p style="color:#444;font-size:15px;line-height:1.8;margin:0 0 20px;">跟著阿傑老闆，探索最純粹的咖啡香。從生豆挑選、烘焙到手沖，一步一步感受咖啡的溫度與故事。課程結束後可帶走自己烘焙的豆子（50g），是送禮自用兩相宜的南投伴手禮。</p>
@@ -1815,13 +1785,8 @@ function sendMessage(text) {
         <div class="message bot-message">
             你好！我是緣投，你的南投在地 AI 嚮導 🌿<br><br>請選擇您感興趣的體驗類別，或直接輸入需求：
             <div class="inline-chips" id="inline-chips">
-                <div class="inline-chip" onclick="pickCategory('【分類探索】☕ 咖啡職人')">☕ 咖啡職人</div>
-                <div class="inline-chip" onclick="pickCategory('【分類探索】🌾 農業休閒')">🌾 農業休閒</div>
-                <div class="inline-chip" onclick="pickCategory('【分類探索】♨️ 秘境溫泉')">♨️ 秘境溫泉</div>
-                <div class="inline-chip" onclick="pickCategory('【分類探索】🏔️ 部落文化')">🏔️ 部落文化</div>
-                <div class="inline-chip" onclick="pickCategory('【分類探索】🏡 特色住宿')">🏡 特色住宿</div>
-                <div class="inline-chip" onclick="pickCategory('【分類探索】🎨 工藝手作')">🎨 工藝手作</div>
-                <div class="inline-chip inline-chip-full" onclick="pickCategory('幫我規劃南投一日行程')">📅 規劃一日行程</div>
+                {% for c in categories %}<div class="inline-chip" data-msg="【分類探索】{{ c.emoji }} {{ c.name }}" onclick="pickCategory(this.dataset.msg)">{{ c.emoji }} {{ c.name }}</div>
+                {% endfor %}                <div class="inline-chip inline-chip-full" onclick="pickCategory('幫我規劃南投一日行程')">📅 規劃一日行程</div>
             </div>
         </div>
     </div>
@@ -1834,24 +1799,39 @@ function sendMessage(text) {
     </div>
 </div>
 
+<script>
+(function heroSlides() {
+    const hero = document.getElementById('hero');
+    const slides = [...hero.querySelectorAll('.hero-slide')];
+    if (slides.length < 2) return;
+    const dots = [...hero.querySelectorAll('.hero-dot')], cap = document.getElementById('hero-caption');
+    let i = 0, timer = null;
+    function show(n) {
+        slides[i].classList.remove('active'); dots[i].classList.remove('active');
+        i = (n + slides.length) % slides.length;
+        slides[i].classList.add('active'); dots[i].classList.add('active');
+        cap.href = slides[i].getAttribute('href');
+        cap.textContent = slides[i].dataset.label + '　查看商家 →';
+    }
+    function start() { clearInterval(timer); timer = setInterval(() => show(i + 1), 6000); }
+    dots.forEach(d => d.addEventListener('click', e => { e.stopPropagation(); show(+d.dataset.i); start(); }));
+    // 文字區不擋點擊：點到照片（含標題文字）就進目前這張的分類頁，按鈕和連結照常運作
+    hero.addEventListener('click', e => {
+        if (e.target.closest('a, button')) return;
+        location.href = slides[i].getAttribute('href');
+    });
+    document.addEventListener('visibilitychange', () => document.hidden ? clearInterval(timer) : start());
+    start();
+})();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="/static/js/locations.js"></script>
 <script>
 (function initMap() {
-    const CAT_COLORS = {
-        coffee:     '#4A5D4E',
-        tea:        '#2D6A4F',
-        craft:      '#D85A30',
-        farm:       '#C8A96E',
-        hot_spring: '#3B82F6',
-        food:       '#E85D04',
-        stay:       '#0F6E56',
-        tribal:     '#7C3AED',
-        temple:     '#92400E',
-    };
+    // 店名 → 分類、顏色、圖示（來自 merchants_data.py）
+    const MERCHANT_CAT = {{ merchant_cat|tojson }};
 
-    function makeIcon(cat, emoji) {
-        const color = CAT_COLORS[cat];
+    function makeIcon(color, emoji) {
         return L.divIcon({
             html: `<div style="width:36px;height:36px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);"><span style="transform:rotate(45deg);font-size:17px;line-height:1;">${emoji}</span></div>`,
             className: '',
@@ -1872,12 +1852,13 @@ function sendMessage(text) {
         }).addTo(map);
 
         LOCATIONS.forEach(loc => {
-            const marker = L.marker([loc.lat, loc.lng], { icon: makeIcon(loc.cat, loc.emoji) }).addTo(map);
-            marker._cat = loc.cat;
+            const mc = MERCHANT_CAT[loc.name] || { cat: 'uncategorized', emoji: '📍', color: '#8A8F87' };
+            const marker = L.marker([loc.lat, loc.lng], { icon: makeIcon(mc.color, mc.emoji) }).addTo(map);
+            marker._cat = mc.cat;
             const phoneHtml = loc.phone ? `<div style="font-size:12px;color:#888;margin-bottom:8px;">📞 ${loc.phone}</div>` : '';
             marker.bindPopup(`
                 <div style="min-width:190px;">
-                    <div class="map-popup-title">${loc.emoji} ${loc.label}</div>
+                    <div class="map-popup-title">${mc.emoji} ${loc.label}</div>
                     <div class="map-popup-desc">${loc.desc}</div>
                     ${phoneHtml}
                     <button class="map-popup-btn" onclick="askAI('${loc.ask}')">🤖 讓 AI 推薦</button>
@@ -2049,7 +2030,7 @@ function sendMessage(text) {
             }
 
             // 偵測預約成功 → 顯示評價頁連結
-            const bookingMatch = text.match(/預約編號[：:]\s*\*?\*?([A-Z0-9]{8})\*?\*?/);
+            const bookingMatch = text.match(/預約編號(?:為|是)?[：:\s]*\*{0,2}([A-Z0-9]{8})/);
             if (bookingMatch) {
                 const ratingWidget = buildRatingWidget(bookingMatch[1]);
                 chatBox.appendChild(msgDiv);

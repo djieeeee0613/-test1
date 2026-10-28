@@ -1251,7 +1251,7 @@ def validate_booking(d):
     if not artisan:
         errors.append("請選擇商家")
     elif not m:
-        errors.append(f"「{artisan}」不在 46 家商家名單中")
+        errors.append(f"「{artisan}」不在商家名錄中")
     try:
         day = datetime.strptime(str(d.get("date") or ""), "%Y-%m-%d").date()
     except ValueError:
@@ -1374,14 +1374,14 @@ def list_line_bindings():
                     "duplicate": counts[r.get("artisan")] > 1, "valid_line_id": bool(LINE_ID_RE.match(r.get("line_id") or ""))})
     bound = {o["matched"] for o in out if o["matched"] and o["valid_line_id"]}
     return jsonify({"rows": out, "unbound": [m["name"] for m in MERCHANTS if m["name"] not in bound],
-                    "merchant_groups": MERCHANT_GROUPS})
+                    "total": len(MERCHANTS), "merchant_groups": MERCHANT_GROUPS})
 
 def validate_binding(d, rid=None):
     errors = []
     artisan = str(d.get("artisan") or "").strip()
     line_id = str(d.get("line_id") or "").strip()
     if artisan not in _BY_NAME:
-        errors.append("請從 46 家商家名單中選擇店名（店名必須完全一致，LINE 通知才找得到）")
+        errors.append("請從商家名錄中選擇店名（店名必須完全一致，LINE 通知才找得到）")
     if not LINE_ID_RE.match(line_id):
         errors.append("LINE User ID 格式不正確（U 開頭，後面 32 個英數字；商家可在 LINE Bot 輸入「我的ID」取得）")
     dup = [r for r in sb_get("merchants", {"artisan": f"eq.{artisan}", "select": "id"}) if r["id"] != rid]
@@ -1599,7 +1599,7 @@ def tool_merchant_performance(category: str = "", sort_by: str = "visits", limit
     """商家表現表：每家的預約數、人次、確認率、待確認數、評分、打卡數、貼文數、是否綁定 LINE，以及 AI 送出但對不到名錄的店名。
 
     Args:
-        category: 只看某個類別（例如：咖啡職人、茶&酒莊、工藝手作），留空代表全部。
+        category: 只看某個類別（例如：文化永續、農業永續、永續住宿），留空代表全部。
         sort_by: 排序依據：visits（預約+打卡）、bookings、confirm_rate、rating、pending、checkins。
         limit: 最多回傳幾家，預設 15。
     """
@@ -1610,7 +1610,7 @@ def tool_merchant_performance(category: str = "", sort_by: str = "visits", limit
     key = sort_by if sort_by in ("visits", "bookings", "confirm_rate", "rating", "pending", "checkins") else "visits"
     rows.sort(key=lambda r: (r.get(key) is None, -(r.get(key) or 0)))
     fields = ("name", "cat_name", "township", "bookings", "people", "confirm_rate", "pending", "rating", "checkins", "posts", "line_bound")
-    return {"count": len(rows), "sorted_by": key, "merchants": [{k: r[k] for k in fields} for r in rows[:max(1, min(46, limit))]],
+    return {"count": len(rows), "sorted_by": key, "merchants": [{k: r[k] for k in fields} for r in rows[:max(1, min(len(MERCHANTS), limit))]],
             "unmatched_names": unmatched.most_common(10)}
 
 def tool_search_bookings(merchant: str = "", status: str = "", date_from: str = "", date_to: str = "", limit: int = 20) -> dict:

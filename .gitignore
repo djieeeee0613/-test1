@@ -13,3 +13,6 @@ ngrok.exe
 # 個人帳單與費用文件、Office 暫存檔（不進 git）
 專案賬單*
 ~$*
+
+# 店家名單原始檔（資料已整理進 merchants_data.py）
+黑客松永續店家名單.xlsx

@@ -10,9 +10,9 @@ import traceback
 import requests
 from datetime import datetime, date, timezone, timedelta
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify, render_template, render_template_string
+from flask import Flask, request, jsonify, render_template, render_template_string, redirect
 from google import genai
-from merchants_data import CATEGORIES, CATEGORY_ORDER
+from merchants_data import CATEGORIES, CATEGORY_ORDER, UNCATEGORIZED
 import merchant_directory as md
 from game import sb_get, sb_insert, sb_patch, n8n_headers
 from google.genai import types
@@ -186,6 +186,20 @@ def book_experience(artisan_name: str, date: str, pax: int,
     return "抱歉，預約系統暫時無法使用，這筆預約沒有送出，請稍後再試或直接聯絡商家。"
 
 _events_cache = {"at": 0, "value": {}}
+_month_bookings_cache = {"at": 0, "value": {}}
+
+def _bookings_this_month():
+    """本月各商家的預約數（快取 5 分鐘），搜尋時把預約較少的職人排前面，分散人流"""
+    if time.time() - _month_bookings_cache["at"] < 300:
+        return _month_bookings_cache["value"]
+    counts = {}
+    month_start = datetime.now(timezone(timedelta(hours=8))).strftime('%Y-%m-01T00:00:00+08:00')
+    for b in sb_get("bookings", {"select": "artisan", "created_at": f"gte.{month_start}", "limit": "5000"}):
+        m = md.match_merchant(b.get("artisan"))
+        if m:
+            counts[m["name"]] = counts.get(m["name"], 0) + 1
+    _month_bookings_cache.update(at=time.time(), value=counts)
+    return counts
 
 def _active_events_by_merchant():
     """首頁輪播上架中的活動（快取 5 分鐘），依正式店名分組，讓 AI 推薦時可以提到"""
@@ -205,23 +219,28 @@ def _active_events_by_merchant():
     return grouped
 
 def search_local_merchants(category: str = "", township: str = "", keyword: str = "") -> str:
-    """搜尋南投在地職人商家（資料來自正式商家名錄，結果隨機排序）。
-    三個參數都可以留空；留空代表不篩選，全部留空會回傳全部 46 家。
+    """搜尋南投在地職人商家（資料來自正式商家名錄）。結果依「本月預約數」由少到多排序，數量相同時隨機，排在前面的請優先推薦。
+    三個參數都可以留空；留空代表不篩選，全部留空會回傳全部商家。
 
     Args:
-        category: 類別名稱，可填：咖啡職人、茶&酒莊、工藝手作、農業休閒、秘境溫泉、永續餐飲、永續住宿、部落文化、宗教文化。
+        category: 類別名稱，可填：文化永續、農業永續、部落永續、永續住宿、永續餐飲、在地購物。
         township: 鄉鎮，例如：魚池、埔里、國姓、鹿谷、竹山、信義、仁愛、水里、集集、草屯、南投市。
-        keyword: 關鍵字，會比對店名、介紹與特色標籤，例如：手沖、柴燒、親子、溫泉、布農。
+        keyword: 關鍵字，會比對店名、介紹與永續依據，例如：手沖、柴燒、親子、溫泉、布農。
     """
     rows, slug = md.search(category, township, keyword)
     notes = []
     if category and not slug:
         notes.append(f"（找不到「{category}」這個類別，已改為不限類別）")
+    if not rows and slug and not (township or keyword):
+        rows, _ = md.search()
+        notes.append(f"（「{CATEGORIES[slug]['name']}」目前還沒有歸類的商家，以下列出全部商家，請挑選相關的推薦）")
     if not rows and (township or keyword):
         rows, _ = md.search(category if slug else "")
         notes.append("（沒有完全符合的商家，以下改列同類別的全部商家）")
+    counts = _bookings_this_month()
+    rows = sorted(rows, key=lambda m: counts.get(m["name"], 0))   # rows 已隨機打亂，sorted 是穩定排序，同數量維持隨機
     print(f"🔎 搜尋商家：category={category!r} township={township!r} keyword={keyword!r} → {len(rows)} 家")
-    header = f"共 {len(rows)} 家（店名以【】內為正式名稱）："
+    header = f"共 {len(rows)} 家（店名以【】內為正式名稱；已依本月預約數由少到多排序，請優先推薦排在前面的職人）："
     return "\n".join(notes + [header, "", md.format_for_ai(rows, _active_events_by_merchant())])
 
 # ==========================================
@@ -231,11 +250,19 @@ MODEL_NAME = 'models/gemini-2.5-flash'
 FALLBACK_MODEL = 'models/gemini-2.0-flash'
 
 BASE_SYSTEM_INSTRUCTION = """
-你是南投在地永續旅遊 AI 嚮導，說話親切、熱情，熟悉當地所有職人與體驗資源。
+你是「緣投」，南投山林的精靈，也是南投職人深度旅遊的 AI 嚮導。
 
-【重要】每次呼叫 search_local_merchants 後，資料庫回傳的商家順序都是隨機排列的。請優先從排在前面的商家中挑選推薦，不要每次都推薦相同的商家，讓每位旅客看到不同的驚喜組合。
+【語氣】
+親切、簡潔，像在地朋友。依旅客使用的語言回覆（繁體中文、英文或日文），旅客用英文或日文時全程使用該語言。
 
-【多語言】旅客如果用英文或日文溝通，請全程用對應語言回答。
+【規則】
+1. 只推薦資料庫（search_local_merchants 的結果）中的店家與職人，不可自行編造店名、地址、價格或營業時間。
+2. 每個推薦都要附上資料來源：寫出該店家在搜尋結果中的「永續依據」（例如：百大文化基地、GDG 綠色餐飲指南、環保標章旅館）。資料庫沒有的資訊（例如營業時間、價格、交通方式細節），直接說「目前沒有這項資料」，並建議旅客向店家確認。
+3. 介紹部落儀式、信仰與傳統時，只使用資料庫中職人或族人提供的內容，不誇大、不臆測，也不把儀式形容成表演。
+4. 條件相近時，優先推薦被推薦次數較少的職人：搜尋結果已依本月預約數由少到多排序，請優先從排在前面的職人中挑選，不要每次都推薦同幾家。
+5. 規劃行程時，提醒旅客可搭乘台灣好行、自備水杯與餐具，並優先選擇在地店家。
+6. 行程或推薦包含部落（部落永續類別）或宗教場域（寺、廟、宮、禪寺、教堂等）時，主動提醒參訪禮儀，例如：拍照前先詢問、尊重祭儀時段、保持安靜。
+7. 不回答與南投旅遊無關的問題，禮貌地把話題帶回旅程規劃。
 
 【天氣整合】如果旅客詢問行程規劃，主動先呼叫 get_nantou_weather 取得天氣，在行程中加入天氣提醒（如：今天有雨，建議攜帶雨具；天氣晴朗適合戶外部落體驗）。
 
@@ -278,6 +305,9 @@ BASE_SYSTEM_INSTRUCTION = """
 📍 地點｜一句話說明為何傍晚適合來這裡
 
 🌤 **天氣提醒**：（根據當天天氣給出實用提醒，例如是否帶傘、防曬）
+🚌 **綠色旅行**：可搭乘台灣好行，記得自備水杯與餐具
+🙏 **參訪禮儀**：（行程有部落或宗教場域時才加這行）
+📚 **資料來源**：各店家的永續依據
 ---
 
 4. 行程結尾加上：「✨ 以上是為您量身打造的南投一日行程！請問您對哪個時段的體驗最感興趣，想進一步預約嗎？」
@@ -293,22 +323,22 @@ BASE_SYSTEM_INSTRUCTION = """
 ---
 🌿 **南投精選體驗推薦**
 
-☕ **職人體驗**
+🎨 **文化永續**
+1. **商家名稱** — 一句話亮點（📚 永續依據）
+
+🌾 **農業永續**
 1. **商家名稱** — 一句話亮點
 
-🌾 **農業休閒**
+🏔️ **部落永續**
 1. **商家名稱** — 一句話亮點
 
-♨️ **秘境溫泉**
+🏡 **永續住宿**
 1. **商家名稱** — 一句話亮點
 
 🍽️ **永續餐飲**
 1. **商家名稱** — 一句話亮點
 
-🏡 **特色住宿**
-1. **商家名稱** — 一句話亮點
-
-🏔️ **部落文化**
+🛍️ **在地購物**
 1. **商家名稱** — 一句話亮點
 ---
 
@@ -319,7 +349,7 @@ BASE_SYSTEM_INSTRUCTION = """
 【C. 旅客點擊分類卡片】
 觸發條件：訊息以「【分類探索】」開頭。
 
-1. 呼叫 search_local_merchants，把訊息中的類別名稱填入 category（例如 category="咖啡職人"；「特色住宿」請填「永續住宿」）。
+1. 呼叫 search_local_merchants，把訊息中的類別名稱填入 category（例如 category="文化永續"；「特色住宿」請填「永續住宿」）。
 2. 從結果中挑選商家。
 3. 列出 3～5 個商家，格式如下：
 
@@ -328,7 +358,8 @@ BASE_SYSTEM_INSTRUCTION = """
 
 **1. [商家名稱]**
 📍 [地點] ｜ [一句話亮點]
-💰 [價格]（若資料庫有提供）
+📚 資料來源：[永續依據]
+💰 [價格]（只有近期活動有標示費用時才寫，沒有就省略這行）
 
 **2. [商家名稱]**
 ...以此類推
@@ -367,17 +398,32 @@ Email：example@email.com
 # ==========================================
 # 4. Flask 路由
 # ==========================================
-@app.route('/')
-def index():
+def _home_context():
+    """首頁（index.html）與改版首頁（home_v2.html）共用：公告、分類、地圖用的店名→分類對照"""
     from game import site_settings
     ann = site_settings()["announcement"]
-    return render_template('index.html', announcement=ann if ann.get("enabled") and ann.get("text") else None)
+    cats = [CATEGORIES[s] for s in CATEGORY_ORDER]
+    # 地圖依正式店名取分類顏色與圖示（locations.js 只存店名）
+    merchant_cat = {m["name"]: {"cat": m["cat"], "emoji": m["emoji"], "color": m["color"]} for m in md.MERCHANTS}
+    return dict(announcement=ann if ann.get("enabled") and ann.get("text") else None,
+                categories=[c for c in cats if c["slug"] != UNCATEGORIZED], map_categories=[c for c in cats if c["merchants"]],
+                merchant_cat=merchant_cat, total_merchants=len(md.MERCHANTS))
+
+@app.route('/')
+def index():
+    return render_template('index.html', **_home_context())
+
+@app.route('/new')
+def home_v2():
+    """首頁改版試作（templates/home_v2.html），確認後再決定是否取代正式首頁"""
+    return render_template('home_v2.html', **_home_context())
 
 @app.route('/category/<slug>')
 def category_page(slug):
     cat = CATEGORIES.get(slug)
     if not cat:
-        return "<h2 style='font-family:sans-serif;text-align:center;margin-top:80px'>找不到此分類</h2>", 404
+        # 舊分類網址（coffee、tea、craft、spa）在 2026-10 改版後已不存在，導回首頁的分類區
+        return redirect('/#experiences')
     cats = [CATEGORIES[s] for s in CATEGORY_ORDER]
     return render_template('category.html', cat=cat, categories=cats)
 

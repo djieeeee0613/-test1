@@ -1,4 +1,4 @@
-"""46 家商家的單一資料來源：結構化索引、店名比對、檢索。AI 嚮導、預約、後台都用這裡。"""
+"""商家名錄的單一資料來源：結構化索引、店名比對、檢索。AI 嚮導、預約、後台都用這裡。"""
 import re
 import random
 import difflib
@@ -55,9 +55,10 @@ def resolve_category(text):
     for name, slug in CATEGORY_NAMES.items():
         if t and (t == name or t in name or name in t):
             return slug
-    aliases = {"咖啡": "coffee", "茶": "tea", "酒": "tea", "工藝": "craft", "手作": "craft", "農": "farm", "溫泉": "spa",
-               "泡湯": "spa", "餐": "dining", "美食": "dining", "住宿": "stay", "民宿": "stay", "飯店": "stay",
-               "部落": "tribe", "原住民": "tribe", "宗教": "culture", "寺": "culture", "廟": "culture"}
+    aliases = {"購物": "shop", "伴手禮": "shop", "選物": "shop", "咖啡": "farm", "茶": "farm", "農": "farm",
+               "工藝": "culture", "手作": "culture", "文化": "culture", "宗教": "culture", "寺": "culture", "廟": "culture",
+               "溫泉": "stay", "泡湯": "stay", "住宿": "stay", "民宿": "stay", "飯店": "stay",
+               "餐": "dining", "美食": "dining", "部落": "tribe", "原住民": "tribe"}
     return next((slug for k, slug in aliases.items() if k in t), None)
 
 
@@ -82,7 +83,7 @@ def search(category="", township="", keyword="", shuffle=True):
 def format_for_ai(rows, events_by_merchant=None):
     lines = []
     for m in rows:
-        line = (f"【{m['name']}】{m['emoji']} {m['cat_name']}｜{m['township']}｜特色：{'、'.join(m['tags'])}\n"
+        line = (f"【{m['name']}】{m['emoji']} {m['cat_name']}｜{m['township']}｜永續依據：{'、'.join(m['tags']) or '無'}\n"
                 f"  介紹：{m['description']}\n  地址：{m['address']}｜電話：{m['phone']}")
         for e in (events_by_merchant or {}).get(m["name"], [])[:2]:
             bits = [e.get("event_date")] + ([f"NT${e['price']}"] if e.get("price") is not None else []) \

@@ -309,7 +309,7 @@ tr:hover td { background: #fafbf9; }
       <div id="bk"></div>
     </div>
     <div class="view" id="v-merchants">
-      <div class="page-head"><div><h1>🏪 商家表現</h1><p>46 家職人的預約、回覆與曝光狀況</p></div></div>
+      <div class="page-head"><div><h1>🏪 商家表現</h1><p>所有職人的預約、回覆與曝光狀況</p></div></div>
       <div id="mc"></div>
     </div>
     <div class="view" id="v-map">
@@ -746,7 +746,7 @@ function drawBookingList() {
   const tag = s => `<span class="tag ${s === '已確認' ? 't-ok' : s === '已婉拒' ? 't-bad' : 't-warn'}">${esc(s)}</span>`;
   $('bl-table').innerHTML = `<table><tr><th>下單時間</th><th>編號</th><th>商家</th><th>體驗日期</th><th>人數</th><th>旅客</th><th>電話</th><th>Email</th><th>狀態</th><th>評分</th><th></th></tr>
     ${show.map(b => `<tr><td>${esc(b.created)}</td><td><code>${esc(b.id)}</code></td>
-      <td>${esc(b.artisan)}${b.merchant ? '' : ' <span class="tag t-warn" title="對不到 46 家商家名單">?</span>'}</td>
+      <td>${esc(b.artisan)}${b.merchant ? '' : ' <span class="tag t-warn" title="對不到商家名錄">?</span>'}</td>
       <td>${esc(b.date)}</td><td>${b.pax}</td><td>${esc(b.customer)}</td><td>${esc(b.phone)}</td><td>${esc(b.email)}</td>
       <td>${tag(b.status)}</td><td title="${esc(b.comment)}">${b.rating ? '⭐'.repeat(Math.round(b.rating)) : '—'}</td>
       <td>${b.row_id ? `<button class="btn btn-sm" onclick="editBooking(${b.row_id})">編輯</button>` : ''}</td></tr>`).join('')
@@ -789,7 +789,7 @@ async function renderMerchants() {
       </div>
       <div class="table-wrap" id="mc-table"></div>
     </div>
-    ${MC.unmatched.length ? `<div class="card" style="margin-top:14px"><h3>❔ 對不到的商家名稱</h3><div class="q">AI 嚮導送出的店名和 46 家名單對不起來，這些預約無法計入上表。若店名寫錯，LINE 通知也可能送不到商家。</div>
+    ${MC.unmatched.length ? `<div class="card" style="margin-top:14px"><h3>❔ 對不到的商家名稱</h3><div class="q">AI 嚮導送出的店名和 名錄裡的名單對不起來，這些預約無法計入上表。若店名寫錯，LINE 通知也可能送不到商家。</div>
       ${MC.unmatched.map(([n, c]) => `<div class="list-row"><span class="grow">${esc(n)}</span><span class="tag t-warn">${c} 筆</span></div>`).join('')}</div>` : ''}`;
   drawMerchants();
 }
@@ -832,8 +832,8 @@ async function renderMap() {
   $('map-cold').innerHTML = mapData.merchants.filter(m => !m.visits).map(m => `<div class="list-row"><span class="status-dot" style="background:${m.color}"></span><span class="grow">${esc(m.name)}</span><span class="muted" style="font-size:11px">${esc(m.cat_name)}</span></div>`).join('') || '<div class="empty">每一家都有人造訪 🎉</div>';
   setTimeout(() => mapObj.invalidateSize(), 80);
 }
-const CAT_ICON = { coffee: 'fa-mug-hot', tea: 'fa-leaf', craft: 'fa-palette', farm: 'fa-wheat-awn', spa: 'fa-hot-tub-person',
-                   dining: 'fa-utensils', stay: 'fa-house-chimney', tribe: 'fa-mountain', culture: 'fa-place-of-worship' };
+const CAT_ICON = { culture: 'fa-palette', farm: 'fa-wheat-awn', tribe: 'fa-mountain', stay: 'fa-house-chimney',
+                   dining: 'fa-utensils', shop: 'fa-bag-shopping', uncategorized: 'fa-location-dot' };
 const MAP_KEY_LABEL = { visits: '預約＋打卡', bookings: '預約數', checkins: '打卡數' };
 function drawMap() {
   if (mapLayer) mapLayer.remove();
@@ -841,7 +841,8 @@ function drawMap() {
   const max = Math.max(1, ...mapData.merchants.map(m => m[mapKey]));
   LOCATIONS.forEach(loc => {
     let best = null, score = 0;
-    mapData.merchants.forEach(m => { const s = similar(loc.label, m.name); if (s > score) { score = s; best = m; } });
+    best = mapData.merchants.find(m => m.name === loc.name); score = best ? 1 : 0;
+    if (!best) mapData.merchants.forEach(m => { const s = similar(loc.label, m.name); if (s > score) { score = s; best = m; } });
     if (!best || score < .45) return;
     const v = best[mapKey];
     const size = v ? Math.round(30 + Math.sqrt(v / max) * 24) : 26;
@@ -1670,7 +1671,7 @@ async function renderLine() {
   const problems = LN.rows.filter(r => !r.exact || r.duplicate || !r.valid_line_id).length;
   $('ln').innerHTML = `
     <div class="grid g3">
-      <div class="card kpi"><div class="lbl">已綁定商家</div><div class="val">${46 - LN.unbound.length} <small style="font-size:14px;color:var(--muted)">/ 46</small></div><div class="meter"><i style="width:${(46 - LN.unbound.length) / 46 * 100}%"></i></div></div>
+      <div class="card kpi"><div class="lbl">已綁定商家</div><div class="val">${LN.total - LN.unbound.length} <small style="font-size:14px;color:var(--muted)">/ ${LN.total}</small></div><div class="meter"><i style="width:${(LN.total - LN.unbound.length) / LN.total * 100}%"></i></div></div>
       <div class="card kpi ${problems ? 'alert' : ''}"><div class="lbl">有問題的綁定</div><div class="val">${problems}</div><div class="sub">店名不一致、重複或 ID 格式錯誤</div></div>
       <div class="card kpi"><div class="lbl">商家怎麼取得 LINE ID？</div><div class="sub" style="line-height:1.7;margin-top:6px">請商家加入 LINE Bot 後傳送「<b>我的ID</b>」，Bot 會回覆一串 U 開頭的 ID。</div></div>
     </div>
