@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案說明
 
-南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Supabase 並推播 LINE 通知給商家。商家確認或婉拒後，系統自動寄 email 通知旅客。商家可透過 LINE Bot 登錄活動、上傳活動照片，照片自動顯示在網站輪播。品牌名稱是「深度與美學旅遊研究室」：網站導覽列、頁尾、分頁圖示、後台與信件用新 logo（原圖 `new_icon.jpg`；`static/images/logo-mark.png` 是裁掉文字的方形圖示、`logo-full.jpg` 是含文字的完整版、`favicon.png` / `apple-touch-icon.png`）。吉祥物「緣投」（`static/images/mascot.jpg`）只用在 AI 相關功能與遊戲角色：AI 嚮導 FAB 與聊天視窗、後台「問緣投」、緣投探索者遊戲內的角色與入口按鈕、使用者沒有頭像時的預設圖。
+南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Supabase 並推播 LINE 通知給商家。商家確認或婉拒後，系統自動寄 email 通知旅客。商家可透過 LINE Bot 登錄活動、上傳活動照片，照片自動顯示在網站輪播。品牌名稱是「深度與美學旅遊研究室」：網站導覽列、頁尾、分頁圖示、後台與信件用新 logo（原圖 `icon/new_icon.jpg`；`static/images/logo-mark.png` 是裁掉文字的方形圖示、`logo-full.jpg` 是含文字的完整版、`favicon.png` / `apple-touch-icon.png`）。吉祥物「緣投」（`static/images/mascot.jpg`）只用在 AI 相關功能與遊戲角色：AI 嚮導 FAB 與聊天視窗、後台「問緣投」、緣投探索者遊戲內的角色與入口按鈕、使用者沒有頭像時的預設圖。遊戲裡的緣投會隨等級換造型（原圖 `icon/多型態緣投.png`，裁切去背後放在 `static/images/mascot/mascot-{sleep,farmer,foodie,cheer}.png`）。
 
 另有兩個子系統：
 - **緣投探索者遊戲**（`/game`）：Google 登入，打卡（AI 驗人臉）、問答大挑戰、旅人動態、排行榜、升到最高等級寄永續達人證書
@@ -208,6 +208,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - **暫停發言**：`game_users.muted` 為 true 時不能發文、留言（403）
 - **限時活動**：`game_events` 表，`xp_multiplier(kind, category)` 取進行中活動的最高倍率（不相乘）；有指定商家類別的活動只套用在該類別打卡。活動時間以 UTC 存，後台以台灣時間輸入與顯示
 - **XP 最低為 0**：`award_xp()` 會把 XP 和計數欄位夾在 0 以上（後台可扣分）
+- **緣投造型**：`game.html` 的 `formFor(level)` 決定造型，最高等級固定是 `cheer`（舉旗歡呼），其他等級依比例分到 `sleep` → `farmer` → `foodie`（預設 3 級時是睡覺、草帽、歡呼；4 級以上才會出現吃麵）。登入前顯示睡覺造型；側欄、右下角緣投、每日小知識、主頁「升級之路」、升級彈窗都會跟著換。換圖片只要替換同名 PNG（透明背景、正方形）
 - **前端** `templates/game.html`：左側抽屜選單（≥1000px 預設展開）、6 個頁面（主頁/打卡/問答/動態/排行/證書）、緣投浮動對話、升級彩帶動畫；所有使用者內容都經 `esc()` 轉義
 
 ### 管理後台（`/admin`）

@@ -66,7 +66,7 @@ a { color: inherit; }
 .feat small { opacity: .7; }
 .feat .ic { font-size: 22px; }
 .login-card { margin-top: 90px; background: #fff; color: var(--text); border-radius: 28px; padding: 40px 34px 32px; width: 360px; max-width: 100%; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); position: relative; }
-.login-mascot { width: 128px; height: 128px; border-radius: 50%; object-fit: cover; border: 5px solid var(--gold); margin: -100px auto 16px; box-shadow: 0 12px 30px rgba(0,0,0,.25); animation: bob 3.2s ease-in-out infinite; cursor: pointer; }
+.login-mascot { width: 150px; height: 150px; object-fit: contain; margin: -110px auto 10px; filter: drop-shadow(0 12px 18px rgba(0,0,0,.28)); animation: bob 3.2s ease-in-out infinite; cursor: pointer; }
 .login-mascot.wiggle { animation: wiggle .7s ease; }
 .login-bubble { background: var(--gold-soft); border: 1px solid #ecdcb6; border-radius: 16px; padding: 12px 14px; font-size: 14px; line-height: 1.7; margin-bottom: 22px; position: relative; color: #5a4a26; min-height: 72px; }
 .login-bubble::before { content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 14px; height: 14px; background: var(--gold-soft); border-left: 1px solid #ecdcb6; border-top: 1px solid #ecdcb6; }
@@ -110,7 +110,7 @@ body.menu-open .sidebar { transform: none; }
 }
 
 .side-mascot { padding: 22px 20px 16px; text-align: center; background: linear-gradient(180deg, var(--green-soft), transparent); position: relative; }
-.side-mascot .m-img { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; margin: 0 auto; border: 4px solid #fff; box-shadow: 0 8px 22px rgba(45,74,53,.25); cursor: pointer; animation: bob 3.6s ease-in-out infinite; }
+.side-mascot .m-img { width: 112px; height: 112px; object-fit: contain; margin: 0 auto; filter: drop-shadow(0 8px 12px rgba(45,74,53,.25)); cursor: pointer; animation: bob 3.6s ease-in-out infinite; }
 .side-mascot .m-img.jump { animation: jump .7s var(--ease); }
 .side-bubble { margin-top: 12px; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 13px; line-height: 1.6; color: #44513f; position: relative; min-height: 44px; transition: opacity .25s; }
 .side-bubble::before { content: ''; position: absolute; top: -7px; left: 50%; width: 12px; height: 12px; background: #fff; border-left: 1px solid var(--line); border-top: 1px solid var(--line); transform: translateX(-50%) rotate(45deg); }
@@ -180,9 +180,10 @@ body.menu-open .sidebar { transform: none; }
 .roadmap::before { content: ''; position: absolute; top: 34px; left: var(--edge); right: var(--edge); height: 4px; background: var(--line); border-radius: 4px; }
 .roadmap .fill { position: absolute; top: 34px; left: var(--edge); height: 4px; background: linear-gradient(90deg, var(--green), var(--gold)); border-radius: 4px; transition: width 1.2s var(--ease); }
 .step { position: relative; z-index: 1; text-align: center; flex: 1; }
-.step .dot { width: 54px; height: 54px; margin: 0 auto 8px; border-radius: 50%; background: #fff; border: 3px solid var(--line); display: grid; place-items: center; font-size: 22px; filter: grayscale(1); opacity: .55; transition: .4s var(--ease); }
+.step .dot { width: 54px; height: 54px; margin: 0 auto 8px; border-radius: 50%; background: #fff; border: 3px solid var(--line); display: grid; place-items: center; font-size: 22px; overflow: hidden; filter: grayscale(1); opacity: .55; transition: .4s var(--ease); }
 .step.done .dot { border-color: var(--green); filter: none; opacity: 1; }
 .step.now .dot { border-color: var(--gold); filter: none; opacity: 1; box-shadow: 0 0 0 6px rgba(200,169,110,.2); transform: scale(1.1); }
+.step .dot img { width: 88%; height: 88%; object-fit: contain; }
 .step .t { font-size: 12px; font-weight: 700; }
 .step .x { font-size: 11px; color: var(--muted); }
 .quick { display: flex; align-items: center; gap: 14px; padding: 18px; border-radius: 20px; background: #fff; border: 1px solid #efece4; text-align: left; transition: transform .3s var(--ease), box-shadow .3s; }
@@ -191,7 +192,7 @@ body.menu-open .sidebar { transform: none; }
 .quick b { display: block; font-size: 15px; color: var(--text); }
 .quick small { color: var(--muted); font-size: 12px; }
 .tip { display: flex; gap: 14px; align-items: flex-start; }
-.tip img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.tip img { width: 64px; height: 64px; object-fit: contain; flex-shrink: 0; }
 .tip .t { background: var(--gold-soft); border-radius: 4px 16px 16px 16px; padding: 12px 14px; font-size: 14px; line-height: 1.75; color: #5a4a26; }
 
 /* ───────── 打卡 ───────── */
@@ -343,7 +344,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 
 /* ───────── 浮動吉祥物 / 特效 ───────── */
 .buddy { position: fixed; right: 18px; bottom: 18px; z-index: 70; display: flex; align-items: flex-end; gap: 10px; pointer-events: none; }
-.buddy img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 3px solid #fff; box-shadow: 0 8px 22px rgba(0,0,0,.2); pointer-events: auto; cursor: pointer; animation: bob 3.4s ease-in-out infinite; }
+.buddy img { width: 84px; height: 84px; object-fit: contain; filter: drop-shadow(0 8px 12px rgba(0,0,0,.22)); pointer-events: auto; cursor: pointer; animation: bob 3.4s ease-in-out infinite; }
 .buddy img.jump { animation: jump .7s var(--ease); }
 .buddy .say { max-width: 240px; background: #fff; border-radius: 18px 18px 4px 18px; padding: 10px 14px; font-size: 13px; line-height: 1.6; box-shadow: 0 10px 28px rgba(0,0,0,.14); opacity: 0; transform: translateY(10px) scale(.9); transform-origin: bottom right; transition: .35s var(--ease); pointer-events: auto; }
 .buddy .say.show { opacity: 1; transform: none; }
@@ -354,7 +355,8 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 #levelup.show { display: flex; }
 #confetti { position: absolute; inset: 0; pointer-events: none; }
 .lu-card { position: relative; text-align: center; color: #fff; animation: pop .7s var(--ease); padding: 20px; }
-.lu-card img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover; border: 6px solid var(--gold); margin: 0 auto 18px; animation: jump 1s var(--ease) .4s 2; box-shadow: 0 0 0 14px rgba(200,169,110,.18), 0 0 60px rgba(200,169,110,.5); }
+.lu-card img { width: 210px; height: 210px; object-fit: contain; margin: 0 auto 10px; animation: jump 1s var(--ease) .4s 2; filter: drop-shadow(0 0 28px rgba(245,213,142,.65)); }
+.lu-card .lu-new { display: inline-block; font-size: 12px; letter-spacing: 2px; color: var(--gold-light); border: 1px solid rgba(245,213,142,.5); border-radius: 20px; padding: 3px 12px; margin-bottom: 10px; }
 .lu-card .lbl { letter-spacing: 6px; font-size: 13px; color: var(--gold-light); }
 .lu-card .lv { font-size: 70px; font-weight: 900; line-height: 1.1; background: linear-gradient(90deg, #f5d58e, #fff, #f5d58e); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 2s linear infinite; }
 .lu-card .tt { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
@@ -372,7 +374,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
   .roadmap::before, .roadmap .fill { top: 20px; }
   .step .t { font-size: 10px; } .step .x { font-size: 9px; }
   .page-head h1 { font-size: 22px; }
-  .buddy img { width: 54px; height: 54px; }
+  .buddy img { width: 70px; height: 70px; }
   .buddy .say { max-width: 200px; }
   .cert-frame { height: 1100px; }
 }
@@ -401,7 +403,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
       </div>
     </div>
     <div class="login-card reveal">
-      <img src="/static/images/mascot.jpg" alt="緣投" class="login-mascot" id="login-mascot">
+      <img src="/static/images/mascot/mascot-sleep.png" alt="緣投" class="login-mascot" id="login-mascot">
       <div class="login-bubble" id="login-bubble">嗨！我是緣投 🌿<br>登入後我就能幫你記錄冒險囉！</div>
       <h2>開始你的南投冒險</h2>
       <div class="gbtn">
@@ -427,7 +429,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 
   <aside class="sidebar">
     <div class="side-mascot">
-      <img src="/static/images/mascot.jpg" alt="緣投" class="m-img" id="side-mascot" onclick="pokeMascot()">
+      <img src="/static/images/mascot/mascot-sleep.png" alt="緣投" class="m-img" id="side-mascot" onclick="pokeMascot()">
       <div class="side-bubble" id="side-bubble">今天想去哪裡探險呢？</div>
     </div>
     <div class="side-profile">
@@ -494,7 +496,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
       </div>
 
       <div class="card reveal" style="margin-top:16px">
-        <div class="tip"><img src="/static/images/mascot.jpg" alt="緣投"><div class="t" id="daily-tip">—</div></div>
+        <div class="tip"><img src="/static/images/mascot/mascot-sleep.png" alt="緣投" id="tip-mascot"><div class="t" id="daily-tip">—</div></div>
       </div>
     </div>
 
@@ -589,14 +591,15 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 
   <div class="buddy" id="buddy">
     <div class="say" id="buddy-say"></div>
-    <img src="/static/images/mascot.jpg" alt="緣投" id="buddy-img" onclick="pokeMascot()">
+    <img src="/static/images/mascot/mascot-sleep.png" alt="緣投" id="buddy-img" onclick="pokeMascot()">
   </div>
 </section>
 
 <div id="levelup">
   <canvas id="confetti"></canvas>
   <div class="lu-card">
-    <img src="/static/images/mascot.jpg" alt="緣投">
+    <img src="/static/images/mascot/mascot-cheer.png" alt="緣投" id="lu-img">
+    <div class="lu-new" id="lu-new">緣投換上新造型</div>
     <div class="lbl">LEVEL UP</div>
     <div class="lv" id="lu-lv">Lv.2</div>
     <div class="tt" id="lu-title">探索者 🗺️</div>
@@ -617,6 +620,19 @@ const MERCHANT_GROUPS = {{ merchant_groups|tojson }};
 const TOTAL = {{ total_merchants }};
 const CFG = {{ cfg|tojson }};
 const MASCOT = '/static/images/mascot.jpg';
+// 緣投會隨等級換造型：睡覺 → 草帽田野 → 品嚐美食，最高等級是舉旗歡呼。
+// 等級數由後台設定，中間等級依比例分配到前三種造型。
+const FORMS = ['sleep', 'farmer', 'foodie', 'cheer'].map(f => `/static/images/mascot/mascot-${f}.png`);
+FORMS.forEach(src => { new Image().src = src; });
+function formFor(level) {
+  const max = CFG.max_level || 1;
+  if (level >= max) return FORMS[3];
+  return FORMS[Math.min(2, Math.floor((level - 1) * 3 / Math.max(1, max - 1)))];
+}
+function renderMascot() {
+  const src = formFor(lvl.level);
+  ['side-mascot', 'buddy-img', 'tip-mascot'].forEach(id => { if ($(id).getAttribute('src') !== src) $(id).src = src; });
+}
 let me = null, lvl = null, checkins = [], images = { ck: null, cp: null }, shareUrl = null;
 let feedCursor = null, quiz = null, timerId = null;
 
@@ -762,6 +778,7 @@ function renderProfile() {
   $('chip-xp').textContent = lvl.xp.toLocaleString() + ' XP';
   $('side-bar').style.width = levelPct() + '%';
   $('badge-checkin').textContent = `${me.checkin_count || 0}/${TOTAL}`;
+  renderMascot();
 }
 function levelPct() {
   if (!lvl.next_xp) return 100;
@@ -798,6 +815,8 @@ function renderHome() {
   const steps = [...document.querySelectorAll('.step')];
   steps.forEach(s => {
     const n = +s.dataset.lv;
+    const dot = s.querySelector('.dot');
+    if (!dot.querySelector('img')) dot.innerHTML = `<img src="${formFor(n)}" alt="Lv.${n} 緣投">`;
     s.classList.toggle('done', n < lvl.level);
     s.classList.toggle('now', n === lvl.level);
   });
@@ -1085,7 +1104,7 @@ async function loadRank() {
 function renderCert() {
   if (lvl.level >= CFG.max_level) {
     $('cert-box').innerHTML = `<div class="card" style="margin-bottom:16px;display:flex;gap:14px;align-items:center">
-        <img src="${MASCOT}" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover">
+        <img src="${FORMS[3]}" alt="" style="width:64px;height:64px;object-fit:contain">
         <div><b style="color:var(--green)">恭喜你成為永續達人！</b><div class="muted">證書已寄到你的 Gmail，也可以在這裡隨時查看、截圖分享。</div></div>
         <a class="btn btn-gold" style="margin-left:auto;padding:9px 14px;font-size:13px;text-decoration:none" href="/game/certificate/${encodeURIComponent(me.google_id)}" target="_blank">開新分頁</a></div>
       <iframe class="cert-frame" src="/game/certificate/${encodeURIComponent(me.google_id)}" title="永續達人證書"></iframe>`;
@@ -1112,6 +1131,9 @@ const LEVEL_MSG = {
   5: '你是真正的永續達人！證書已經寄到你的 Gmail 囉 📜',
 };
 function showLevelUp(s) {
+  // renderProfile 已先換好側欄造型，所以用「上一級的造型」判斷這次有沒有換裝
+  $('lu-img').src = formFor(s.level);
+  $('lu-new').style.display = formFor(s.level) !== formFor(s.level - 1) ? '' : 'none';
   $('lu-lv').textContent = 'Lv.' + s.level;
   $('lu-title').textContent = `${s.title} ${s.emoji}`;
   $('lu-msg').textContent = s.level >= CFG.max_level
