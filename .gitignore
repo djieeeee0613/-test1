@@ -9,3 +9,7 @@ ngrok.exe
 *.pem
 .claude/
 .vscode/
+
+# 個人帳單與費用文件、Office 暫存檔（不進 git）
+專案賬單*
+~$*
