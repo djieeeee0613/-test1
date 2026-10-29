@@ -216,6 +216,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - **XP 最低為 0**：`award_xp()` 會把 XP 和計數欄位夾在 0 以上（後台可扣分）
 - **緣投造型**：`game.html` 的 `formFor(level)` 決定造型，最高等級固定是 `cheer`（舉旗歡呼），其他等級依比例分到 `sleep` → `farmer` → `foodie`（預設 3 級時是睡覺、草帽、歡呼；4 級以上才會出現吃麵）。登入前顯示睡覺造型；側欄、右下角緣投、每日小知識、主頁「升級之路」、升級彈窗都會跟著換。換圖片只要替換同名 PNG（透明背景、正方形）
 - **故事「緣投回家記」**：緣投從緣投星掉進蟲洞來到南投，XP 就是「回家能量」，升到最高等級時蟲洞打開送他回家（設定見 `遊戲故事設定_緣投回家記.md`）。動畫在 `static/js/story.js` / `static/css/story.css`（純 SVG/CSS）：`Story.intro()` 第一次進遊戲播放（`localStorage` 的 `yt_intro_v1`）、`Story.mission(type, {xp, pct, form})` 在打卡成功、答完一局、發文拿到 XP 時播放（輪流 8 個南投自然景點）、`Story.farewell()` 升到最高等級時播放。動畫用 `Story.enqueue()` 排隊，`applyStats()` 的升級彈窗經 `queueLevelUp()` 排在任務動畫之後；動畫的 class 都有 `st-` / `mv-` 前綴，避免和 `game.html` 既有樣式（例如 `.drop`）撞名
+- **叢林背景**：`game.html` 的 `#jungle` 固定在最底層，分成遠景、光束、中景、霧、頂部樹冠藤蔓、左右近景蕨葉幾層（圖在 `static/images/jungle/*.svg`），加上 JS 產生的螢火蟲；滑鼠移動與捲動時各層以不同幅度位移（`--d` 越大越近）。卡片是半透明米白底，頁首標題用白字
 - **前端** `templates/game.html`：左側抽屜選單（≥1000px 預設展開）、6 個頁面（主頁/打卡/問答/動態/排行/證書）、緣投浮動對話、升級彩帶動畫；所有使用者內容都經 `esc()` 轉義
 
 ### 管理後台（`/admin`）
