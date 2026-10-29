@@ -148,63 +148,88 @@
             background: #e8590c; color: #fff; padding: 1px 6px; border-radius: 8px; text-shadow: none;
         }
 
-        /* ===== 遊戲 Banner ===== */
+        /* ===== 遊戲 Banner：幫緣投回家（任務 + 蟲洞傳送門） ===== */
         .game-banner {
-            position: relative; overflow: hidden; color: #fff; padding: 72px 24px;
-            background: radial-gradient(circle at 85% 30%, rgba(200,169,110,.25), transparent 45%),
-                        linear-gradient(135deg, #142d1b 0%, #2d4a35 55%, #3d6645 100%);
+            position: relative; overflow: hidden; color: #fff; padding: 80px 24px 0;
+            background: radial-gradient(circle at 78% 30%, rgba(123,92,255,.35), transparent 40%),
+                        linear-gradient(180deg, #0f1733 0%, #1c2b4a 45%, #24452f 100%);
         }
-        .gb-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.4fr 1fr; gap: 48px; align-items: center; }
-        .gb-chip { display: inline-block; background: rgba(200,169,110,.2); border: 1px solid rgba(200,169,110,.45); color: #f0e0b0; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 2px; }
-        .gb-text h2 { font-size: clamp(32px, 5vw, 48px); font-weight: 900; margin: 16px 0 12px; }
-        .gb-text h2 span { color: #f0e0b0; }
-        .gb-text p { font-size: 15px; line-height: 1.9; opacity: .88; margin-bottom: 24px; max-width: 560px; }
-        .gb-feats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 30px; max-width: 560px; }
-        .gb-feats div { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 12px 14px; transition: background .25s, transform .25s; }
-        .gb-feats div:hover { background: rgba(255,255,255,.12); transform: translateY(-2px); }
-        .gb-feats b { display: block; font-size: 14px; }
-        .gb-feats small { font-size: 12px; opacity: .7; }
+        .gb-sky { position: absolute; inset: 0; pointer-events: none; }
+        .gb-sky i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: gb-twinkle 3s ease-in-out infinite; }
+        @keyframes gb-twinkle { 0%, 100% { opacity: .2; } 50% { opacity: .9; } }
+        .gb-ridge { position: relative; display: block; width: 100%; height: 120px; margin-top: 24px; }
+        .gb-inner { position: relative; max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; align-items: center; }
+        .gb-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(123,92,255,.22); border: 1px solid rgba(159,230,255,.4); color: #cfe9ff;
+            padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 2px; }
+        .gb-text h2 { font-size: clamp(36px, 5.5vw, 56px); font-weight: 900; margin: 16px 0 12px; letter-spacing: 4px; }
+        .gb-text h2 span { background: linear-gradient(90deg, #f5d58e, #fff3c9, #9fe6ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .gb-text > p { font-size: 15px; line-height: 1.9; opacity: .88; margin-bottom: 22px; max-width: 540px; }
+        .gb-quests { display: grid; gap: 10px; max-width: 540px; margin-bottom: 26px; }
+        .gb-quest { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 16px; color: #fff; text-decoration: none;
+            background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); transition: transform .25s, background .25s, border-color .25s; }
+        .gb-quest:hover { transform: translateX(6px); background: rgba(255,255,255,.12); border-color: rgba(159,230,255,.5); }
+        .gb-quest > i { flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; color: #0f1733;
+            background: linear-gradient(135deg, #f5d58e, #9fe6ff); }
+        .gb-quest b { display: block; font-size: 15px; }
+        .gb-quest small { font-size: 12px; opacity: .72; }
+        .gb-quest em { margin-left: auto; font-style: normal; font-weight: 900; font-size: 13px; color: #9fe6ff; white-space: nowrap; }
+        .gb-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
         .gb-cta > span { padding: 14px 32px; font-size: 16px; }
-        .gb-chip .ic, .gb-float .ic { vertical-align: -0.2em; }
-        .gb-feats i { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: rgba(240,224,176,.14); color: #f0e0b0; font-size: 17px; margin-bottom: 6px; }
+        .gb-reward { font-size: 13px; opacity: .85; display: inline-flex; align-items: center; gap: 6px; }
+        .gb-chip .ic, .gb-reward .ic, .gb-float .ic { vertical-align: -0.2em; }
         @keyframes gb-bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-12px) rotate(3deg); } }
-        /* 升級展示台 */
-        .gb-stage { position: relative; height: 380px; display: grid; place-items: center; color: inherit; text-decoration: none; cursor: pointer; }
-        .gb-rays { position: absolute; width: 330px; height: 330px; border-radius: 50%;
-            background: repeating-conic-gradient(from 0deg, rgba(240,224,176,.16) 0deg 10deg, transparent 10deg 30deg);
-            -webkit-mask: radial-gradient(circle, #000 35%, transparent 70%); mask: radial-gradient(circle, #000 35%, transparent 70%);
-            animation: glow-spin 24s linear infinite; }
-        .gb-stage::before { content: ''; position: absolute; width: 230px; height: 230px; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -58%);
-            background: radial-gradient(circle, rgba(240,224,176,.35), rgba(200,169,110,.08) 60%, transparent 70%); }
-        .gb-form { position: absolute; top: 34px; width: 230px; height: 230px; object-fit: contain; opacity: 0; transform: translateY(40px) scale(.4);
-            filter: drop-shadow(0 18px 24px rgba(0,0,0,.35)); transition: opacity .3s, transform .3s; }
+
+        /* 傳送門舞台：緣投依等級換造型，回家能量環跑滿就升級，最高等級時蟲洞全開 */
+        .gb-stage { position: relative; height: 430px; display: grid; place-items: center; color: inherit; text-decoration: none; cursor: pointer; --lv: 0; }
+        .gb-portal { position: absolute; top: 34px; left: 50%; width: 300px; height: 300px; margin-left: -150px; border-radius: 50%;
+            transform: scale(calc(.62 + var(--lv) * .14)); transition: transform 1s cubic-bezier(.34,1.56,.64,1); }
+        .gb-portal::before { content: ''; position: absolute; inset: 0; border-radius: 50%;
+            background: repeating-conic-gradient(from 0deg, rgba(123,92,255,.9) 0 12deg, rgba(43,212,255,.75) 12deg 24deg, rgba(26,15,74,.4) 24deg 36deg);
+            -webkit-mask: radial-gradient(circle, transparent 0 30%, #000 42%, transparent 70%); mask: radial-gradient(circle, transparent 0 30%, #000 42%, transparent 70%);
+            animation: glow-spin 6s linear infinite; }
+        .gb-portal::after { content: ''; position: absolute; inset: 24%; border-radius: 50%;
+            background: radial-gradient(circle, rgba(15,23,51,.95) 0 45%, rgba(80,50,180,.6) 62%, transparent 72%); box-shadow: 0 0 60px 16px rgba(123,92,255,.45); }
+        .gb-stage.home .gb-portal { transform: scale(1.25); }
+        .gb-stage.home .gb-portal::after { box-shadow: 0 0 90px 36px rgba(245,213,142,.6); }
+        .gb-ring { position: absolute; top: 24px; left: 50%; width: 320px; height: 320px; margin-left: -160px; transform: rotate(-90deg); pointer-events: none; }
+        .gb-ring circle { fill: none; stroke-width: 3; }
+        .gb-ring .bg { stroke: rgba(255,255,255,.12); }
+        .gb-ring .fg { stroke: url(#gb-grad); stroke-linecap: round; stroke-dasharray: 339.3; stroke-dashoffset: 339.3; }
+        .gb-form { position: absolute; top: 74px; width: 220px; height: 220px; object-fit: contain; opacity: 0; transform: translateY(40px) scale(.4);
+            filter: drop-shadow(0 18px 24px rgba(0,0,0,.45)); transition: opacity .3s, transform .3s; }
         .gb-form.on { opacity: 1; transform: none; animation: gb-pop .8s cubic-bezier(.34,1.56,.64,1), gb-bob 3.4s ease-in-out .8s infinite; }
         @keyframes gb-pop { 0% { opacity: 0; transform: translateY(60px) scale(.3) rotate(-8deg); } 60% { opacity: 1; transform: translateY(-14px) scale(1.12) rotate(4deg); } 100% { transform: none; } }
         .gb-stage:hover .gb-form.on { animation-play-state: paused; transform: scale(1.06); }
-        .gb-levelup { position: absolute; top: 8px; font-weight: 900; letter-spacing: 4px; font-size: 22px; color: #f5d58e; text-shadow: 0 2px 12px rgba(0,0,0,.4); opacity: 0; pointer-events: none; }
+        .gb-levelup { position: absolute; top: 4px; font-weight: 900; letter-spacing: 4px; font-size: 22px; color: #f5d58e; text-shadow: 0 2px 12px rgba(0,0,0,.5); opacity: 0; pointer-events: none; white-space: nowrap; }
         .gb-stage.pop .gb-levelup { animation: gb-lvup 1.3s ease-out; }
         @keyframes gb-lvup { 0% { opacity: 0; transform: translateY(14px) scale(.6); } 25% { opacity: 1; transform: scale(1.15); } 70% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px); } }
         .gb-sparks { position: absolute; inset: 0; pointer-events: none; }
-        .gb-sparks i { position: absolute; top: 42%; left: 50%; width: 8px; height: 8px; border-radius: 2px; background: #f0e0b0; opacity: 0; }
+        .gb-sparks i { position: absolute; top: 40%; left: 50%; width: 8px; height: 8px; border-radius: 2px; background: #f0e0b0; opacity: 0; }
         .gb-stage.pop .gb-sparks i { animation: gb-spark .9s ease-out; }
-        .gb-sparks i:nth-child(1) { --x: -120px; --y: -90px; } .gb-sparks i:nth-child(2) { --x: 120px; --y: -80px; background: #fff; }
-        .gb-sparks i:nth-child(3) { --x: -140px; --y: 10px; background: #C8A96E; } .gb-sparks i:nth-child(4) { --x: 140px; --y: 20px; }
-        .gb-sparks i:nth-child(5) { --x: -70px; --y: -140px; background: #fff; } .gb-sparks i:nth-child(6) { --x: 80px; --y: -140px; background: #C8A96E; }
+        .gb-sparks i:nth-child(1) { --x: -130px; --y: -90px; } .gb-sparks i:nth-child(2) { --x: 130px; --y: -80px; background: #9fe6ff; }
+        .gb-sparks i:nth-child(3) { --x: -150px; --y: 10px; background: #C8A96E; } .gb-sparks i:nth-child(4) { --x: 150px; --y: 20px; background: #b9a6ff; }
+        .gb-sparks i:nth-child(5) { --x: -70px; --y: -150px; background: #fff; } .gb-sparks i:nth-child(6) { --x: 80px; --y: -150px; background: #9fe6ff; }
         @keyframes gb-spark { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.4) rotate(0); } 100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1.2) rotate(180deg); } }
-        .gb-badge { position: absolute; bottom: 74px; display: flex; align-items: baseline; gap: 8px; background: rgba(20,45,27,.75); border: 1px solid rgba(240,224,176,.4);
+        .gb-badge { position: absolute; top: 330px; display: flex; align-items: baseline; gap: 8px; background: rgba(15,23,51,.78); border: 1px solid rgba(159,230,255,.45);
             padding: 5px 16px; border-radius: 999px; backdrop-filter: blur(4px); white-space: nowrap; }
         .gb-badge b { color: #f5d58e; font-size: 16px; } .gb-badge span { font-size: 14px; }
-        .gb-xp { position: absolute; bottom: 58px; width: 200px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.15); overflow: hidden; }
-        .gb-xp i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #C8A96E, #f5d58e); border-radius: 3px; }
-        .gb-path { position: absolute; bottom: 6px; display: flex; gap: 10px; }
-        .gb-path span { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.15); display: grid; place-items: center;
-            filter: grayscale(1); opacity: .5; transition: all .4s; }
-        .gb-path span.on { filter: none; opacity: 1; border-color: #f0e0b0; transform: scale(1.12); box-shadow: 0 0 14px rgba(240,224,176,.5); }
+        .gb-badge small { font-size: 12px; color: #9fe6ff; }
+        /* 回家之路：每一級的緣投造型，最後是緣投星 */
+        .gb-path { position: absolute; bottom: 0; display: flex; align-items: center; }
+        .gb-path span { position: relative; width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.18);
+            display: grid; place-items: center; filter: grayscale(1); opacity: .5; transition: all .4s; }
+        .gb-path span + span { margin-left: 22px; }
+        .gb-path span + span::before { content: ''; position: absolute; right: 100%; top: 50%; width: 22px; height: 2px; background: rgba(255,255,255,.18); }
+        .gb-path span.on, .gb-path span.done { filter: none; opacity: 1; border-color: #f0e0b0; }
+        .gb-path span.on { transform: scale(1.14); box-shadow: 0 0 14px rgba(240,224,176,.55); }
+        .gb-path span.done::before, .gb-path span.on::before { background: #f0e0b0; }
         .gb-path img { width: 30px; height: 30px; object-fit: contain; }
-        .gb-float { position: absolute; background: #fff; color: #2d4a35; font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 14px; box-shadow: 0 8px 20px rgba(0,0,0,.25); animation: gb-bob 3s ease-in-out infinite; white-space: nowrap; }
-        .gb-float.f1 { top: 44px; left: 2%; color: #b88a3e; }
-        .gb-float.f2 { top: 46%; right: 0; animation-delay: -1s; color: #e8590c; }
-        .gb-float.f3 { top: 58%; left: 0; animation-delay: -2s; }
+        .gb-path .planet { background: radial-gradient(circle at 35% 30%, #b7f0c7, #5fbf86 45%, #2d6b4c); }
+        .gb-path .planet.on { box-shadow: 0 0 22px rgba(140,240,180,.8); }
+        .gb-float { position: absolute; background: #fff; color: #2d4a35; font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 14px; box-shadow: 0 8px 20px rgba(0,0,0,.3); animation: gb-bob 3s ease-in-out infinite; white-space: nowrap; }
+        .gb-float.f1 { top: 52px; left: 0; color: #6a4fd8; }
+        .gb-float.f2 { top: 44%; right: 0; animation-delay: -1s; color: #e8590c; }
+        .gb-float.f3 { top: 64%; left: 2%; animation-delay: -2s; color: #b88a3e; }
         .nav-game em { font-style: normal; }
         .ng-short { display: none; }
         @media (max-width: 1100px) { .nav-links { gap: 20px; } .nav-game-new { display: none; } }
@@ -217,14 +242,16 @@
             .ng-long { display: none; } .ng-short { display: inline; }
         }
         @media (max-width: 860px) {
-            .gb-inner { grid-template-columns: 1fr; text-align: center; gap: 12px; }
-            .gb-stage { order: -1; height: 340px; }
-            .gb-form { width: 190px; height: 190px; }
-            .gb-rays { width: 280px; height: 280px; }
-            .gb-text p, .gb-feats { margin-left: auto; margin-right: auto; }
-            .game-banner { padding: 48px 18px; }
+            .gb-inner { grid-template-columns: 1fr; text-align: center; gap: 8px; }
+            .gb-stage { order: -1; height: 400px; }
+            .gb-text > p, .gb-quests { margin-left: auto; margin-right: auto; text-align: left; }
+            .gb-text > p { text-align: center; }
+            .gb-actions { justify-content: center; }
+            .gb-text { padding-top: 18px; }
+            .game-banner { padding: 48px 16px 0; }
+            .gb-float.f1 { left: 4%; } .gb-float.f2 { right: 4%; }
         }
-        @media (prefers-reduced-motion: reduce) { .glow-btn, .glow-btn::before, .glow-btn > span::after, .gb-form, .gb-float, .gb-rays { animation: none !important; } }
+        @media (prefers-reduced-motion: reduce) { .glow-btn, .glow-btn::before, .glow-btn > span::after, .gb-form, .gb-float, .gb-portal::before, .gb-sky i { animation: none !important; } }
 
         /* ===== Hero ===== */
         .hero {
@@ -1674,62 +1701,89 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<!-- ===== 遊戲入口 Banner ===== -->
-<div class="game-banner" id="game">
+<!-- ===== 遊戲入口 Banner：幫緣投回家 ===== -->
+<section class="game-banner" id="game">
+  <div class="gb-sky" aria-hidden="true">{% for n in range(46) %}<i style="left:{{ (n * 37) % 100 }}%;top:{{ (n * 23) % 70 }}%;animation-delay:{{ (n % 7) * 0.4 }}s"></i>{% endfor %}</div>
   <div class="gb-inner">
     <div class="gb-text">
-      <span class="gb-chip">{{ icon("device-gamepad-2") }} 互動遊戲</span>
-      <h2>緣投<span>探索者</span></h2>
-      <p>和吉祥物緣投一起走訪南投 {{ total_merchants }} 間在地職人：AI 驗證打卡收集印章、挑戰問答、分享旅程。每升一級，緣投就換上新造型，升到 Lv.{{ game_cfg.max_level }}「{{ game_cfg.max_title }}」還能領取專屬證書！</p>
-      <div class="gb-feats">
-        <div><i>{{ icon("camera") }}</i><b>職人打卡</b><small>+{{ game_cfg.xp_checkin }} XP</small></div>
-        <div><i>{{ icon("brain") }}</i><b>問答大挑戰</b><small>每局 {{ game_cfg.quiz_round_size }} 題・無限挑戰</small></div>
-        <div><i>{{ icon("message-circle") }}</i><b>旅人動態</b><small>分享・按讚・留言</small></div>
-        <div><i>{{ icon("certificate") }}</i><b>永續達人證書</b><small>Lv.{{ game_cfg.max_level }} 自動寄送</small></div>
+      <span class="gb-chip">{{ icon("device-gamepad-2") }} 互動遊戲・緣投回家記</span>
+      <h2>幫<span>緣投</span>回家</h2>
+      <p>緣投原本住在遙遠的緣投星，一不小心掉進蟲洞，來到了南投。陪他走訪 {{ total_merchants }} 間在地職人、完成任務累積回家能量，升到 Lv.{{ game_cfg.max_level }}「{{ game_cfg.max_title }}」時，蟲洞就會再次打開！</p>
+      <div class="gb-quests">
+        <a href="/game#checkin" class="gb-quest"><i>{{ icon("camera") }}</i><div><b>職人打卡</b><small>到職人工坊拍照，AI 驗證後蓋章</small></div><em>+{{ game_cfg.xp_checkin }} 能量</em></a>
+        <a href="/game#quiz" class="gb-quest"><i>{{ icon("brain") }}</i><div><b>問答大挑戰</b><small>每局 {{ game_cfg.quiz_round_size }} 題，連續答對有連擊加分</small></div><em>+{{ game_cfg.xp_quiz_correct }} / 題</em></a>
+        <a href="/game#feed" class="gb-quest"><i>{{ icon("message-circle") }}</i><div><b>分享旅程</b><small>在旅人動態分享你遇見的南投</small></div><em>+{{ game_cfg.xp_post }} 能量</em></a>
       </div>
-      <a href="/game" class="glow-btn gb-cta"><span>開始探索之旅 →</span></a>
+      <div class="gb-actions">
+        <a href="/game" class="glow-btn gb-cta"><span>接受任務 →</span></a>
+        <span class="gb-reward">{{ icon("certificate") }} 送緣投回家，領取永續達人證書</span>
+      </div>
     </div>
 
-    <!-- 升級展示台：緣投依等級換造型，經驗條跑滿就 LEVEL UP 換下一級 -->
+    <!-- 傳送門舞台：緣投依等級換造型，回家能量環跑滿就升級，最高等級時蟲洞全開 -->
     <a href="/game" class="gb-stage" id="gb-stage" aria-label="進入緣投探索者遊戲">
-      <div class="gb-rays" aria-hidden="true"></div>
+      <div class="gb-portal" aria-hidden="true"></div>
+      <svg class="gb-ring" viewBox="0 0 120 120" aria-hidden="true">
+        <defs><linearGradient id="gb-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5d58e"/><stop offset="1" stop-color="#9fe6ff"/></linearGradient></defs>
+        <circle class="bg" cx="60" cy="60" r="54"/><circle class="fg" id="gb-ring" cx="60" cy="60" r="54"/>
+      </svg>
       <div class="gb-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-      <div class="gb-levelup" aria-hidden="true">LEVEL UP!</div>
+      <div class="gb-levelup" id="gb-levelup" aria-hidden="true">LEVEL UP!</div>
       {% for st in game_stages %}<img class="gb-form{% if loop.first %} on{% endif %}" src="{{ st.img }}" alt="Lv.{{ st.level }} {{ st.title }}的緣投" data-lv="{{ st.level }}" data-title="{{ st.title }}">
       {% endfor %}
-      <div class="gb-badge"><b id="gb-lv">Lv.{{ game_stages[0].level }}</b><span id="gb-title">{{ game_stages[0].title }}</span></div>
-      <div class="gb-xp"><i id="gb-xp"></i></div>
+      <div class="gb-badge"><b id="gb-lv">Lv.{{ game_stages[0].level }}</b><span id="gb-title">{{ game_stages[0].title }}</span><small>回家能量 <span id="gb-pct">0</span>%</small></div>
       <div class="gb-path">
-        {% for st in game_stages %}<span class="{% if loop.first %}on{% endif %}"><img src="{{ st.img }}" alt=""></span>{% endfor %}
+        {% for st in game_stages %}<span class="{% if loop.first %}on{% endif %}"><img src="{{ st.img }}" alt=""></span>{% endfor %}<span class="planet" title="緣投星"></span>
       </div>
-      <span class="gb-float f1">+{{ game_cfg.xp_checkin }} XP</span>
+      <span class="gb-float f1">+{{ game_cfg.xp_checkin }} 回家能量</span>
       <span class="gb-float f2">{{ icon("flame") }} 連擊！</span>
-      <span class="gb-float f3">{{ icon("trophy") }} Lv.{{ game_cfg.max_level }}</span>
+      <span class="gb-float f3">{{ icon("sparkles") }} 蟲洞充能中</span>
     </a>
   </div>
-</div>
+  <svg class="gb-ridge" viewBox="0 0 1440 120" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0 70 L120 40 L230 66 L360 22 L470 58 L600 30 L720 64 L850 18 L980 56 L1100 34 L1230 62 L1340 30 L1440 52 V120 H0Z" fill="#2d4a35" opacity=".7"/>
+    <path d="M0 92 L160 62 L300 88 L450 58 L620 90 L780 64 L930 92 L1090 60 L1250 88 L1440 66 V120 H0Z" fill="#1f3a27"/>
+  </svg>
+</section>
 <script>
 (function gameStage() {
     const stage = document.getElementById('gb-stage');
     if (!stage) return;
     const forms = [...stage.querySelectorAll('.gb-form')], path = [...stage.querySelectorAll('.gb-path span')];
-    const lv = document.getElementById('gb-lv'), title = document.getElementById('gb-title'), xp = document.getElementById('gb-xp');
+    const lv = document.getElementById('gb-lv'), title = document.getElementById('gb-title'), pct = document.getElementById('gb-pct');
+    const ring = document.getElementById('gb-ring'), lvup = document.getElementById('gb-levelup');
+    const FULL = 339.3;   // 2πr，r = 54
     if (forms.length < 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     let i = 0;
-    function next() {
-        // 經驗條先跑滿，再 LEVEL UP 換成下一級的造型
-        xp.style.transition = 'none'; xp.style.width = '0%'; void xp.offsetWidth;
-        xp.style.transition = 'width 2.2s ease-in-out'; xp.style.width = '100%';
+    function show(n, home) {
+        forms[i].classList.remove('on');
+        i = n;
+        forms[i].classList.add('on');
+        path.forEach((p, k) => { p.classList.toggle('on', home ? k === path.length - 1 : k === i); p.classList.toggle('done', k < i || (home && k <= i)); });
+        lv.textContent = 'Lv.' + forms[i].dataset.lv; title.textContent = forms[i].dataset.title;
+        stage.style.setProperty('--lv', i);
+        stage.classList.toggle('home', !!home);
+        lvup.textContent = home ? '蟲洞打開了，回家囉！' : 'LEVEL UP!';
+        stage.classList.remove('pop'); void stage.offsetWidth; stage.classList.add('pop');
+    }
+    function charge() {
+        // 回家能量環跑滿 → 升到下一級；最高等級時蟲洞全開，接著從頭再來
+        ring.style.transition = 'none'; ring.style.strokeDashoffset = FULL; void ring.getBoundingClientRect();
+        ring.style.transition = 'stroke-dashoffset 2.2s ease-in-out'; ring.style.strokeDashoffset = 0;
+        const t0 = performance.now();
+        (function count(t) { const k = Math.min(1, (t - t0) / 2200); pct.textContent = Math.round(k * 100); if (k < 1) requestAnimationFrame(count); })(t0);
         setTimeout(() => {
-            forms[i].classList.remove('on'); path[i].classList.remove('on');
-            i = (i + 1) % forms.length;
-            forms[i].classList.add('on'); path[i].classList.add('on');
-            lv.textContent = 'Lv.' + forms[i].dataset.lv; title.textContent = forms[i].dataset.title;
-            stage.classList.remove('pop'); void stage.offsetWidth; stage.classList.add('pop');
+            if (i === forms.length - 1) {
+                show(i, true);
+                setTimeout(() => { show(0); setTimeout(charge, 1000); }, 3200);
+                return;
+            }
+            show(i + 1);
+            setTimeout(charge, 1400);
         }, 2300);
     }
-    next();
-    setInterval(next, 3600);
+    stage.style.setProperty('--lv', 0);
+    charge();
 })();
 </script>
 

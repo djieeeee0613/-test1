@@ -147,10 +147,10 @@ Render 環境變數（在 Render dashboard 設定）：
 - **聊天 UI**：開啟時顯示 6 個類別 inline chip（`pickCategory()` 送出並消失）；AI 回覆中的 `[選項: A | B | C]` 解析為 `.opt-chip` 按鈕（`selectOpt()` 點擊後消失並送出）
 - **語言切換**：繁中 / EN / 日本語，切換後通知 AI 改換語言回覆
 - **聊天 session**：每次開頁產生 `chatSessionId`，隨 `/api/chat` 送出，用於後台 AI 嚮導分析
-- **遊戲入口**：導覽列流光按鈕 `.glow-btn.nav-game`（手機顯示「玩遊戲」）、CTA 前的滿版 `.game-banner`；文字裡的 XP、等級數字來自 `game_cfg`，不要寫死
+- **遊戲入口**：導覽列流光按鈕 `.glow-btn.nav-game`（手機顯示「玩遊戲」）、CTA 前的滿版 `.game-banner`（幫緣投回家）；文字裡的 XP、等級數字來自 `game_cfg`，不要寫死
 - **公告列**：`announcement` 存在時顯示浮動 `.site-ann`，訪客關閉後以 sessionStorage 記住（公告文字改變會重新顯示）
 - **頁尾**：「🔒 管理員登入」連到 `/admin`
-- **遊戲橫幅升級展示台**（`#gb-stage`）：緣投依等級換造型輪播（`_game_stages()`，與 `game.html` 的 `formFor` 同規則），經驗條跑滿時 LEVEL UP 彈出下一級；等級名稱與數量讀後台遊戲設定
+- **遊戲橫幅「幫緣投回家」**（`#game`）：星空與南投山稜背景，左邊是三個任務（打卡、問答、分享旅程，能量數字讀 `game_cfg`），右邊是蟲洞傳送門舞台（`#gb-stage`）：緣投依等級換造型輪播（`_game_stages()`，與 `game.html` 的 `formFor` 同規則），回家能量環跑滿就 LEVEL UP；到最高等級時蟲洞放大、「回家之路」最後的緣投星亮起，接著從 Lv.1 重新輪播。等級名稱與數量讀後台遊戲設定
 - **首頁主視覺輪播**（`#hero`）：背景輪流顯示 6 大分類照片（`static/images/hero/{slug}.jpg`，1920×1080，原圖在 `pic/`），每 6 秒換一張，下方有分類名稱與圓點可切換。點照片或標題文字會進入目前那張的分類頁（`.hero-content` 設 `pointer-events: none`，只有按鈕和連結能點）；分類由 `categories` 產生，新增分類時要補一張同名照片
 - **永續承諾**（`.values-grid`）：四張卡片是文化傳承、在地受益、友善環境、看見成效；文化傳承與友善環境用照片當背景（`static/images/values/`，原圖在 `pic/`），加 `.value-photo` 就會套用深色漸層蒙版與白字
 - **活動輪播**（`#ad-carousel`）：

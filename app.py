@@ -523,6 +523,11 @@ def _game_stages():
     return [{"level": n, "title": title, "xp": xp, "img": f"/static/images/mascot/mascot-{form(n)}.png"}
             for xp, n, title, _ in lv]
 
+@app.route('/healthz')
+def healthz():
+    '''給外部監測服務定時呼叫，讓 Render 免費方案不會休眠；不讀資料庫、不呼叫 AI'''
+    return 'ok', 200
+
 @app.route('/')
 def index():
     return render_template('index.html', **_home_context())
