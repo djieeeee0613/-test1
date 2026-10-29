@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 專案說明
 
-南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Supabase 並推播 LINE 通知給商家。商家確認或婉拒後，系統自動寄 email 通知旅客。商家可透過 LINE Bot 登錄活動、上傳活動照片，照片自動顯示在網站輪播。品牌名稱是「深度與美學旅遊研究室」：網站導覽列、頁尾、分頁圖示、後台與信件用新 logo（原圖 `icon/new_icon.jpg`；`static/images/logo-mark.png` 是裁掉文字的方形圖示、`logo-full.jpg` 是含文字的完整版、`favicon.png` / `apple-touch-icon.png`）。吉祥物「緣投」（`static/images/mascot.jpg`）只用在 AI 相關功能與遊戲角色：AI 嚮導 FAB 與聊天視窗、後台「問緣投」、緣投探索者遊戲內的角色與入口按鈕、使用者沒有頭像時的預設圖。遊戲裡的緣投會隨等級換造型（原圖 `icon/多型態緣投.png`，裁切去背後放在 `static/images/mascot/mascot-{sleep,farmer,foodie,cheer}.png`）。
+南投在地職人永續旅遊 AI 嚮導。前端是完整旅遊網站，右下角浮動按鈕可展開聊天視窗，AI 可呼叫工具搜尋商家、查詢空檔、完成預約。預約透過 n8n webhook 寫入 Supabase 並推播 LINE 通知給商家。商家確認或婉拒後，系統自動寄 email 通知旅客。商家可透過 LINE Bot 登錄活動、上傳活動照片，照片自動顯示在網站輪播。品牌名稱是「深度與美學旅遊研究室」：網站導覽列、頁尾、分頁圖示、後台與信件用新 logo（原圖 `icon/new_icon.jpg`；`static/images/logo-mark.png` 是裁掉文字的方形圖示、`logo-full.jpg` 是含文字的完整版、`favicon.png` / `apple-touch-icon.png`）。吉祥物「緣投」（`static/images/mascot.jpg`；首頁導覽列遊戲按鈕、AI 嚮導 FAB 與聊天視窗頭像用去背版 `mascot.png`）只用在 AI 相關功能與遊戲角色：AI 嚮導 FAB 與聊天視窗、後台「問緣投」、緣投探索者遊戲內的角色與入口按鈕、使用者沒有頭像時的預設圖。遊戲裡的緣投會隨等級換造型（原圖 `icon/多型態緣投.png`，裁切去背後放在 `static/images/mascot/mascot-{sleep,farmer,foodie,cheer}.png`）。
 
 另有兩個子系統：
 - **緣投探索者遊戲**（`/game`）：Google 登入，打卡（AI 驗人臉）、問答大挑戰、旅人動態、排行榜、升到最高等級寄永續達人證書
@@ -152,7 +152,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - **頁尾**：「🔒 管理員登入」連到 `/admin`
 - **遊戲橫幅「幫緣投回家」**（`#game`）：星空與南投山稜背景，左邊是三個任務（打卡、問答、分享旅程，能量數字讀 `game_cfg`），右邊是蟲洞傳送門舞台（`#gb-stage`）：緣投依等級換造型輪播（`_game_stages()`，與 `game.html` 的 `formFor` 同規則），回家能量環跑滿就 LEVEL UP；到最高等級時蟲洞放大、「回家之路」最後的緣投星亮起，接著從 Lv.1 重新輪播。等級名稱與數量讀後台遊戲設定
 - **首頁主視覺輪播**（`#hero`）：背景輪流顯示 6 大分類照片（`static/images/hero/{slug}.jpg`，1920×1080，原圖在 `pic/`），每 6 秒換一張，下方有分類名稱與圓點可切換。點照片或標題文字會進入目前那張的分類頁（`.hero-content` 設 `pointer-events: none`，只有按鈕和連結能點）；分類由 `categories` 產生，新增分類時要補一張同名照片
-- **永續承諾**（`.values-grid`）：四張卡片是文化傳承、在地受益、友善環境、看見成效；文化傳承與友善環境用照片當背景（`static/images/values/`，原圖在 `pic/`），加 `.value-photo` 就會套用深色漸層蒙版與白字
+- **永續承諾**（`.values-grid`）：桌機三欄錯落排版，照片卡（文化傳承、友善環境，`.value-photo` + `.value-bg`，照片在 `static/images/values/`，原圖在 `pic/`）加 `.value-wide` 佔兩欄，與文字卡（在地受益、看見成效）交錯；每張卡左上是編號、右上是圖示。平板兩欄、手機一欄（手機規則放在 `<style>` 最後，才不會被前面的斷點蓋掉）
 - **活動輪播**（`#ad-carousel`）：
   - `_loadAds()` 在 DOMContentLoaded 呼叫 `GET /api/events`
   - `_buildSlide()` 判斷 `ev.image_url`：有圖則顯示全版照片 + 半透明漸層文字列；無圖則顯示色塊卡片

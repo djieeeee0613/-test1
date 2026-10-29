@@ -142,7 +142,7 @@
         .glow-btn:hover { transform: translateY(-2px) scale(1.04); }
         .nav-game { margin-left: 20px; }
         .nav-game > span { padding: 7px 16px 7px 8px; font-size: 14px; }
-        .nav-game img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; }
+        .nav-game img { width: 30px; height: 30px; object-fit: contain; margin: -4px 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25)); }
         .nav-game-new {
             font-style: normal; font-size: 10px; font-weight: 900; letter-spacing: .5px;
             background: #e8590c; color: #fff; padding: 1px 6px; border-radius: 8px; text-shadow: none;
@@ -238,7 +238,7 @@
         @media (max-width: 768px) {
             .nav-game { margin-left: auto; margin-right: 12px; }
             .nav-game > span { padding: 5px 12px 5px 5px; font-size: 13px; }
-            .nav-game img { width: 22px; height: 22px; }
+            .nav-game img { width: 26px; height: 26px; }
             .ng-long { display: none; } .ng-short { display: inline; }
         }
         @media (max-width: 860px) {
@@ -754,52 +754,51 @@
             margin-bottom: 12px;
         }
 
-        /* ===== 永續理念 ===== */
+        /* ===== 永續理念：錯落的格狀排版，照片卡與文字卡交錯 ===== */
         .values-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 24px;
+            display: grid; gap: 20px;
+            grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: minmax(250px, auto);
         }
-
         .value-item {
-            text-align: center;
-            padding: 32px 20px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
-        }
-
-        .value-icon { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 30px; margin-bottom: 16px; background: #f3efe6; }
-
-        .value-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 8px;
-            color: var(--primary);
-        }
-
-        .value-desc { font-size: 14px; color: #666; line-height: 1.6; }
-        .value-item { position: relative; }
-        .value-num { position: absolute; top: 14px; left: 18px; font-family: var(--font-serif, serif); font-size: 64px; font-weight: 700; line-height: 1; color: #EAE5D8; pointer-events: none; }
-        .value-title::before { content: ""; display: block; width: 28px; height: 3px; background: var(--accent); border-radius: 2px; margin: 0 auto 14px; }
-
-        /* 照片卡片：深色漸層蒙版 + 白字，圖示放在毛玻璃圓圈裡 */
-        .value-item { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 260px; }
-        .value-photo {
             position: relative; overflow: hidden; isolation: isolate;
-            background-size: cover; background-position: center;
-            box-shadow: 0 10px 28px rgba(20,32,24,0.18);
+            display: flex; flex-direction: column; justify-content: space-between; gap: 28px;
+            padding: 28px 30px; border-radius: 22px; text-align: left;
+            background: #F7F4EC; border: 1px solid #ECE6D8;
+            transition: transform .35s ease, box-shadow .35s ease;
         }
+        .value-item:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(30,45,34,0.12); }
+        .value-wide { grid-column: span 2; }
+        .value-head { display: flex; align-items: center; justify-content: space-between; }
+        .value-num { font-family: var(--font-serif, serif); font-size: 15px; font-weight: 700; letter-spacing: 3px; color: var(--accent); }
+        .value-icon {
+            width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 22px;
+            color: var(--primary); background: #fff; border: 1px solid #E6DFCF;
+        }
+        .value-title { font-family: var(--font-serif, serif); font-size: 24px; font-weight: 700; color: var(--primary); margin-bottom: 10px; letter-spacing: 2px; }
+        .value-desc { font-size: 14.5px; color: #5f665f; line-height: 1.85; max-width: 30em; }
+
+        /* 照片卡：背景照片慢慢放大，底部深色漸層 + 白字 */
+        .value-photo { background: #22352a; border: 0; color: #fff; }
+        .value-photo .value-bg {
+            position: absolute; inset: 0; z-index: -2;
+            background-size: cover; background-position: center; transition: transform 1.2s ease;
+        }
+        .value-photo:hover .value-bg { transform: scale(1.06); }
         .value-photo::before {
             content: ''; position: absolute; inset: 0; z-index: -1;
-            background: linear-gradient(180deg, rgba(18,30,22,0.45) 0%, rgba(18,30,22,0.62) 45%, rgba(18,30,22,0.82) 100%);
+            background: linear-gradient(180deg, rgba(18,30,22,0.15) 0%, rgba(18,30,22,0.35) 40%, rgba(18,30,22,0.85) 100%);
         }
-        .value-photo .value-icon {
-            width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; font-size: 30px;
-            background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); backdrop-filter: blur(6px);
+        .value-photo .value-num { color: #f0dcae; }
+        .value-photo .value-icon { color: #fff; background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.35); backdrop-filter: blur(6px); }
+        .value-photo .value-title { color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+        .value-photo .value-desc { color: rgba(255,255,255,0.92); text-shadow: 0 1px 8px rgba(0,0,0,0.45); }
+
+        /* 文字卡：右下角淡淡的大圖示當裝飾 */
+        .value-item:not(.value-photo)::after {
+            content: ''; position: absolute; right: -30px; bottom: -40px; width: 170px; height: 170px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(200,169,110,0.16), rgba(200,169,110,0) 70%); z-index: -1;
         }
-        .value-photo .value-title { color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.45); }
-        .value-photo .value-desc { color: rgba(255,255,255,0.92); text-shadow: 0 1px 8px rgba(0,0,0,0.5); }
 
         /* ===== CTA ===== */
         .cta-section {
@@ -894,36 +893,36 @@
         /* ===== AI 浮動按鈕 ===== */
         #ai-fab {
             position: fixed;
-            bottom: 28px;
-            right: 28px;
-            width: 60px;
-            height: 60px;
-            background: var(--primary);
+            bottom: 20px;
+            right: 22px;
+            width: 76px;
+            height: 76px;
+            background: none;
             color: white;
             border: none;
-            border-radius: 50%;
             font-size: 26px;
             cursor: pointer;
-            box-shadow: 0 6px 24px rgba(74,93,78,0.45);
             z-index: 999;
-            transition: transform 0.3s, box-shadow 0.3s;
+            transition: transform 0.3s;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
             padding: 0;
         }
+        /* 去背的緣投直接站在畫面上，輕輕上下浮動 */
         #ai-fab img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            border-radius: 50%;
+            object-fit: contain;
             display: block;
+            filter: drop-shadow(0 8px 12px rgba(30,45,34,0.35));
+            animation: fab-bob 3.2s ease-in-out infinite;
         }
+        @keyframes fab-bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-6px) rotate(2deg); } }
+        @media (prefers-reduced-motion: reduce) { #ai-fab img { animation: none; } }
 
         #ai-fab:hover {
             transform: scale(1.1);
-            box-shadow: 0 10px 32px rgba(74,93,78,0.55);
         }
 
         #ai-fab .fab-tooltip {
@@ -984,11 +983,13 @@
             border-radius: 50%;
             overflow: hidden;
             flex-shrink: 0;
+            background: #eef4ee;
+            padding: 3px;
         }
         .chat-avatar img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
             display: block;
         }
 
@@ -1171,8 +1172,8 @@
         /* ===== 通知點 ===== */
         .fab-dot {
             position: absolute;
-            top: 4px;
-            right: 4px;
+            top: 8px;
+            right: 6px;
             width: 12px;
             height: 12px;
             background: #e53935;
@@ -1245,8 +1246,8 @@
             .nav-hamburger { display: flex; }
         }
         @media (max-width: 900px) {
+            .values-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; grid-auto-rows: minmax(220px, auto); }
             .cards-grid { grid-template-columns: repeat(2, 1fr); }
-            .values-grid { grid-template-columns: repeat(2, 1fr); }
             .cat-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
@@ -1275,8 +1276,6 @@
             .timeline { flex-direction: column; gap: 16px; }
             .timeline-item { margin-right: 0; }
 
-            .values-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
-            .value-item { padding: 24px 16px; }
 
             .cta-section { padding: 52px 20px; }
             .cta-section h2 { font-size: 26px; }
@@ -1293,10 +1292,10 @@
             }
 
             #ai-fab {
-                bottom: 20px;
-                right: 20px;
-                width: 54px;
-                height: 54px;
+                bottom: 14px;
+                right: 14px;
+                width: 66px;
+                height: 66px;
                 font-size: 22px;
             }
             #ai-fab .fab-tooltip { display: none; }
@@ -1309,7 +1308,6 @@
             .hero-badge { font-size: 11px; letter-spacing: 1px; }
             .stats { gap: 20px; }
             .stat-item .num { font-size: 26px; }
-            .values-grid { grid-template-columns: 1fr; }
             .section-title { font-size: 22px; }
             .section-sub { font-size: 14px; }
         }
@@ -1378,7 +1376,15 @@
             .map-inner { padding: 0 20px; }
             #nantou-map { height: 340px; }
         }
-    </style>
+            /* 永續承諾：手機一欄（放在最後，蓋過前面的斷點） */
+        @media (max-width: 600px) {
+            .values-grid { grid-template-columns: 1fr; }
+            .value-wide { grid-column: auto; }
+            .value-item { padding: 24px 22px; gap: 22px; }
+            .value-photo { min-height: 260px; }
+            .value-title { font-size: 21px; }
+        }
+</style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1422,7 +1428,7 @@ const UI_ICONS = {{ ui_icons|tojson }};
         <li><a href="#values">永續理念</a></li>
         <li><a href="#" onclick="openChat()">AI 規劃行程</a></li>
     </ul>
-    <a href="/game" class="glow-btn nav-game"><span><img src="/static/images/mascot.jpg" alt=""><em class="ng-long">緣投探索遊戲</em><em class="ng-short">玩遊戲</em><i class="nav-game-new">NEW</i></span></a>
+    <a href="/game" class="glow-btn nav-game"><span><img src="/static/images/mascot.png" alt=""><em class="ng-long">緣投探索遊戲</em><em class="ng-short">玩遊戲</em><i class="nav-game-new">NEW</i></span></a>
     <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileMenu()">
         <span></span><span></span><span></span>
     </button>
@@ -1544,21 +1550,23 @@ const UI_ICONS = {{ ui_icons|tojson }};
     <div class="section-title">我們的永續承諾</div>
     <div class="section-sub">以文化為核心，讓每一趟旅行都能支持南投的職人、社區與山林。</div>
     <div class="values-grid">
-        <div class="value-item value-photo" style="background-image: url('/static/images/values/culture.jpg')">
-            <div class="value-title">文化傳承</div>
-            <div class="value-desc">職人故事經本人確認後，以中、英、日文介紹；部落內容由族人詮釋。</div>
+        <div class="value-item value-photo value-wide">
+            <div class="value-bg" style="background-image: url('/static/images/values/culture.jpg')"></div>
+            <div class="value-head"><span class="value-num">01</span><span class="value-icon">{{ icon('palette') }}</span></div>
+            <div><div class="value-title">文化傳承</div><div class="value-desc">職人故事經本人確認後，以中、英、日文介紹；部落內容由族人詮釋。</div></div>
         </div>
-        <div class="value-item"><span class="value-num" aria-hidden="true">02</span>
-            <div class="value-title">在地受益</div>
-            <div class="value-desc">旅客直接向職人預約，縮短中間通路，讓消費留在南投。</div>
+        <div class="value-item">
+            <div class="value-head"><span class="value-num">02</span><span class="value-icon">{{ icon('users-group') }}</span></div>
+            <div><div class="value-title">在地受益</div><div class="value-desc">旅客直接向職人預約，縮短中間通路，讓消費留在南投。</div></div>
         </div>
-        <div class="value-item value-photo" style="background-image: url('/static/images/values/environment.jpg')">
-            <div class="value-title">友善環境</div>
-            <div class="value-desc">優先推薦具環保標章與綠色餐飲認證的店家，並建議搭乘大眾運輸如台灣好行。</div>
+        <div class="value-item">
+            <div class="value-head"><span class="value-num">03</span><span class="value-icon">{{ icon('target') }}</span></div>
+            <div><div class="value-title">看見成效</div><div class="value-desc">記錄到訪與人流、分散熱門景點，並規劃職人回饋機制，持續改善。</div></div>
         </div>
-        <div class="value-item"><span class="value-num" aria-hidden="true">04</span>
-            <div class="value-title">看見成效</div>
-            <div class="value-desc">記錄到訪與人流、分散熱門景點，並規劃職人回饋機制，持續改善。</div>
+        <div class="value-item value-photo value-wide">
+            <div class="value-bg" style="background-image: url('/static/images/values/environment.jpg')"></div>
+            <div class="value-head"><span class="value-num">04</span><span class="value-icon">{{ icon('leaf') }}</span></div>
+            <div><div class="value-title">友善環境</div><div class="value-desc">優先推薦具環保標章與綠色餐飲認證的店家，並建議搭乘大眾運輸如台灣好行。</div></div>
         </div>
     </div>
 </section>
@@ -1870,14 +1878,14 @@ function sendMessage(text) {
 <!-- ===== AI 浮動按鈕 ===== -->
 <button id="ai-fab" onclick="toggleChat()">
     <span class="fab-tooltip">緣投 AI 嚮導</span>
-    <img src="/static/images/mascot.jpg" alt="緣投">
+    <img src="/static/images/mascot.png" alt="緣投">
     <span class="fab-dot"></span>
 </button>
 
 <!-- ===== 聊天小視窗 ===== -->
 <div id="chat-widget">
     <div id="chat-header">
-        <div class="chat-avatar"><img src="/static/images/mascot.jpg" alt="緣投"></div>
+        <div class="chat-avatar"><img src="/static/images/mascot.png" alt="緣投"></div>
         <div class="chat-header-info">
             <div class="chat-header-name">緣投 AI 嚮導</div>
             <div class="chat-header-status">● 線上服務中</div>
