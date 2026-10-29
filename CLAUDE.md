@@ -150,7 +150,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - **遊戲入口**：導覽列流光按鈕 `.glow-btn.nav-game`（手機顯示「玩遊戲」）、CTA 前的滿版 `.game-banner`（幫緣投回家）；文字裡的 XP、等級數字來自 `game_cfg`，不要寫死
 - **公告列**：`announcement` 存在時顯示浮動 `.site-ann`，訪客關閉後以 sessionStorage 記住（公告文字改變會重新顯示）
 - **頁尾**：「🔒 管理員登入」連到 `/admin`
-- **遊戲橫幅「幫緣投回家」**（`#game`）：星空與南投山稜背景，左邊是三個任務（打卡、問答、分享旅程，能量數字讀 `game_cfg`），右邊是蟲洞傳送門舞台（`#gb-stage`）：緣投依等級換造型輪播（`_game_stages()`，與 `game.html` 的 `formFor` 同規則），回家能量環跑滿就 LEVEL UP；到最高等級時蟲洞放大、「回家之路」最後的緣投星亮起，接著從 Lv.1 重新輪播。等級名稱與數量讀後台遊戲設定
+- **遊戲橫幅「幫緣投回家」**（`#game`）：滿版、至少一個螢幕高（`.game-banner` 覆寫 `section` 通用的 `max-width: 1200px`），星空與南投山稜背景，左邊是三個任務（打卡、問答、分享旅程，能量數字讀 `game_cfg`），右邊是蟲洞傳送門舞台（`#gb-stage`）：緣投依等級換造型輪播（`_game_stages()`，與 `game.html` 的 `formFor` 同規則），回家能量環跑滿就 LEVEL UP；到最高等級時蟲洞放大、「回家之路」最後的緣投星亮起，接著從 Lv.1 重新輪播。等級名稱與數量讀後台遊戲設定
 - **首頁主視覺輪播**（`#hero`）：背景輪流顯示 6 大分類照片（`static/images/hero/{slug}.jpg`，1920×1080，原圖在 `pic/`），每 6 秒換一張，下方有分類名稱與圓點可切換。點照片或標題文字會進入目前那張的分類頁（`.hero-content` 設 `pointer-events: none`，只有按鈕和連結能點）；分類由 `categories` 產生，新增分類時要補一張同名照片
 - **永續承諾**（`.values-grid`）：桌機三欄錯落排版，照片卡（文化傳承、友善環境，`.value-photo` + `.value-bg`，照片在 `static/images/values/`，原圖在 `pic/`）加 `.value-wide` 佔兩欄，與文字卡（在地受益、看見成效）交錯；每張卡左上是編號、右上是圖示。平板兩欄、手機一欄（手機規則放在 `<style>` 最後，才不會被前面的斷點蓋掉）
 - **活動輪播**（`#ad-carousel`）：

@@ -150,15 +150,17 @@
 
         /* ===== 遊戲 Banner：幫緣投回家（任務 + 蟲洞傳送門） ===== */
         .game-banner {
-            position: relative; overflow: hidden; color: #fff; padding: 80px 24px 0;
+            position: relative; overflow: hidden; color: #fff; padding: 110px 24px 0;
+            max-width: none; margin: 0; min-height: 100vh; min-height: 100svh;   /* 滿版整頁，蓋過 section 通用的 1200px */
+            display: flex; flex-direction: column; justify-content: center;
             background: radial-gradient(circle at 78% 30%, rgba(123,92,255,.35), transparent 40%),
                         linear-gradient(180deg, #0f1733 0%, #1c2b4a 45%, #24452f 100%);
         }
         .gb-sky { position: absolute; inset: 0; pointer-events: none; }
         .gb-sky i { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: gb-twinkle 3s ease-in-out infinite; }
         @keyframes gb-twinkle { 0%, 100% { opacity: .2; } 50% { opacity: .9; } }
-        .gb-ridge { position: relative; display: block; width: 100%; height: 120px; margin-top: 24px; }
-        .gb-inner { position: relative; max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; align-items: center; }
+        .gb-ridge { position: relative; display: block; width: 100%; height: 120px; margin-top: 24px; flex-shrink: 0; }
+        .gb-inner { position: relative; width: 100%; max-width: 1200px; margin: auto; display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; align-items: center; }
         .gb-chip { display: inline-flex; align-items: center; gap: 6px; background: rgba(123,92,255,.22); border: 1px solid rgba(159,230,255,.4); color: #cfe9ff;
             padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; letter-spacing: 2px; }
         .gb-text h2 { font-size: clamp(36px, 5.5vw, 56px); font-weight: 900; margin: 16px 0 12px; letter-spacing: 4px; }
