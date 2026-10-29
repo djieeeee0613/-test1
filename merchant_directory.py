@@ -83,7 +83,7 @@ def search(category="", township="", keyword="", shuffle=True):
 def format_for_ai(rows, events_by_merchant=None):
     lines = []
     for m in rows:
-        line = (f"【{m['name']}】{m['emoji']} {m['cat_name']}｜{m['township']}｜永續依據：{'、'.join(m['tags']) or '無'}\n"
+        line = (f"【{m['name']}】{m['cat_name']}｜{m['township']}｜永續依據：{'、'.join(m['tags']) or '無'}\n"
                 f"  介紹：{m['description']}\n  地址：{m['address']}｜電話：{m['phone']}")
         for e in (events_by_merchant or {}).get(m["name"], [])[:2]:
             bits = [e.get("event_date")] + ([f"NT${e['price']}"] if e.get("price") is not None else []) \

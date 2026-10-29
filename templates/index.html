@@ -40,6 +40,7 @@
         }
 
         .nav-logo {
+            display: flex; align-items: center; gap: 8px; line-height: 1;
             color: white;
             font-size: 20px;
             font-weight: bold;
@@ -49,6 +50,7 @@
         .nav-logo span { color: var(--accent); }
 
         .nav-links {
+            margin-left: auto; margin-right: 28px;
             display: flex;
             gap: 32px;
             list-style: none;
@@ -67,7 +69,7 @@
         .lang-switcher {
             display: flex;
             gap: 4px;
-            margin-left: 24px;
+            margin-right: 10px;
         }
 
         .lang-btn {
@@ -81,11 +83,15 @@
             transition: all 0.2s;
         }
 
+        #chat-header .lang-btn { padding: 3px 8px; font-size: 11px; }
         .lang-btn:hover, .lang-btn.active {
             background: rgba(255,255,255,0.25);
             color: white;
             border-color: rgba(255,255,255,0.4);
         }
+
+        /* ===== 線條圖示（Tabler Icons）===== */
+        .ic { vertical-align: -0.15em; flex-shrink: 0; }
 
         /* ===== 網站公告 ===== */
         .site-ann {
@@ -159,14 +165,46 @@
         .gb-feats b { display: block; font-size: 14px; }
         .gb-feats small { font-size: 12px; opacity: .7; }
         .gb-cta > span { padding: 14px 32px; font-size: 16px; }
-        .gb-visual { position: relative; height: 300px; display: grid; place-items: center; }
-        .gb-orbit { position: absolute; width: 270px; height: 270px; border-radius: 50%; border: 2px dashed rgba(240,224,176,.3); animation: glow-spin 30s linear infinite; }
+        .gb-chip .ic, .gb-float .ic { vertical-align: -0.2em; }
+        .gb-feats i { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: rgba(240,224,176,.14); color: #f0e0b0; font-size: 17px; margin-bottom: 6px; }
         @keyframes gb-bob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-12px) rotate(3deg); } }
-        .gb-mascot { width: 190px; height: 190px; border-radius: 50%; object-fit: cover; border: 6px solid #C8A96E; box-shadow: 0 0 0 12px rgba(200,169,110,.15), 0 20px 50px rgba(0,0,0,.35); animation: gb-bob 3.4s ease-in-out infinite; }
+        /* 升級展示台 */
+        .gb-stage { position: relative; height: 380px; display: grid; place-items: center; color: inherit; text-decoration: none; cursor: pointer; }
+        .gb-rays { position: absolute; width: 330px; height: 330px; border-radius: 50%;
+            background: repeating-conic-gradient(from 0deg, rgba(240,224,176,.16) 0deg 10deg, transparent 10deg 30deg);
+            -webkit-mask: radial-gradient(circle, #000 35%, transparent 70%); mask: radial-gradient(circle, #000 35%, transparent 70%);
+            animation: glow-spin 24s linear infinite; }
+        .gb-stage::before { content: ''; position: absolute; width: 230px; height: 230px; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -58%);
+            background: radial-gradient(circle, rgba(240,224,176,.35), rgba(200,169,110,.08) 60%, transparent 70%); }
+        .gb-form { position: absolute; top: 34px; width: 230px; height: 230px; object-fit: contain; opacity: 0; transform: translateY(40px) scale(.4);
+            filter: drop-shadow(0 18px 24px rgba(0,0,0,.35)); transition: opacity .3s, transform .3s; }
+        .gb-form.on { opacity: 1; transform: none; animation: gb-pop .8s cubic-bezier(.34,1.56,.64,1), gb-bob 3.4s ease-in-out .8s infinite; }
+        @keyframes gb-pop { 0% { opacity: 0; transform: translateY(60px) scale(.3) rotate(-8deg); } 60% { opacity: 1; transform: translateY(-14px) scale(1.12) rotate(4deg); } 100% { transform: none; } }
+        .gb-stage:hover .gb-form.on { animation-play-state: paused; transform: scale(1.06); }
+        .gb-levelup { position: absolute; top: 8px; font-weight: 900; letter-spacing: 4px; font-size: 22px; color: #f5d58e; text-shadow: 0 2px 12px rgba(0,0,0,.4); opacity: 0; pointer-events: none; }
+        .gb-stage.pop .gb-levelup { animation: gb-lvup 1.3s ease-out; }
+        @keyframes gb-lvup { 0% { opacity: 0; transform: translateY(14px) scale(.6); } 25% { opacity: 1; transform: scale(1.15); } 70% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px); } }
+        .gb-sparks { position: absolute; inset: 0; pointer-events: none; }
+        .gb-sparks i { position: absolute; top: 42%; left: 50%; width: 8px; height: 8px; border-radius: 2px; background: #f0e0b0; opacity: 0; }
+        .gb-stage.pop .gb-sparks i { animation: gb-spark .9s ease-out; }
+        .gb-sparks i:nth-child(1) { --x: -120px; --y: -90px; } .gb-sparks i:nth-child(2) { --x: 120px; --y: -80px; background: #fff; }
+        .gb-sparks i:nth-child(3) { --x: -140px; --y: 10px; background: #C8A96E; } .gb-sparks i:nth-child(4) { --x: 140px; --y: 20px; }
+        .gb-sparks i:nth-child(5) { --x: -70px; --y: -140px; background: #fff; } .gb-sparks i:nth-child(6) { --x: 80px; --y: -140px; background: #C8A96E; }
+        @keyframes gb-spark { 0% { opacity: 1; transform: translate(-50%, -50%) scale(.4) rotate(0); } 100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) scale(1.2) rotate(180deg); } }
+        .gb-badge { position: absolute; bottom: 74px; display: flex; align-items: baseline; gap: 8px; background: rgba(20,45,27,.75); border: 1px solid rgba(240,224,176,.4);
+            padding: 5px 16px; border-radius: 999px; backdrop-filter: blur(4px); white-space: nowrap; }
+        .gb-badge b { color: #f5d58e; font-size: 16px; } .gb-badge span { font-size: 14px; }
+        .gb-xp { position: absolute; bottom: 58px; width: 200px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.15); overflow: hidden; }
+        .gb-xp i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #C8A96E, #f5d58e); border-radius: 3px; }
+        .gb-path { position: absolute; bottom: 6px; display: flex; gap: 10px; }
+        .gb-path span { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.15); display: grid; place-items: center;
+            filter: grayscale(1); opacity: .5; transition: all .4s; }
+        .gb-path span.on { filter: none; opacity: 1; border-color: #f0e0b0; transform: scale(1.12); box-shadow: 0 0 14px rgba(240,224,176,.5); }
+        .gb-path img { width: 30px; height: 30px; object-fit: contain; }
         .gb-float { position: absolute; background: #fff; color: #2d4a35; font-weight: 800; font-size: 13px; padding: 6px 12px; border-radius: 14px; box-shadow: 0 8px 20px rgba(0,0,0,.25); animation: gb-bob 3s ease-in-out infinite; white-space: nowrap; }
-        .gb-float.f1 { top: 30px; left: 6%; color: #b88a3e; }
-        .gb-float.f2 { top: 52%; right: 0; animation-delay: -1s; color: #e8590c; }
-        .gb-float.f3 { bottom: 18px; left: 14%; animation-delay: -2s; }
+        .gb-float.f1 { top: 44px; left: 2%; color: #b88a3e; }
+        .gb-float.f2 { top: 46%; right: 0; animation-delay: -1s; color: #e8590c; }
+        .gb-float.f3 { top: 58%; left: 0; animation-delay: -2s; }
         .nav-game em { font-style: normal; }
         .ng-short { display: none; }
         @media (max-width: 1100px) { .nav-links { gap: 20px; } .nav-game-new { display: none; } }
@@ -180,13 +218,13 @@
         }
         @media (max-width: 860px) {
             .gb-inner { grid-template-columns: 1fr; text-align: center; gap: 12px; }
-            .gb-visual { order: -1; height: 230px; }
-            .gb-mascot { width: 150px; height: 150px; }
-            .gb-orbit { width: 210px; height: 210px; }
+            .gb-stage { order: -1; height: 340px; }
+            .gb-form { width: 190px; height: 190px; }
+            .gb-rays { width: 280px; height: 280px; }
             .gb-text p, .gb-feats { margin-left: auto; margin-right: auto; }
             .game-banner { padding: 48px 18px; }
         }
-        @media (prefers-reduced-motion: reduce) { .glow-btn, .glow-btn::before, .glow-btn > span::after, .gb-mascot, .gb-float, .gb-orbit { animation: none; } }
+        @media (prefers-reduced-motion: reduce) { .glow-btn, .glow-btn::before, .glow-btn > span::after, .gb-form, .gb-float, .gb-rays { animation: none !important; } }
 
         /* ===== Hero ===== */
         .hero {
@@ -685,7 +723,7 @@
         }
 
         .timeline-emoji {
-            font-size: 32px;
+            font-size: 32px; color: var(--primary); line-height: 1;
             margin-bottom: 12px;
         }
 
@@ -1175,7 +1213,8 @@
         /* ===== 響應式 ===== */
         /* 要放在 .nav-hamburger 基本樣式之後，才蓋得過它的 display: none */
         @media (max-width: 1180px) {
-            .nav-links, .lang-switcher { display: none; }
+            .nav-links { display: none; }
+            .nav-game { margin-left: auto; margin-right: 12px; }
             .nav-hamburger { display: flex; }
         }
         @media (max-width: 900px) {
@@ -1186,7 +1225,7 @@
 
         @media (max-width: 768px) {
             nav { padding: 0 20px; }
-            .nav-links, .lang-switcher { display: none; }
+            .nav-links { display: none; }
             .nav-hamburger { display: flex; }
 
             .hero h1 { font-size: 34px; letter-spacing: 1px; }
@@ -1323,9 +1362,9 @@
 
 {% if announcement %}
 <div class="site-ann ann-{{ announcement.style }}" id="site-ann" data-key="{{ announcement.text|e }}" hidden>
-    <span class="ann-ic">{{ {'info': '📢', 'promo': '🎉', 'warning': '⚠️'}.get(announcement.style, '📢') }}</span>
+    <span class="ann-ic">{{ icon({'info': 'speakerphone', 'promo': 'confetti', 'warning': 'alert-triangle'}.get(announcement.style, 'speakerphone')) }}</span>
     {% if announcement.link %}<a href="{{ announcement.link|e }}">{{ announcement.text }} →</a>{% else %}<span>{{ announcement.text }}</span>{% endif %}
-    <button onclick="closeAnnouncement()" aria-label="關閉公告">✕</button>
+    <button onclick="closeAnnouncement()" aria-label="關閉公告">{{ icon("x") }}</button>
 </div>
 <script>
 (function () {
@@ -1341,9 +1380,14 @@ function closeAnnouncement() {
 }
 </script>
 {% endif %}
+<script>
+// 黑白線條圖示（Tabler Icons，MIT）：分類圖示給地圖標記，介面圖示給動態產生的內容
+const CAT_ICONS = {{ cat_icons|tojson }};
+const UI_ICONS = {{ ui_icons|tojson }};
+</script>
 <!-- ===== 導覽列 ===== -->
 <nav>
-    <div class="nav-logo"><img src="/static/images/logo-mark.png" alt="深度與美學旅遊研究室" style="width:30px;height:30px;border-radius:7px;object-fit:cover;vertical-align:middle;margin-right:8px;">深度與美學<span>旅遊研究室</span></div>
+    <div class="nav-logo"><img src="/static/images/logo-mark.png" alt="深度與美學旅遊研究室" style="width:30px;height:30px;border-radius:7px;object-fit:cover;flex-shrink:0;"><span style="color:inherit">深度與美學<span>旅遊研究室</span></span></div>
     <ul class="nav-links">
         <li><a href="#experiences">體驗項目</a></li>
         <li><a href="#itinerary">精選行程</a></li>
@@ -1352,11 +1396,6 @@ function closeAnnouncement() {
         <li><a href="#" onclick="openChat()">AI 規劃行程</a></li>
     </ul>
     <a href="/game" class="glow-btn nav-game"><span><img src="/static/images/mascot.jpg" alt=""><em class="ng-long">緣投探索遊戲</em><em class="ng-short">玩遊戲</em><i class="nav-game-new">NEW</i></span></a>
-    <div class="lang-switcher">
-        <button class="lang-btn active" onclick="setLang('zh-TW', this)">繁中</button>
-        <button class="lang-btn" onclick="setLang('en', this)">EN</button>
-        <button class="lang-btn" onclick="setLang('ja', this)">日本語</button>
-    </div>
     <button class="nav-hamburger" id="nav-hamburger" onclick="toggleMobileMenu()">
         <span></span><span></span><span></span>
     </button>
@@ -1364,31 +1403,26 @@ function closeAnnouncement() {
 
 <!-- ===== 手機選單 ===== -->
 <div class="mobile-menu" id="mobile-menu">
-    <a href="#experiences" onclick="closeMobileMenu()">🎯 體驗項目</a>
-    <a href="#itinerary" onclick="closeMobileMenu()">🗓️ 精選行程</a>
-    <a href="#map" onclick="closeMobileMenu()">🗺️ 探索地圖</a>
-    <a href="#values" onclick="closeMobileMenu()">🌱 永續理念</a>
-    <a href="#" onclick="closeMobileMenu(); openChat()">🤖 AI 規劃行程</a>
-    <a href="/game" style="color:#f0e0b0;font-weight:700">🎮 緣投探索遊戲</a>
-    <div class="mobile-lang">
-        <button class="lang-btn active" id="ml-zh" onclick="setLangMobile('zh-TW')">繁中</button>
-        <button class="lang-btn" id="ml-en" onclick="setLangMobile('en')">EN</button>
-        <button class="lang-btn" id="ml-ja" onclick="setLangMobile('ja')">日本語</button>
-    </div>
+    <a href="#experiences" onclick="closeMobileMenu()">體驗項目</a>
+    <a href="#itinerary" onclick="closeMobileMenu()">精選行程</a>
+    <a href="#map" onclick="closeMobileMenu()">探索地圖</a>
+    <a href="#values" onclick="closeMobileMenu()">永續理念</a>
+    <a href="#" onclick="closeMobileMenu(); openChat()">AI 規劃行程</a>
+    <a href="/game" style="color:#f0e0b0;font-weight:700">緣投探索遊戲</a>
 </div>
 
 <!-- ===== Hero ===== -->
 <div class="hero{% if categories %} has-slides{% endif %}" id="hero">
     <div class="hero-slides">
-        {% for c in categories %}<a class="hero-slide{% if loop.first %} active{% endif %}" href="/category/{{ c.slug }}"
-           style="background-image: url('/static/images/hero/{{ c.slug }}.jpg')" aria-label="查看{{ c.name }}的商家"
-           data-label="{{ c.emoji }} {{ c.name }}"></a>
+        {% for c in categories %}<a class="hero-slide{% if loop.first %} active{% endif %}" href="{{ c.external_url or '/category/' ~ c.slug }}"{% if c.external_url %} target="_blank" rel="noopener"{% endif %}
+           style="background-image: url('/static/images/hero/{{ c.slug }}.jpg')" aria-label="查看{{ c.name }}"
+           data-label="{{ c.name }}"></a>
         {% endfor %}
     </div>
     <div class="hero-circle c1"></div>
     <div class="hero-circle c2"></div>
     <div class="hero-content">
-        <div class="hero-badge">✦ 南投縣永續旅遊推薦平台 ✦</div>
+        <div class="hero-badge">緣投・南投永續旅遊平台</div>
         <h1>職人帶路<br><em>南投永續深度旅行</em></h1>
         <p>不只路過。從百年蛇窯、手工紙寮到部落織布，與職人面對面，留下只屬於你的南投記憶。</p>
         <div class="hero-btns">
@@ -1398,7 +1432,7 @@ function closeAnnouncement() {
     </div>
     {% if categories %}
     <div class="hero-slide-nav">
-        <a class="hero-slide-caption" id="hero-caption" href="/category/{{ categories[0].slug }}">{{ categories[0].emoji }} {{ categories[0].name }}　查看商家 →</a>
+        <a class="hero-slide-caption" id="hero-caption" href="/category/{{ categories[0].slug }}">{{ categories[0].name }}　查看商家 →</a>
         <div class="hero-dots">
             {% for c in categories %}<button class="hero-dot{% if loop.first %} active{% endif %}" aria-label="{{ c.name }}" data-i="{{ loop.index0 }}"></button>{% endfor %}
         </div>
@@ -1407,46 +1441,26 @@ function closeAnnouncement() {
     <div class="hero-scroll">向下滾動</div>
 </div>
 
-<!-- ===== 數據 ===== -->
-<div class="stats">
-    <div class="stat-item">
-        <div class="num">30+</div>
-        <div class="label">在地職人商家</div>
-    </div>
-    <div class="stat-item">
-        <div class="num">{{ categories|length }}</div>
-        <div class="label">體驗類別</div>
-    </div>
-    <div class="stat-item">
-        <div class="num">1200+</div>
-        <div class="label">旅客好評</div>
-    </div>
-    <div class="stat-item">
-        <div class="num">100%</div>
-        <div class="label">在地永續認證</div>
-    </div>
-</div>
-
 <!-- ===== 體驗分類 ===== -->
 <section id="experiences">
     <div class="section-tag">EXPERIENCES</div>
     <div class="section-title">六大體驗分類</div>
-    <div class="section-sub">選擇您感興趣的類別，AI 嚮導立即介紹精選商家並協助預約。</div>
+    <div class="section-sub">選擇您感興趣的類別，緣投立即介紹精選商家並協助預約。</div>
     <div class="cat-grid">
         {% for c in categories %}
-        <div class="cat-card" onclick="location.href='/category/{{ c.slug }}'">
+        <div class="cat-card" onclick="{% if c.external_url %}window.open('{{ c.external_url }}', '_blank', 'noopener'){% else %}location.href='/category/{{ c.slug }}'{% endif %}">
             <div class="cat-header cat-photo" style="background-color: {{ c.color }}; background-image: url('/static/images/categories/{{ c.image }}')">
                 <span class="cat-count">{% if c.merchants %}{{ c.merchants|length }} 家{% else %}即將推出{% endif %}</span>
             </div>
             <div class="cat-body">
-                <div class="cat-name">{{ c.emoji }} {{ c.name }}</div>
+                <div class="cat-name">{{ icon(c.icon) }} {{ c.name }}</div>
                 <div class="cat-desc">{{ c.tagline }}</div>
                 <div class="cat-tags">
                     {% for t in c.tags %}<span class="cat-tag">{{ t }}</span>{% endfor %}
                 </div>
                 <div class="cat-footer-row">
-                    <div class="cat-explore">查看商家 →</div>
-                    <span class="cat-ask-ai" data-msg="【分類探索】我對「{{ c.emoji }} {{ c.name }}」類別感興趣，請介紹南投有哪些相關的商家與體驗。" onclick="event.stopPropagation(); openChatWithMsg(this.dataset.msg)">問問 AI</span>
+                    <div class="cat-explore">{% if c.external_url %}前往品味南投{% else %}查看商家 →{% endif %}</div>
+                    <span class="cat-ask-ai" data-msg="【分類探索】我對「{{ c.name }}」類別感興趣，請介紹南投有哪些相關的商家與體驗。" onclick="event.stopPropagation(); openChatWithMsg(this.dataset.msg)">問問 AI</span>
                 </div>
             </div>
         </div>
@@ -1462,7 +1476,7 @@ function closeAnnouncement() {
         <div class="section-sub">點擊地圖上的標記，查看各地職人介紹，或讓 AI 嚮導幫你推薦。</div>
         <div id="nantou-map"></div>
         <div class="map-legend" id="map-legend">
-            {% for c in map_categories %}<div class="map-legend-item" onclick="filterMap('{{ c.slug }}')"><div class="legend-dot" style="background:{{ c.color }}"></div>{{ c.emoji }} {{ c.name }}</div>
+            {% for c in map_categories %}<div class="map-legend-item" onclick="filterMap('{{ c.slug }}')"><div class="legend-dot" style="background:{{ c.color }}"></div>{{ c.name }}</div>
             {% endfor %}<div class="map-legend-item" onclick="filterMap('all')" style="font-weight:600; color:var(--primary);">全部顯示</div>
         </div>
     </div>
@@ -1473,22 +1487,22 @@ function closeAnnouncement() {
     <div class="itinerary-inner">
         <div class="section-tag">ITINERARY</div>
         <div class="section-title">南投一日深度行程</div>
-        <div class="section-sub">AI 嚮導根據旅客喜好即時規劃，以下為經典示範行程。</div>
+        <div class="section-sub">緣投根據旅客喜好即時規劃，以下為示範行程。</div>
         <div class="timeline">
             <div class="timeline-item">
-                <div class="timeline-emoji">🌅</div>
+                <div class="timeline-emoji">{{ icon("sunrise") }}</div>
                 <div class="timeline-time">上午 9:00 - 12:00</div>
                 <div class="timeline-title">日月老茶廠</div>
                 <div class="timeline-desc">清晨走進魚池鄉的百年製茶廠，跟著茶師認識友善有機農法，一杯在地紅茶開啟一天。</div>
             </div>
             <div class="timeline-item">
-                <div class="timeline-emoji">🌞</div>
+                <div class="timeline-emoji">{{ icon("sun") }}</div>
                 <div class="timeline-time">下午 13:00 - 17:00</div>
                 <div class="timeline-title">地利遊客資訊站＆丹大布農生態旅遊</div>
                 <div class="timeline-desc">午後來到信義鄉布農族部落，走雙龍吊橋、體驗獵人智慧，親手做一瓶馬告香氛。</div>
             </div>
             <div class="timeline-item">
-                <div class="timeline-emoji">🌙</div>
+                <div class="timeline-emoji">{{ icon("moon") }}</div>
                 <div class="timeline-time">傍晚 18:00 以後</div>
                 <div class="timeline-title">慢午廚房x野食</div>
                 <div class="timeline-desc">傍晚在望鄉部落享用從土地到餐桌的原民風味餐，吃一頓野菜與野花入菜的晚餐。</div>
@@ -1526,7 +1540,7 @@ function closeAnnouncement() {
 <!-- ===== 商家廣告輪播 ===== -->
 <section id="promotions" style="padding: 60px 20px; background: #f7f5f0;">
     <div style="max-width: 900px; margin: 0 auto;">
-        <div class="section-tag">✨ 職人推廣</div>
+        <div class="section-tag">職人推廣</div>
         <h2 class="section-title">精選體驗工作坊</h2>
         <p class="section-sub">南投在地職人限定活動，名額有限，把握機會</p>
 
@@ -1585,9 +1599,9 @@ function _buildSlide(type, ev, slideIdx, evIdx) {
                     <div style="font-size:11px;color:rgba(255,255,255,0.75);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px;">${ev.artisan}</div>
                     <div style="font-size:22px;font-weight:800;color:#fff;line-height:1.2;">${ev.title}</div>
                     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;">
-                        <span style="font-size:12px;color:rgba(255,255,255,0.85);">📅 ${ev.event_date||''}</span>
-                        <span style="font-size:12px;color:rgba(255,255,255,0.85);">👥 ${ev.capacity||''}人</span>
-                        <span style="font-size:12px;color:rgba(255,255,255,0.85);">💰 NT$${ev.price||''}</span>
+                        <span style="font-size:12px;color:rgba(255,255,255,0.85);">${UI_ICONS.calendar} ${ev.event_date||''}</span>
+                        <span style="font-size:12px;color:rgba(255,255,255,0.85);">${UI_ICONS.users} ${ev.capacity||''}人</span>
+                        <span style="font-size:12px;color:rgba(255,255,255,0.85);">${UI_ICONS.coin} NT$${ev.price||''}</span>
                     </div>
                 </div>
             </div>`;
@@ -1597,9 +1611,9 @@ function _buildSlide(type, ev, slideIdx, evIdx) {
                 <div style="font-size:11px;color:#888;letter-spacing:2px;text-transform:uppercase;">${ev.artisan}</div>
                 <div style="font-size:26px;font-weight:800;color:${tc};line-height:1.2;">${ev.title}</div>
                 <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;margin-top:6px;">
-                    <span style="font-size:13px;color:#666;">📅 ${ev.event_date||''}</span>
-                    <span style="font-size:13px;color:#666;">👥 ${ev.capacity||''}人</span>
-                    <span style="font-size:13px;color:#666;">💰 NT$${ev.price||''}</span>
+                    <span style="font-size:13px;color:#666;">${UI_ICONS.calendar} ${ev.event_date||''}</span>
+                    <span style="font-size:13px;color:#666;">${UI_ICONS.users} ${ev.capacity||''}人</span>
+                    <span style="font-size:13px;color:#666;">${UI_ICONS.coin} NT$${ev.price||''}</span>
                 </div>
                 <div style="font-size:14px;color:#777;max-width:400px;line-height:1.5;margin-top:4px;">${ev.description||''}</div>
                 <div style="margin-top:10px;background:rgba(74,93,78,0.12);color:#4A5D4E;padding:8px 24px;border-radius:20px;font-size:13px;font-weight:600;">點擊查看詳情 →</div>
@@ -1608,13 +1622,13 @@ function _buildSlide(type, ev, slideIdx, evIdx) {
     }
     // placeholder
     const PH = [
-        {icon:'☕',bg:'linear-gradient(135deg,#e8e4dc,#d5cfc4)',tc:'#5a5a4a',txt:'你的工作坊廣告刊登於此'},
-        {icon:'🎨',bg:'linear-gradient(135deg,#e8dce0,#d5c4c8)',tc:'#5a3a3a',txt:'你的手作工藝廣告刊登於此'},
+        {icon:'coin',bg:'linear-gradient(135deg,#e8e4dc,#d5cfc4)',tc:'#5a5a4a',txt:'你的工作坊廣告刊登於此'},
+        {icon:'star',bg:'linear-gradient(135deg,#e8dce0,#d5c4c8)',tc:'#5a3a3a',txt:'你的手作工藝廣告刊登於此'},
     ];
     const p = PH[slideIdx % PH.length];
     return `<div class="ad-slide" style="min-width:100%;height:380px;">
         <div style="height:100%;background:${p.bg};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
-            <div style="font-size:48px;">${p.icon}</div>
+            <div style="font-size:44px;line-height:1;color:${p.tc};">${UI_ICONS[p.icon]}</div>
             <div style="font-size:22px;font-weight:700;color:${p.tc};">待推廣</div>
             <div style="font-size:14px;color:#888;letter-spacing:1px;">${p.txt}</div>
             <div style="font-size:13px;color:#aaa;">傳送訊息給 LINE Bot 登錄活動</div>
@@ -1664,26 +1678,60 @@ document.addEventListener('DOMContentLoaded', () => {
 <div class="game-banner" id="game">
   <div class="gb-inner">
     <div class="gb-text">
-      <span class="gb-chip">🎮 互動遊戲</span>
+      <span class="gb-chip">{{ icon("device-gamepad-2") }} 互動遊戲</span>
       <h2>緣投<span>探索者</span></h2>
-      <p>和吉祥物緣投一起走訪南投 {{ total_merchants }} 間在地職人：AI 驗證打卡收集印章、挑戰問答、分享旅程，升到 Lv.{{ game_cfg.max_level }}「{{ game_cfg.max_title }}」就能領取專屬證書！</p>
+      <p>和吉祥物緣投一起走訪南投 {{ total_merchants }} 間在地職人：AI 驗證打卡收集印章、挑戰問答、分享旅程。每升一級，緣投就換上新造型，升到 Lv.{{ game_cfg.max_level }}「{{ game_cfg.max_title }}」還能領取專屬證書！</p>
       <div class="gb-feats">
-        <div><b>📸 職人打卡</b><small>+{{ game_cfg.xp_checkin }} XP</small></div>
-        <div><b>🧠 問答大挑戰</b><small>每局 {{ game_cfg.quiz_round_size }} 題・無限挑戰</small></div>
-        <div><b>💬 旅人動態</b><small>分享・按讚・留言</small></div>
-        <div><b>📜 永續達人證書</b><small>Lv.{{ game_cfg.max_level }} 自動寄送</small></div>
+        <div><i>{{ icon("camera") }}</i><b>職人打卡</b><small>+{{ game_cfg.xp_checkin }} XP</small></div>
+        <div><i>{{ icon("brain") }}</i><b>問答大挑戰</b><small>每局 {{ game_cfg.quiz_round_size }} 題・無限挑戰</small></div>
+        <div><i>{{ icon("message-circle") }}</i><b>旅人動態</b><small>分享・按讚・留言</small></div>
+        <div><i>{{ icon("certificate") }}</i><b>永續達人證書</b><small>Lv.{{ game_cfg.max_level }} 自動寄送</small></div>
       </div>
       <a href="/game" class="glow-btn gb-cta"><span>開始探索之旅 →</span></a>
     </div>
-    <div class="gb-visual">
-      <div class="gb-orbit"></div>
-      <img src="/static/images/mascot.jpg" alt="緣投" class="gb-mascot">
+
+    <!-- 升級展示台：緣投依等級換造型，經驗條跑滿就 LEVEL UP 換下一級 -->
+    <a href="/game" class="gb-stage" id="gb-stage" aria-label="進入緣投探索者遊戲">
+      <div class="gb-rays" aria-hidden="true"></div>
+      <div class="gb-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="gb-levelup" aria-hidden="true">LEVEL UP!</div>
+      {% for st in game_stages %}<img class="gb-form{% if loop.first %} on{% endif %}" src="{{ st.img }}" alt="Lv.{{ st.level }} {{ st.title }}的緣投" data-lv="{{ st.level }}" data-title="{{ st.title }}">
+      {% endfor %}
+      <div class="gb-badge"><b id="gb-lv">Lv.{{ game_stages[0].level }}</b><span id="gb-title">{{ game_stages[0].title }}</span></div>
+      <div class="gb-xp"><i id="gb-xp"></i></div>
+      <div class="gb-path">
+        {% for st in game_stages %}<span class="{% if loop.first %}on{% endif %}"><img src="{{ st.img }}" alt=""></span>{% endfor %}
+      </div>
       <span class="gb-float f1">+{{ game_cfg.xp_checkin }} XP</span>
-      <span class="gb-float f2">🔥 連擊！</span>
-      <span class="gb-float f3">🏆 Lv.{{ game_cfg.max_level }}</span>
-    </div>
+      <span class="gb-float f2">{{ icon("flame") }} 連擊！</span>
+      <span class="gb-float f3">{{ icon("trophy") }} Lv.{{ game_cfg.max_level }}</span>
+    </a>
   </div>
 </div>
+<script>
+(function gameStage() {
+    const stage = document.getElementById('gb-stage');
+    if (!stage) return;
+    const forms = [...stage.querySelectorAll('.gb-form')], path = [...stage.querySelectorAll('.gb-path span')];
+    const lv = document.getElementById('gb-lv'), title = document.getElementById('gb-title'), xp = document.getElementById('gb-xp');
+    if (forms.length < 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let i = 0;
+    function next() {
+        // 經驗條先跑滿，再 LEVEL UP 換成下一級的造型
+        xp.style.transition = 'none'; xp.style.width = '0%'; void xp.offsetWidth;
+        xp.style.transition = 'width 2.2s ease-in-out'; xp.style.width = '100%';
+        setTimeout(() => {
+            forms[i].classList.remove('on'); path[i].classList.remove('on');
+            i = (i + 1) % forms.length;
+            forms[i].classList.add('on'); path[i].classList.add('on');
+            lv.textContent = 'Lv.' + forms[i].dataset.lv; title.textContent = forms[i].dataset.title;
+            stage.classList.remove('pop'); void stage.offsetWidth; stage.classList.add('pop');
+        }, 2300);
+    }
+    next();
+    setInterval(next, 3600);
+})();
+</script>
 
 <div class="cta-section">
     <h2>讓 AI 幫你規劃專屬行程</h2>
@@ -1694,7 +1742,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- ===== 廣告 Modal ===== -->
 <div id="ad-modal" style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.6); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this)closeAdModal()">
     <div id="ad-modal-inner" style="background:#fff; border-radius:20px; max-width:640px; width:100%; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-        <button onclick="closeAdModal()" style="position:absolute; top:14px; right:16px; background:rgba(0,0,0,0.15); border:none; border-radius:50%; width:36px; height:36px; font-size:18px; cursor:pointer; z-index:10; color:#333;">✕</button>
+        <button onclick="closeAdModal()" style="position:absolute; top:14px; right:16px; background:rgba(0,0,0,0.15); border:none; border-radius:50%; width:36px; height:36px; font-size:18px; cursor:pointer; z-index:10; color:#333;">{{ icon("x") }}</button>
         <div id="ad-modal-content"></div>
     </div>
 </div>
@@ -1702,17 +1750,17 @@ document.addEventListener('DOMContentLoaded', () => {
 const _SAMPLE_HTML = `
     <img src="/static/images/ad-sample.jpg" alt="阿傑老闆的咖啡工作坊" style="width:100%;border-radius:20px 20px 0 0;display:block;max-height:300px;object-fit:cover;">
     <div style="padding:24px 28px 28px;">
-        <div style="display:inline-block;background:#f0f7f0;color:#4A5D4E;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px;">🌾 農業永續 · 限定體驗</div>
+        <div style="display:inline-block;background:#f0f7f0;color:#4A5D4E;font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;letter-spacing:1px;margin-bottom:12px;">農業永續 · 限定體驗</div>
         <h2 style="font-size:24px;font-weight:800;color:#1a1a1a;margin:0 0 6px;">阿傑老闆的咖啡工作坊</h2>
         <p style="color:#888;font-size:14px;margin:0 0 20px;">手作體驗 × 職人手沖 × 豆品販售</p>
         <p style="color:#444;font-size:15px;line-height:1.8;margin:0 0 20px;">跟著阿傑老闆，探索最純粹的咖啡香。從生豆挑選、烘焙到手沖，一步一步感受咖啡的溫度與故事。課程結束後可帶走自己烘焙的豆子（50g），是送禮自用兩相宜的南投伴手禮。</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
-            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">📅 開課時間</div><div style="font-size:14px;font-weight:600;color:#333;">每週六、日<br>10:00 – 13:00</div></div>
-            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">👥 每場名額</div><div style="font-size:14px;font-weight:600;color:#333;">限 8 人<br><span style="color:#e85d04;font-size:12px;">▸ 名額有限，早報早得</span></div></div>
-            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">💰 體驗費用</div><div style="font-size:14px;font-weight:600;color:#333;">NT$800 / 人<br><span style="color:#888;font-size:12px;">含材料、豆子帶走</span></div></div>
-            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">📍 地點</div><div style="font-size:14px;font-weight:600;color:#333;">南投縣埔里鎮<br>仁愛路67號</div></div>
+            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">開課時間</div><div style="font-size:14px;font-weight:600;color:#333;">每週六、日<br>10:00 – 13:00</div></div>
+            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">每場名額</div><div style="font-size:14px;font-weight:600;color:#333;">限 8 人<br><span style="color:#e85d04;font-size:12px;">▸ 名額有限，早報早得</span></div></div>
+            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">體驗費用</div><div style="font-size:14px;font-weight:600;color:#333;">NT$800 / 人<br><span style="color:#888;font-size:12px;">含材料、豆子帶走</span></div></div>
+            <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">地點</div><div style="font-size:14px;font-weight:600;color:#333;">南投縣埔里鎮<br>仁愛路67號</div></div>
         </div>
-        <button onclick="closeAdModal();openChat();setTimeout(()=>sendMessage('我想預約阿傑老闆的咖啡工作坊'),400);" style="width:100%;background:linear-gradient(135deg,#4A5D4E,#2D6A4F);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;">🤖 讓 AI 幫我預約</button>
+        <button onclick="closeAdModal();openChat();setTimeout(()=>sendMessage('我想預約阿傑老闆的咖啡工作坊'),400);" style="width:100%;background:linear-gradient(135deg,#4A5D4E,#2D6A4F);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;">讓 AI 幫我預約</button>
     </div>`;
 
 function openAdModal(evIdx) {
@@ -1724,19 +1772,19 @@ function openAdModal(evIdx) {
         const esc = s => String(s||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
         content.innerHTML = `
             <div style="background:linear-gradient(135deg,#4A5D4E,#2D6A4F);height:180px;border-radius:20px 20px 0 0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;">
-                <div style="font-size:48px;">🌿</div>
+                <img src="/static/images/logo-mark.png" alt="" style="width:56px;height:56px;border-radius:12px;">
                 <div style="color:rgba(255,255,255,0.75);font-size:13px;letter-spacing:2px;">${esc(ev.artisan)}</div>
             </div>
             <div style="padding:24px 28px 28px;">
                 <h2 style="font-size:24px;font-weight:800;color:#1a1a1a;margin:0 0 8px;">${esc(ev.title)}</h2>
                 <p style="color:#666;font-size:15px;line-height:1.7;margin:0 0 20px;">${esc(ev.description)}</p>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;">
-                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">📅 活動日期</div><div style="font-size:14px;font-weight:600;color:#333;">${esc(ev.event_date)}</div></div>
-                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">👥 每場名額</div><div style="font-size:14px;font-weight:600;color:#333;">限 ${esc(ev.capacity)} 人</div></div>
-                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">💰 體驗費用</div><div style="font-size:14px;font-weight:600;color:#333;">NT$${esc(ev.price)} / 人</div></div>
-                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">🏪 主辦商家</div><div style="font-size:14px;font-weight:600;color:#333;">${esc(ev.artisan)}</div></div>
+                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">活動日期</div><div style="font-size:14px;font-weight:600;color:#333;">${esc(ev.event_date)}</div></div>
+                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">每場名額</div><div style="font-size:14px;font-weight:600;color:#333;">限 ${esc(ev.capacity)} 人</div></div>
+                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">體驗費用</div><div style="font-size:14px;font-weight:600;color:#333;">NT$${esc(ev.price)} / 人</div></div>
+                    <div style="background:#f7f5f0;border-radius:12px;padding:14px 16px;"><div style="font-size:11px;color:#999;letter-spacing:1px;margin-bottom:4px;">主辦商家</div><div style="font-size:14px;font-weight:600;color:#333;">${esc(ev.artisan)}</div></div>
                 </div>
-                <button onclick="closeAdModal();openChat();setTimeout(()=>sendMessage('我想預約${esc(ev.artisan)}的${esc(ev.title)}'),400);" style="width:100%;background:linear-gradient(135deg,#4A5D4E,#2D6A4F);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;">🤖 讓 AI 幫我預約</button>
+                <button onclick="closeAdModal();openChat();setTimeout(()=>sendMessage('我想預約${esc(ev.artisan)}的${esc(ev.title)}'),400);" style="width:100%;background:linear-gradient(135deg,#4A5D4E,#2D6A4F);color:#fff;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;">讓 AI 幫我預約</button>
             </div>`;
     }
     document.getElementById('ad-modal').style.display = 'flex';
@@ -1760,8 +1808,9 @@ function sendMessage(text) {
 <!-- ===== Footer ===== -->
 <footer>
     <p><strong>深度與美學旅遊研究室</strong> · 守護山林，連結人心</p>
-    <p style="margin-top:8px;">© 2025 南投永續旅遊推廣協會</p>
-    <a href="/admin" class="admin-link">🔒 管理員登入</a>
+    <p style="margin-top:8px;">© 2026 深度與美學旅遊研究室</p>
+    <p style="margin-top:4px;font-size:12px;opacity:.7;">本網站由深度與美學旅遊研究室製作，非政府機關官方網站。</p>
+    <a href="/admin" class="admin-link">{{ icon("lock") }} 管理員登入</a>
 </footer>
 
 <!-- ===== AI 浮動按鈕 ===== -->
@@ -1777,16 +1826,21 @@ function sendMessage(text) {
         <div class="chat-avatar"><img src="/static/images/mascot.jpg" alt="緣投"></div>
         <div class="chat-header-info">
             <div class="chat-header-name">緣投 AI 嚮導</div>
-            <div class="chat-header-status">● 線上，隨時為您服務</div>
+            <div class="chat-header-status">● 線上服務中</div>
         </div>
-        <button id="chat-close" onclick="closeChat()">✕</button>
+        <div class="lang-switcher">
+            <button class="lang-btn active" onclick="setLang('zh-TW', this)">繁中</button>
+            <button class="lang-btn" onclick="setLang('en', this)">EN</button>
+            <button class="lang-btn" onclick="setLang('ja', this)">日本語</button>
+        </div>
+        <button id="chat-close" onclick="closeChat()" aria-label="關閉聊天">{{ icon("x") }}</button>
     </div>
     <div id="chat-box">
         <div class="message bot-message">
-            你好！我是緣投，你的南投在地 AI 嚮導 🌿<br><br>請選擇您感興趣的體驗類別，或直接輸入需求：
+            你好！我是緣投，你的南投在地 AI 嚮導。<br><br>請選擇您感興趣的體驗類別，或直接輸入需求：
             <div class="inline-chips" id="inline-chips">
-                {% for c in categories %}<div class="inline-chip" data-msg="【分類探索】{{ c.emoji }} {{ c.name }}" onclick="pickCategory(this.dataset.msg)">{{ c.emoji }} {{ c.name }}</div>
-                {% endfor %}                <div class="inline-chip inline-chip-full" onclick="pickCategory('幫我規劃南投一日行程')">📅 規劃一日行程</div>
+                {% for c in categories %}<div class="inline-chip" data-msg="【分類探索】{{ c.name }}" onclick="pickCategory(this.dataset.msg)">{{ icon(c.icon) }} {{ c.name }}</div>
+                {% endfor %}                <div class="inline-chip inline-chip-full" onclick="pickCategory('幫我規劃南投一日行程')">{{ icon("route") }} 規劃一日行程</div>
             </div>
         </div>
     </div>
@@ -1795,7 +1849,7 @@ function sendMessage(text) {
     </div>
     <div id="input-container">
         <input type="text" id="user-input" placeholder="輸入你的需求..." autocomplete="off">
-        <button id="send-btn">➤</button>
+        <button id="send-btn" aria-label="送出">{{ icon("send") }}</button>
     </div>
 </div>
 
@@ -1811,6 +1865,7 @@ function sendMessage(text) {
         i = (n + slides.length) % slides.length;
         slides[i].classList.add('active'); dots[i].classList.add('active');
         cap.href = slides[i].getAttribute('href');
+        cap.target = slides[i].target || '';
         cap.textContent = slides[i].dataset.label + '　查看商家 →';
     }
     function start() { clearInterval(timer); timer = setInterval(() => show(i + 1), 6000); }
@@ -1818,7 +1873,8 @@ function sendMessage(text) {
     // 文字區不擋點擊：點到照片（含標題文字）就進目前這張的分類頁，按鈕和連結照常運作
     hero.addEventListener('click', e => {
         if (e.target.closest('a, button')) return;
-        location.href = slides[i].getAttribute('href');
+        if (slides[i].target === '_blank') window.open(slides[i].href, '_blank', 'noopener');
+        else location.href = slides[i].getAttribute('href');
     });
     document.addEventListener('visibilitychange', () => document.hidden ? clearInterval(timer) : start());
     start();
@@ -1831,9 +1887,10 @@ function sendMessage(text) {
     // 店名 → 分類、顏色、圖示（來自 merchants_data.py）
     const MERCHANT_CAT = {{ merchant_cat|tojson }};
 
-    function makeIcon(color, emoji) {
+    // 標記：分類顏色的水滴形底，中間是白色線條圖示
+    function makeIcon(color, svg) {
         return L.divIcon({
-            html: `<div style="width:36px;height:36px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);"><span style="transform:rotate(45deg);font-size:17px;line-height:1;">${emoji}</span></div>`,
+            html: `<div style="width:36px;height:36px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;border:2.5px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.25);"><span style="transform:rotate(45deg);font-size:18px;line-height:0;color:#fff;">${svg}</span></div>`,
             className: '',
             iconSize: [36, 36],
             iconAnchor: [18, 36],
@@ -1852,16 +1909,16 @@ function sendMessage(text) {
         }).addTo(map);
 
         LOCATIONS.forEach(loc => {
-            const mc = MERCHANT_CAT[loc.name] || { cat: 'uncategorized', emoji: '📍', color: '#8A8F87' };
-            const marker = L.marker([loc.lat, loc.lng], { icon: makeIcon(mc.color, mc.emoji) }).addTo(map);
+            const mc = MERCHANT_CAT[loc.name] || { cat: 'uncategorized', color: '#8A8F87' };
+            const marker = L.marker([loc.lat, loc.lng], { icon: makeIcon(mc.color, CAT_ICONS[mc.cat] || CAT_ICONS.uncategorized) }).addTo(map);
             marker._cat = mc.cat;
-            const phoneHtml = loc.phone ? `<div style="font-size:12px;color:#888;margin-bottom:8px;">📞 ${loc.phone}</div>` : '';
+            const phoneHtml = loc.phone ? `<div style="font-size:12px;color:#888;margin-bottom:8px;">${UI_ICONS.phone} ${loc.phone}</div>` : '';
             marker.bindPopup(`
                 <div style="min-width:190px;">
-                    <div class="map-popup-title">${mc.emoji} ${loc.label}</div>
+                    <div class="map-popup-title">${loc.label}</div>
                     <div class="map-popup-desc">${loc.desc}</div>
                     ${phoneHtml}
-                    <button class="map-popup-btn" onclick="askAI('${loc.ask}')">🤖 讓 AI 推薦</button>
+                    <button class="map-popup-btn" onclick="askAI('${loc.ask}')">${UI_ICONS['message-chatbot']} 讓 AI 推薦</button>
                 </div>`, { maxWidth: 260 });
             allMarkers.push(marker);
         });
@@ -2049,7 +2106,7 @@ function sendMessage(text) {
     function buildShareBar(planText) {
         const bar = document.createElement('div');
         bar.className = 'share-bar';
-        bar.innerHTML = '<span style="color:#666">📤 分享此行程</span>';
+        bar.innerHTML = `<span style="color:#666">${UI_ICONS.share} 分享此行程</span>`;
         const btn = document.createElement('button');
         btn.className = 'share-btn';
         btn.textContent = '取得連結';
@@ -2064,7 +2121,7 @@ function sendMessage(text) {
                 });
                 const data = await res.json();
                 const link = window.location.origin + data.url;
-                bar.innerHTML = `<span style="color:#666">🔗 行程連結：</span><a class="share-link" href="${link}" target="_blank">${link}</a>`;
+                bar.innerHTML = `<span style="color:#666">${UI_ICONS.link} 行程連結：</span><a class="share-link" href="${link}" target="_blank">${link}</a>`;
                 try { navigator.clipboard.writeText(link); } catch(e) {}
             } catch(e) {
                 btn.textContent = '失敗，請重試';
@@ -2080,7 +2137,7 @@ function sendMessage(text) {
         const widget = document.createElement('div');
         widget.className = 'rating-widget';
         widget.innerHTML = `
-            <div class="rw-title">🌟 體驗結束後，歡迎回來評分！</div>
+            <div class="rw-title">${UI_ICONS.star} 體驗結束後，歡迎回來評分！</div>
             <a class="rw-link" href="/rate/${bookingId}" target="_blank">預約 ${bookingId} 的評價頁面 →</a>`;
         return widget;
     }
@@ -2114,33 +2171,6 @@ function sendMessage(text) {
     function closeMobileMenu() {
         document.getElementById('mobile-menu').classList.remove('open');
         document.getElementById('nav-hamburger').classList.remove('open');
-    }
-
-    function setLangMobile(lang) {
-        // sync desktop lang buttons
-        document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
-        ['zh-TW','en','ja'].forEach(l => {
-            const desktop = document.querySelector(`.lang-switcher .lang-btn[onclick*="${l}"]`);
-            const mobile  = document.getElementById('ml-' + (l === 'zh-TW' ? 'zh' : l === 'en' ? 'en' : 'ja'));
-            if (desktop) desktop.classList.toggle('active', l === lang);
-            if (mobile)  mobile.classList.toggle('active', l === lang);
-        });
-        currentLang = lang;
-        const greetings = {
-            'zh-TW': '已切換為繁體中文，我會用中文和您溝通！',
-            'en': 'Switched to English! How can I help you explore Nantou?',
-            'ja': '日本語に切り替えました！南投の旅をご一緒に計画しましょう！'
-        };
-        const placeholders = {
-            'zh-TW': '輸入你的需求...',
-            'en': 'Ask me anything about Nantou...',
-            'ja': '南投の旅について聞いてください...'
-        };
-        userInput.placeholder = placeholders[lang];
-        closeMobileMenu();
-        openChat();
-        appendMessage(greetings[lang], 'bot-message');
-        conversationHistory.push({ role: 'model', text: greetings[lang] });
     }
 
     // 點選頁面其他地方關閉手機選單

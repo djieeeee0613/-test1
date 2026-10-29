@@ -51,6 +51,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - `N8N_CERT_WEBHOOK_URL`（預設 https://nantoutravel.app.n8n.cloud/webhook/nantou-certificate）
 - `ADMIN_EMAILS`（管理後台管理員，逗號分隔）、`MODERATOR_EMAILS`（內容審核員，選填）
 - `N8N_API_KEY`（後台讀取 n8n 工作流狀態，選填）
+- `CWA_API_KEY`（中央氣象署開放資料授權碼；`get_nantou_weather` 用它查南投縣各鄉鎮預報，沒設或失敗時退回 Open-Meteo）
 - `N8N_WEBHOOK_SECRET`（n8n `nantou-booking`、`nantou-certificate` webhook 的 Header Auth 密鑰，Flask 以 `X-Webhook-Secret` header 送出；n8n 端憑證要設同一個值）
 
 ## 架構
@@ -116,6 +117,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - **使用紀錄**：每次回覆後背景寫入 `chat_logs`（`session_id`、語言、`chat_category()` 解析出的類別、工具、是否預約、耗時），**不存對話內容**
 - **AI 補充指示**：`run_chat()` 會把後台設定的 `site_settings()["ai_extra"]` 接在系統指示最後
 - **首頁公告**：`index()` 把後台設定的公告（開啟且有內容時）以 `announcement` 傳給模板
+- **天氣**：`get_nantou_weather(township)` 讀中央氣象署 `F-D0047-023`（南投縣各鄉鎮一週預報，快取 30 分鐘），金鑰走 `Authorization` header；氣象署憑證缺 Subject Key Identifier，所以用自訂 adapter 關掉 `VERIFY_X509_STRICT`（仍驗證憑證鏈）。錯誤訊息不輸出細節，避免金鑰外洩
 - **容錯**：`candidate.parts` 可能為 `None`（Gemini 偶發），已加 guard；503 自動指數退避重試，fallback 到 `gemini-2.0-flash`
 - **對話記憶**：前端維護 `conversationHistory[]`，每次請求帶 `history` 陣列（最多 20 輪），後端 rebuild `contents`
 - **速率限制**：`check_rate(ip, limit=20, window=60)`，超過 20 req/min 回傳 429
@@ -148,6 +150,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - **遊戲入口**：導覽列流光按鈕 `.glow-btn.nav-game`（手機顯示「玩遊戲」）、CTA 前的滿版 `.game-banner`；文字裡的 XP、等級數字來自 `game_cfg`，不要寫死
 - **公告列**：`announcement` 存在時顯示浮動 `.site-ann`，訪客關閉後以 sessionStorage 記住（公告文字改變會重新顯示）
 - **頁尾**：「🔒 管理員登入」連到 `/admin`
+- **遊戲橫幅升級展示台**（`#gb-stage`）：緣投依等級換造型輪播（`_game_stages()`，與 `game.html` 的 `formFor` 同規則），經驗條跑滿時 LEVEL UP 彈出下一級；等級名稱與數量讀後台遊戲設定
 - **首頁主視覺輪播**（`#hero`）：背景輪流顯示 6 大分類照片（`static/images/hero/{slug}.jpg`，1920×1080，原圖在 `pic/`），每 6 秒換一張，下方有分類名稱與圓點可切換。點照片或標題文字會進入目前那張的分類頁（`.hero-content` 設 `pointer-events: none`，只有按鈕和連結能點）；分類由 `categories` 產生，新增分類時要補一張同名照片
 - **永續承諾**（`.values-grid`）：四張卡片是文化傳承、在地受益、友善環境、看見成效；文化傳承與友善環境用照片當背景（`static/images/values/`，原圖在 `pic/`），加 `.value-photo` 就會套用深色漸層蒙版與白字
 - **活動輪播**（`#ad-carousel`）：
@@ -212,6 +215,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - **限時活動**：`game_events` 表，`xp_multiplier(kind, category)` 取進行中活動的最高倍率（不相乘）；有指定商家類別的活動只套用在該類別打卡。活動時間以 UTC 存，後台以台灣時間輸入與顯示
 - **XP 最低為 0**：`award_xp()` 會把 XP 和計數欄位夾在 0 以上（後台可扣分）
 - **緣投造型**：`game.html` 的 `formFor(level)` 決定造型，最高等級固定是 `cheer`（舉旗歡呼），其他等級依比例分到 `sleep` → `farmer` → `foodie`（預設 3 級時是睡覺、草帽、歡呼；4 級以上才會出現吃麵）。登入前顯示睡覺造型；側欄、右下角緣投、每日小知識、主頁「升級之路」、升級彈窗都會跟著換。換圖片只要替換同名 PNG（透明背景、正方形）
+- **故事「緣投回家記」**：緣投從緣投星掉進蟲洞來到南投，XP 就是「回家能量」，升到最高等級時蟲洞打開送他回家（設定見 `遊戲故事設定_緣投回家記.md`）。動畫在 `static/js/story.js` / `static/css/story.css`（純 SVG/CSS）：`Story.intro()` 第一次進遊戲播放（`localStorage` 的 `yt_intro_v1`）、`Story.mission(type, {xp, pct, form})` 在打卡成功、答完一局、發文拿到 XP 時播放（輪流 8 個南投自然景點）、`Story.farewell()` 升到最高等級時播放。動畫用 `Story.enqueue()` 排隊，`applyStats()` 的升級彈窗經 `queueLevelUp()` 排在任務動畫之後；動畫的 class 都有 `st-` / `mv-` 前綴，避免和 `game.html` 既有樣式（例如 `.drop`）撞名
 - **前端** `templates/game.html`：左側抽屜選單（≥1000px 預設展開）、6 個頁面（主頁/打卡/問答/動態/排行/證書）、緣投浮動對話、升級彩帶動畫；所有使用者內容都經 `esc()` 轉義
 
 ### 管理後台（`/admin`）
@@ -285,6 +289,16 @@ Render 環境變數（在 Render dashboard 設定）：
 - `FLASK_SECRET_KEY`、`N8N_API_KEY`、`N8N_WEBHOOK_SECRET` 只放 Render 環境變數，不進程式碼
 - n8n 預約、寄信 webhook 用 Header Auth 驗證；LINE 確認 / 婉拒只能更新該 LINE 帳號綁定商家、且狀態為待確認的預約（步驟見 `n8n安全修正步驟.md`）
 
+## 圖示（不用 emoji）
+
+網頁介面一律不用 emoji，改用黑白線條圖示 **Tabler Icons**（MIT 授權，`static/icons/*.svg`，授權聲明在 `static/icons/LICENSE.txt`）：
+- 模板用 `{{ icon('名稱') }}` 嵌入（`app.py` 的 `icon()`，大小 1em、顏色跟著文字）；要新增圖示，從 `https://cdn.jsdelivr.net/npm/@tabler/icons@3.19.0/icons/outline/<名稱>.svg` 下載放進 `static/icons/`，重啟後就能用
+- 分類圖示是 `CATEGORIES[slug]['icon']`；地圖標記用 `cat_icons`（分類色水滴底 + 白色圖示），動態內容用 `ui_icons`（都由 `_home_context()` 傳給前端）
+- 遊戲頁（`game.html`）、AI 嚮導的回覆格式（`BASE_SYSTEM_INSTRUCTION`）、信件標題與評價頁也都不用 emoji；後台（`admin.html`）還保留
+- AI 嚮導不提及資料來源或永續依據；語言由前端 `lang` 決定，`run_chat()` 會在系統指示與每則使用者訊息都標明回覆語言，避免切換語言後混用
+- 首頁語言切換按鈕在聊天視窗標題列，導覽列沒有
+- 清除 Supabase 舊商家資料用 `sql/2026-10-29_清除舊商家資料.sql`（先檢查再刪除）
+
 ## 商家分類（6 大類）
 
 2026-10-28 改版成 6 大分類，定義在 `merchants_data.py` 的 `CATEGORIES`（名稱、emoji、顏色、首頁卡片文案、照片）：
@@ -303,6 +317,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - **地圖座標**：在 `static/js/locations.js`。舊名錄有的店家沿用舊座標，新店家由 OpenStreetMap 依地址查詢，大多只精確到「路名」，少數只到村里或鄉鎮；之後拿到店家的 Google Maps 座標可以直接替換
 - **未分類**：`uncategorized` 不會出現在首頁卡片；有未分類商家時才會排進 `CATEGORY_ORDER`（地圖圖例、遊戲打卡清單、後台看得到）
 - **照片**：原圖在 `pic/`，網頁用的是裁成 960×600、壓縮過的 `static/images/categories/{slug}.jpg`
+- **在地購物**：`CATEGORIES['shop']['external_url']` 導向品味南投（https://www.tastingnantou.com.tw/）；首頁卡片、主視覺、分類頁導覽另開分頁，`/category/shop` 直接轉址
 - **舊分類網址**（`/category/coffee`、`tea`、`craft`、`spa`）會導回首頁分類區
 - **AI 嚮導**：某個分類還沒有商家時，`search_local_merchants` 會改列全部商家並提示 AI 自行挑選相關的
 

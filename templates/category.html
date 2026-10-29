@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ cat.emoji }} {{ cat.name }} — 深度與美學旅遊研究室</title>
+<title>{{ cat.name }} — 深度與美學旅遊研究室</title>
 <link rel="icon" type="image/png" href="/static/images/favicon.png">
 <link rel="apple-touch-icon" href="/static/images/apple-touch-icon.png">
 <meta name="description" content="{{ cat.description }}">
@@ -64,7 +64,9 @@
     padding: 64px 24px 48px;
     text-align: center;
   }
-  .hero-emoji { font-size: 64px; line-height: 1; margin-bottom: 16px; }
+  .hero-emoji { font-size: 56px; line-height: 1; margin-bottom: 16px; }
+  .ic { vertical-align: -0.15em; flex-shrink: 0; }
+  .nav-cat .ic { margin-right: 2px; }
   .hero h1 { font-size: clamp(28px, 6vw, 42px); font-weight: 800; letter-spacing: 2px; margin-bottom: 12px; }
   .hero p { font-size: 16px; max-width: 600px; margin: 0 auto; opacity: 0.9; line-height: 1.8; }
   .hero-count {
@@ -177,7 +179,7 @@
     .nav-cats { display: none; }
   }
   .coming-soon { text-align: center; background: #fff; border: 1px dashed var(--border); border-radius: 20px; padding: 48px 24px; max-width: 560px; margin: 0 auto; }
-  .coming-soon .cs-emoji { font-size: 48px; margin-bottom: 12px; }
+  .coming-soon .cs-emoji { font-size: 44px; margin-bottom: 12px; color: var(--accent); }
   .coming-soon p { color: var(--muted); margin-bottom: 20px; }
   .coming-soon .btn-ai { display: inline-block; }
 </style>
@@ -192,8 +194,8 @@
   <a href="/" class="nav-logo"><img src="/static/images/logo-mark.png" alt="深度與美學旅遊研究室" style="width:28px;height:28px;border-radius:6px;object-fit:cover;vertical-align:middle;margin-right:6px;"> <span>深度與美學</span>旅遊研究室</a>
   <div class="nav-cats">
     {% for c in categories %}
-    <a href="/category/{{ c.slug }}" class="nav-cat {% if c.slug == cat.slug %}active{% endif %}">
-      {{ c.emoji }} {{ c.name }}
+    <a href="{{ c.external_url or '/category/' ~ c.slug }}" class="nav-cat {% if c.slug == cat.slug %}active{% endif %}"{% if c.external_url %} target="_blank" rel="noopener"{% endif %}>
+      {{ icon(c.icon) }} {{ c.name }}
     </a>
     {% endfor %}
   </div>
@@ -204,11 +206,11 @@
   <span>›</span>
   <a href="/category">所有分類</a>
   <span>›</span>
-  <span>{{ cat.emoji }} {{ cat.name }}</span>
+  <span>{{ cat.name }}</span>
 </div>
 
 <div class="hero"{% if cat.image %} style="background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,.55)), url('/static/images/categories/{{ cat.image }}') center/cover"{% endif %}>
-  <div class="hero-emoji">{{ cat.emoji }}</div>
+  <div class="hero-emoji">{{ icon(cat.icon) }}</div>
   <h1>{{ cat.name }}</h1>
   <p>{{ cat.description }}</p>
   <div class="hero-count">{% if cat.merchants %}共 {{ cat.merchants|length }} 家精選職人{% else %}即將推出{% endif %}</div>
@@ -229,25 +231,25 @@
         </div>
         <div class="card-meta">
           <div class="meta-row">
-            <span class="meta-icon">📍</span>
+            <span class="meta-icon">{{ icon("map-pin") }}</span>
             <span>{{ m.address }}</span>
           </div>
           <div class="meta-row">
-            <span class="meta-icon">📞</span>
+            <span class="meta-icon">{{ icon("phone") }}</span>
             <span>{{ m.phone }}</span>
           </div>
         </div>
       </div>
       <div class="card-footer">
         <a href="/?ask={{ (cat.name + '的' + m.name)|urlencode }}" class="btn-ai">問問緣投 AI</a>
-        <a href="/?book={{ m.name|urlencode }}" class="btn-book">📅 預約體驗</a>
+        <a href="/?book={{ m.name|urlencode }}" class="btn-book">{{ icon("calendar") }} 預約體驗</a>
       </div>
     </div>
     {% endfor %}
   </div>
   {% if not cat.merchants %}
   <div class="coming-soon">
-    <div class="cs-emoji">{{ cat.emoji }}</div>
+    <div class="cs-emoji">{{ icon(cat.icon) }}</div>
     <p>{{ cat.coming_soon or '這個分類的商家正在整理中，即將上線。' }}</p>
     <a href="/#experiences" class="btn-ai">看看其他分類</a>
   </div>

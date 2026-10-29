@@ -45,20 +45,36 @@ app.secret_key = os.getenv("FLASK_SECRET_KEY") or os.urandom(32)
 app.permanent_session_lifetime = timedelta(days=30)
 app.config.update(SESSION_COOKIE_SAMESITE="Lax", SESSION_COOKIE_HTTPONLY=True)
 
+# ── 黑白線條圖示（Tabler Icons，MIT 授權，檔案在 static/icons/）──
+# 模板裡用 {{ icon('phone') }} 嵌入 SVG；大小跟著文字（1em）、顏色跟著文字顏色
+from markupsafe import Markup
+_ICON_DIR = os.path.join(os.path.dirname(__file__), 'static', 'icons')
+ICONS = {}
+for _f in os.listdir(_ICON_DIR):
+    if _f.endswith('.svg'):
+        _svg = re.sub(r'\s+', ' ', open(os.path.join(_ICON_DIR, _f), encoding='utf-8').read()).strip()
+        _svg = re.sub(r'\s(width|height)="24"', r' \1="1em"', _svg)
+        ICONS[_f[:-4]] = re.sub(r'class="[^"]*"', 'class="ic" aria-hidden="true" focusable="false"', _svg)
+
+def icon(name):
+    return Markup(ICONS.get(name, ICONS['map-pin']))
+
+app.jinja_env.globals['icon'] = icon
+
 # ==========================================
 # 2. AI 工具函式
 # ==========================================
 WMO_CODES = {
-    0: "晴天 ☀️", 1: "大致晴天 🌤", 2: "部分多雲 ⛅", 3: "多雲 ☁️",
-    45: "有霧 🌫", 48: "濃霧 🌫",
-    51: "毛毛雨 🌦", 53: "毛毛雨 🌦", 55: "毛毛雨 🌦",
-    61: "小雨 🌧", 63: "中雨 🌧", 65: "大雨 🌧",
-    80: "陣雨 🌦", 81: "陣雨 🌦", 82: "強陣雨 ⛈",
-    95: "雷雨 ⛈", 96: "強雷雨 ⛈"
+    0: "晴天", 1: "大致晴天", 2: "部分多雲", 3: "多雲",
+    45: "有霧", 48: "濃霧",
+    51: "毛毛雨", 53: "毛毛雨", 55: "毛毛雨",
+    61: "小雨", 63: "中雨", 65: "大雨",
+    80: "陣雨", 81: "陣雨", 82: "強陣雨",
+    95: "雷雨", 96: "強雷雨"
 }
 
-def get_nantou_weather() -> str:
-    """取得南投縣今明兩天天氣預報，用於建議適合的戶外或室內體驗"""
+def _open_meteo_weather() -> str:
+    """備援：中央氣象署取不到時改用 Open-Meteo（整個南投縣一組數字）"""
     try:
         r = requests.get(
             "https://api.open-meteo.com/v1/forecast",
@@ -81,7 +97,92 @@ def get_nantou_weather() -> str:
             )
         return "\n".join(lines)
     except Exception as e:
-        return f"天氣資料暫時無法取得：{e}"
+        return "天氣資料暫時無法取得"
+
+import ssl
+from requests.adapters import HTTPAdapter
+
+CWA_DATASET = "F-D0047-023"   # 南投縣各鄉鎮未來一週天氣預報（12 小時一筆）
+_cwa_cache = {"at": 0, "value": None}
+
+class _CwaAdapter(HTTPAdapter):
+    """氣象署憑證缺少 Subject Key Identifier，Python 3.13 預設的嚴格驗證會拒絕；只關掉嚴格旗標，仍然驗證憑證鏈"""
+    def init_poolmanager(self, *args, **kwargs):
+        ctx = ssl.create_default_context()
+        ctx.verify_flags &= ~ssl.VERIFY_X509_STRICT
+        kwargs["ssl_context"] = ctx
+        super().init_poolmanager(*args, **kwargs)
+
+_cwa_session = requests.Session()
+_cwa_session.mount("https://opendata.cwa.gov.tw", _CwaAdapter())
+
+def _cwa_townships():
+    """南投縣各鄉鎮預報（快取 30 分鐘）：{鄉鎮名: {元素名: [時段...]}}；沒設金鑰或失敗回傳 None"""
+    key = os.environ.get("CWA_API_KEY")
+    if not key:
+        return None
+    if _cwa_cache["value"] and time.time() - _cwa_cache["at"] < 1800:
+        return _cwa_cache["value"]
+    try:
+        r = _cwa_session.get(f"https://opendata.cwa.gov.tw/api/v1/rest/datastore/{CWA_DATASET}",
+                             headers={"Authorization": key}, timeout=10)   # 金鑰放 header，不進網址與錯誤訊息
+        r.raise_for_status()
+        locs = r.json()["records"]["Locations"][0]["Location"]
+        data = {l["LocationName"]: {e["ElementName"]: e["Time"] for e in l["WeatherElement"]} for l in locs}
+        _cwa_cache.update(at=time.time(), value=data)
+        return data
+    except Exception as e:
+        print(f"⚠️ 中央氣象署天氣讀取失敗：{type(e).__name__}")
+        return _cwa_cache["value"]    # 失敗時沿用舊快取（可能是 None）
+
+def _cwa_val(el, key):
+    try:
+        return el["ElementValue"][0][key]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+def get_nantou_weather(township: str = "") -> str:
+    """取得南投縣今明兩天的天氣預報（中央氣象署鄉鎮預報），用於建議適合的戶外或室內體驗。
+    Args:
+        township: 鄉鎮名稱，例如：埔里、魚池、信義、仁愛、竹山、鹿谷、集集、水里、國姓、草屯、南投市、名間、中寮、魚池、集集。
+                  旅客有指定地點時帶入（山區與平地天氣常不同）；沒指定就不帶，預設查埔里。"""
+    data = _cwa_townships()
+    if not data:
+        return _open_meteo_weather()
+    want = (township or "埔里").strip()
+    for place, town in (("日月潭", "魚池"), ("清境", "仁愛"), ("合歡山", "仁愛"), ("溪頭", "鹿谷"), ("杉林溪", "竹山"), ("奧萬大", "仁愛")):
+        if place in want:
+            want = town
+    name = next((n for n in data if n == want or n.startswith(want) or want.startswith(n[:-1])), None)
+    if not name:
+        name = "埔里鎮"
+    els = data[name]
+    tz = timezone(timedelta(hours=8))
+    today = datetime.now(tz).date()
+    lines = []
+    for offset, label in ((0, "今天"), (1, "明天")):
+        day = str(today + timedelta(days=offset))
+        def rows(el):
+            return [t for t in els.get(el, []) if str(t.get("StartTime", ""))[:10] == day]
+        wx = rows("天氣現象")
+        if not wx:
+            continue
+        mx = [int(v) for v in (_cwa_val(t, "MaxTemperature") for t in rows("最高溫度")) if v is not None]
+        mn = [int(v) for v in (_cwa_val(t, "MinTemperature") for t in rows("最低溫度")) if v is not None]
+        pop = [int(v) for v in (_cwa_val(t, "ProbabilityOfPrecipitation") for t in rows("12小時降雨機率")) if v not in (None, "-")]
+        uv = _cwa_val(rows("紫外線指數")[0], "UVExposureLevel") if rows("紫外線指數") else None
+        desc = "、".join(dict.fromkeys(_cwa_val(t, "Weather") for t in wx if _cwa_val(t, "Weather")))
+        parts = [desc]
+        if mn and mx:
+            parts.append(f"氣溫 {min(mn)}～{max(mx)}°C")
+        if pop:
+            parts.append(f"降雨機率最高 {max(pop)}%")
+        if uv:
+            parts.append(f"紫外線{uv}")
+        lines.append(f"{label}（{day}）：" + "，".join(parts))
+    if not lines:
+        return _open_meteo_weather()
+    return f"{name}天氣（中央氣象署）\n" + "\n".join(lines)
 
 def _parse_booking_date(date_str: str):
     """嘗試解析各種日期格式，回傳 date 物件；解析失敗回傳 None"""
@@ -135,7 +236,7 @@ def _check_date_not_past(date_str: str) -> str | None:
     today = _today_tw()
     if d < today:
         return (
-            f"❌ 無法預約過去的日期（{date_str}）。"
+            f"無法預約過去的日期（{date_str}）。"
             f"今天是 {today.strftime('%Y年%m月%d日')}，請選擇今天或之後的日期。"
         )
     return None
@@ -253,22 +354,22 @@ BASE_SYSTEM_INSTRUCTION = """
 你是「緣投」，南投山林的精靈，也是南投職人深度旅遊的 AI 嚮導。
 
 【語氣】
-親切、簡潔，像在地朋友。依旅客使用的語言回覆（繁體中文、英文或日文），旅客用英文或日文時全程使用該語言。
+親切、簡潔，像在地朋友。回覆中不使用 emoji 或表情符號，用文字表達即可。依旅客使用的語言回覆（繁體中文、英文或日文），旅客用英文或日文時全程使用該語言。
 
 【規則】
 1. 只推薦資料庫（search_local_merchants 的結果）中的店家與職人，不可自行編造店名、地址、價格或營業時間。
-2. 每個推薦都要附上資料來源：寫出該店家在搜尋結果中的「永續依據」（例如：百大文化基地、GDG 綠色餐飲指南、環保標章旅館）。資料庫沒有的資訊（例如營業時間、價格、交通方式細節），直接說「目前沒有這項資料」，並建議旅客向店家確認。
+2. 介紹景點與店家時，不要提及資料來源、永續依據或認證名稱，直接用自然的話介紹特色即可。資料庫沒有的資訊（例如營業時間、價格、交通方式細節），直接說「目前沒有這項資料」，並建議旅客向店家確認。
 3. 介紹部落儀式、信仰與傳統時，只使用資料庫中職人或族人提供的內容，不誇大、不臆測，也不把儀式形容成表演。
 4. 條件相近時，優先推薦被推薦次數較少的職人：搜尋結果已依本月預約數由少到多排序，請優先從排在前面的職人中挑選，不要每次都推薦同幾家。
 5. 規劃行程時，提醒旅客可搭乘台灣好行、自備水杯與餐具，並優先選擇在地店家。
 6. 行程或推薦包含部落（部落永續類別）或宗教場域（寺、廟、宮、禪寺、教堂等）時，主動提醒參訪禮儀，例如：拍照前先詢問、尊重祭儀時段、保持安靜。
 7. 不回答與南投旅遊無關的問題，禮貌地把話題帶回旅程規劃。
 
-【天氣整合】如果旅客詢問行程規劃，主動先呼叫 get_nantou_weather 取得天氣，在行程中加入天氣提醒（如：今天有雨，建議攜帶雨具；天氣晴朗適合戶外部落體驗）。
+【天氣整合】如果旅客詢問行程規劃，主動先呼叫 get_nantou_weather 取得天氣（旅客提到地點時帶入 township，例如日月潭、清境、信義，山區與平地天氣不同），在行程中加入天氣提醒（如：今天有雨，建議攜帶雨具；天氣晴朗適合戶外部落體驗）。
 
 【搜尋方式】search_local_merchants 可以依 category（類別）、township（鄉鎮）、keyword（關鍵字）篩選。旅客指定區域時帶入 township，指定體驗類型時帶入 category 或 keyword。
 
-【價格】商家名錄沒有價格資料，只有「🎉 近期活動」會標示費用。旅客詢問價格或預算時，絕對不可自行編造金額；請說明費用依體驗內容而定，預約時商家會再確認，若有標示費用的近期活動可以優先介紹。
+【價格】商家名錄沒有價格資料，只有「近期活動」會標示費用。旅客詢問價格或預算時，絕對不可自行編造金額；請說明費用依體驗內容而定，預約時商家會再確認，若有標示費用的近期活動可以優先介紹。
 
 【正式店名】推薦與預約時，請使用搜尋結果中【】內的正式店名。
 
@@ -290,27 +391,26 @@ BASE_SYSTEM_INSTRUCTION = """
 3. 根據天氣安排早午晚三個時段，格式如下：
 
 ---
-🗺️ **南投一日深度體驗行程**
+**南投一日深度體驗行程**
 
-🌅 **上午｜9:00 - 12:00**
+**上午｜9:00 - 12:00**
 **商家名稱**
-📍 地點｜一句話說明為何早上適合來這裡
+地點｜一句話說明為何早上適合來這裡
 
-🌞 **下午｜13:00 - 17:00**
+**下午｜13:00 - 17:00**
 **商家名稱**
-📍 地點｜一句話說明為何下午適合來這裡
+地點｜一句話說明為何下午適合來這裡
 
-🌙 **傍晚／夜間｜18:00 以後**
+**傍晚／夜間｜18:00 以後**
 **商家名稱**
-📍 地點｜一句話說明為何傍晚適合來這裡
+地點｜一句話說明為何傍晚適合來這裡
 
-🌤 **天氣提醒**：（根據當天天氣給出實用提醒，例如是否帶傘、防曬）
-🚌 **綠色旅行**：可搭乘台灣好行，記得自備水杯與餐具
-🙏 **參訪禮儀**：（行程有部落或宗教場域時才加這行）
-📚 **資料來源**：各店家的永續依據
+**天氣提醒**：（根據當天天氣給出實用提醒，例如是否帶傘、防曬）
+**綠色旅行**：可搭乘台灣好行，記得自備水杯與餐具
+**參訪禮儀**：（行程有部落或宗教場域時才加這行）
 ---
 
-4. 行程結尾加上：「✨ 以上是為您量身打造的南投一日行程！請問您對哪個時段的體驗最感興趣，想進一步預約嗎？」
+4. 行程結尾加上：「以上是為您量身打造的南投一日行程！請問您對哪個時段的體驗最感興趣，想進一步預約嗎？」
 
 ---
 
@@ -321,28 +421,28 @@ BASE_SYSTEM_INSTRUCTION = """
 2. 依類別各挑最多 3 個，格式如下：
 
 ---
-🌿 **南投精選體驗推薦**
+**南投精選體驗推薦**
 
-🎨 **文化永續**
-1. **商家名稱** — 一句話亮點（📚 永續依據）
-
-🌾 **農業永續**
+**文化永續**
 1. **商家名稱** — 一句話亮點
 
-🏔️ **部落永續**
+**農業永續**
 1. **商家名稱** — 一句話亮點
 
-🏡 **永續住宿**
+**部落永續**
 1. **商家名稱** — 一句話亮點
 
-🍽️ **永續餐飲**
+**永續住宿**
 1. **商家名稱** — 一句話亮點
 
-🛍️ **在地購物**
+**永續餐飲**
+1. **商家名稱** — 一句話亮點
+
+**在地購物**
 1. **商家名稱** — 一句話亮點
 ---
 
-3. 結尾加上：「✨ 請問您對哪一家最感興趣？告訴我店家名稱，我就幫您安排預約！」
+3. 結尾加上：「請問您對哪一家最感興趣？告訴我店家名稱，我就幫您安排預約！」
 
 ---
 
@@ -354,18 +454,17 @@ BASE_SYSTEM_INSTRUCTION = """
 3. 列出 3～5 個商家，格式如下：
 
 ---
-[類別 emoji] **[類別名稱] 精選商家**
+**[類別名稱] 精選商家**
 
 **1. [商家名稱]**
-📍 [地點] ｜ [一句話亮點]
-📚 資料來源：[永續依據]
-💰 [價格]（只有近期活動有標示費用時才寫，沒有就省略這行）
+[地點] ｜ [一句話亮點]
+[價格]（只有近期活動有標示費用時才寫，沒有就省略這行）
 
 **2. [商家名稱]**
 ...以此類推
 ---
 
-4. 結尾固定加上：「✨ 以上是[類別名稱]的精選商家！請問您對哪一家最感興趣？告訴我店家名稱，我可以幫您查詢空檔、安排預約，或規劃整天行程 😊」
+4. 結尾固定加上：「以上是[類別名稱]的精選商家！請問您對哪一家最感興趣？告訴我店家名稱，我可以幫您查詢空檔、安排預約，或規劃整天行程 」
 
 ---
 
@@ -381,18 +480,18 @@ BASE_SYSTEM_INSTRUCTION = """
 - 日期必須是今天或之後的日期。若系統回覆日期已過去，立即告知旅客並請重新選擇日期，不得繼續詢問聯絡資料。
 - 確認後，發送以下提示請旅客填寫聯絡資料：
 
-「📋 最後一步！請您用以下格式傳送聯絡資料：
+「最後一步！請您用以下格式傳送聯絡資料：
 
 姓名：王小明
 電話：0912-345-678
 Email：example@email.com
 
-直接複製上方格式填入即可 😊」
+直接複製上方格式填入即可 」
 
 **第二階段：收到聯絡資料後完成預約**
 - 從訊息中擷取姓名、電話、Email。
 - 立刻呼叫 book_experience 完成預約。
-- 預約成功後回覆：「🎉 已成功為您預約 [店家名稱]！您的預約編號：[booking_id]。商家收到通知後會與您聯繫確認，期待您的南投之旅！」
+- 預約成功後回覆：「已成功為您預約 [店家名稱]！您的預約編號：[booking_id]。商家收到通知後會與您聯繫確認，期待您的南投之旅！」
 """
 
 # ==========================================
@@ -403,11 +502,26 @@ def _home_context():
     from game import site_settings
     ann = site_settings()["announcement"]
     cats = [CATEGORIES[s] for s in CATEGORY_ORDER]
-    # 地圖依正式店名取分類顏色與圖示（locations.js 只存店名）
-    merchant_cat = {m["name"]: {"cat": m["cat"], "emoji": m["emoji"], "color": m["color"]} for m in md.MERCHANTS}
+    # 地圖依正式店名取分類顏色（locations.js 只存店名）；標記圖示用 cat_icons 的黑白線條 SVG
+    merchant_cat = {m["name"]: {"cat": m["cat"], "color": m["color"]} for m in md.MERCHANTS}
+    cat_icons = {s: str(icon(CATEGORIES[s]["icon"])) for s in CATEGORIES}
+    ui_icons = {n: str(icon(n)) for n in ("phone", "message-chatbot", "share", "link", "star", "calendar", "users", "coin", "map-pin")}
     return dict(announcement=ann if ann.get("enabled") and ann.get("text") else None,
                 categories=[c for c in cats if c["slug"] != UNCATEGORIZED], map_categories=[c for c in cats if c["merchants"]],
-                merchant_cat=merchant_cat, total_merchants=len(md.MERCHANTS))
+                merchant_cat=merchant_cat, cat_icons=cat_icons, ui_icons=ui_icons,
+                game_stages=_game_stages(), total_merchants=len(md.MERCHANTS))
+
+
+def _game_stages():
+    """首頁遊戲橫幅的升級輪播：每個等級對應的緣投造型（與 game.html 的 formFor 同一套規則）"""
+    from game import levels
+    lv = levels()
+    forms = ['sleep', 'farmer', 'foodie', 'cheer']
+    top = len(lv)
+    def form(n):
+        return forms[3] if n >= top else forms[min(2, (n - 1) * 3 // max(1, top - 1))]
+    return [{"level": n, "title": title, "xp": xp, "img": f"/static/images/mascot/mascot-{form(n)}.png"}
+            for xp, n, title, _ in lv]
 
 @app.route('/')
 def index():
@@ -424,6 +538,8 @@ def category_page(slug):
     if not cat:
         # 舊分類網址（coffee、tea、craft、spa）在 2026-10 改版後已不存在，導回首頁的分類區
         return redirect('/#experiences')
+    if cat.get("external_url"):          # 在地購物導向「品味南投」平台
+        return redirect(cat["external_url"])
     cats = [CATEGORIES[s] for s in CATEGORY_ORDER]
     return render_template('category.html', cat=cat, categories=cats)
 
@@ -537,7 +653,7 @@ def rate_page(booking_id):
   h2{color:#4A5D4E;font-size:22px;margin-bottom:8px;}
   .sub{color:#666;font-size:14px;line-height:1.6;margin-bottom:32px;}
   .stars{display:flex;justify-content:center;gap:8px;margin-bottom:24px;}
-  .star{font-size:44px;cursor:pointer;opacity:0.25;transition:opacity 0.15s,transform 0.1s;}
+  .star{color:#f5b301;font-size:44px;cursor:pointer;opacity:0.25;transition:opacity 0.15s,transform 0.1s;}
   .star.lit{opacity:1;}
   .star:hover{transform:scale(1.15);}
   textarea{width:100%;border:1.5px solid #ddd;border-radius:14px;padding:14px;font-size:14px;resize:none;outline:none;margin-bottom:20px;font-family:inherit;color:#333;}
@@ -564,15 +680,15 @@ def rate_page(booking_id):
   <h2>感謝您的南投體驗！</h2>
   <div class="sub">{{ artisan }}的服務如何？<br>您的回饋幫助更多旅客發現南投的美好<br><small style="color:#bbb">預約編號：{{ booking_id }}</small></div>
   <div class="stars" id="stars">
-    <span class="star" data-v="1">⭐</span>
-    <span class="star" data-v="2">⭐</span>
-    <span class="star" data-v="3">⭐</span>
-    <span class="star" data-v="4">⭐</span>
-    <span class="star" data-v="5">⭐</span>
+    <span class="star" data-v="1">★</span>
+    <span class="star" data-v="2">★</span>
+    <span class="star" data-v="3">★</span>
+    <span class="star" data-v="4">★</span>
+    <span class="star" data-v="5">★</span>
   </div>
   <textarea id="comment" rows="3" placeholder="分享您的體驗心得（選填）"></textarea>
   <button class="btn" onclick="submitRating()">送出評價</button>
-  <div class="success" id="success">🎉 感謝您的評價，期待再次相遇！</div>
+  <div class="success" id="success">感謝您的評價，期待再次相遇！</div>
   {% endif %}
 </div>
 <script>
@@ -641,7 +757,7 @@ TOOL_MAP = {
 def chat():
     ip = request.headers.get('X-Forwarded-For', request.remote_addr).split(',')[0].strip()
     if not check_rate(ip):
-        return jsonify({"reply": "請求過於頻繁，請稍後再試 🙏"}), 429
+        return jsonify({"reply": "請求過於頻繁，請稍後再試 "}), 429
 
     data = request.json or {}
     user_message = data.get('message', '')
@@ -679,8 +795,14 @@ def log_chat(row):
 def run_chat(user_message, history, lang, state):
     """回傳 (回覆文字, 是否發生錯誤)；state 會記下呼叫過的工具"""
     lang_note = {
-        'en': "\n[LANGUAGE OVERRIDE]: Respond entirely in English for this conversation.",
-        'ja': "\n[LANGUAGE OVERRIDE]: この会話はすべて日本語でお答えください。",
+        'zh-TW': "\n[LANGUAGE OVERRIDE]: 這次對話全程使用繁體中文回覆，即使先前訊息或工具結果出現其他語言也一樣。",
+        'en': "\n[LANGUAGE OVERRIDE]: Respond entirely in English for this conversation, even if earlier messages or tool results are in another language. Never switch to Japanese or Chinese.",
+        'ja': "\n[LANGUAGE OVERRIDE]: この会話はすべて日本語でお答えください。以前のメッセージやツール結果が他の言語でも同様です。",
+    }.get(lang, "")
+    lang_tag = {
+        'zh-TW': "（請用繁體中文回覆）",
+        'en': "\n[Reply in English only]",
+        'ja': "\n[日本語のみで回答してください]",
     }.get(lang, "")
     from game import site_settings
     extra = (site_settings().get("ai_extra") or "").strip()
@@ -697,7 +819,7 @@ def run_chat(user_message, history, lang, state):
                         role=h['role'],
                         parts=[types.Part(text=h['text'])]
                     ))
-                contents.append(types.Content(role='user', parts=[types.Part(text=user_message)]))
+                contents.append(types.Content(role='user', parts=[types.Part(text=user_message + lang_tag)]))
                 config = types.GenerateContentConfig(
                     system_instruction=system_instruction,
                     tools=[check_availability, book_experience, search_local_merchants, get_nantou_weather],
@@ -740,7 +862,7 @@ def run_chat(user_message, history, lang, state):
                 return f"系統發生錯誤：{str(e)[:200]}", True
             break
 
-    return "目前 AI 服務需求量很大，請稍等片刻再試一次 🙏", True
+    return "目前 AI 服務需求量很大，請稍等片刻再試一次", True
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5001))

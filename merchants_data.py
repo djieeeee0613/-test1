@@ -9,6 +9,7 @@
 CATEGORIES = {
     'culture': {
         'slug': 'culture',
+        'icon': 'palette',   # static/icons/palette.svg
         'name': '文化永續',
         'emoji': '🎨',
         'color': '#B5542F',
@@ -20,6 +21,7 @@ CATEGORIES = {
     },
     'farm': {
         'slug': 'farm',
+        'icon': 'plant-2',   # static/icons/plant-2.svg
         'name': '農業永續',
         'emoji': '🌾',
         'color': '#5B8C3A',
@@ -31,6 +33,7 @@ CATEGORIES = {
     },
     'tribe': {
         'slug': 'tribe',
+        'icon': 'mountain',   # static/icons/mountain.svg
         'name': '部落永續',
         'emoji': '🏔️',
         'color': '#7C3AED',
@@ -42,6 +45,7 @@ CATEGORIES = {
     },
     'stay': {
         'slug': 'stay',
+        'icon': 'home',   # static/icons/home.svg
         'name': '永續住宿',
         'emoji': '🏡',
         'color': '#0F6E56',
@@ -53,6 +57,7 @@ CATEGORIES = {
     },
     'dining': {
         'slug': 'dining',
+        'icon': 'tools-kitchen-2',   # static/icons/tools-kitchen-2.svg
         'name': '永續餐飲',
         'emoji': '🍽️',
         'color': '#E85D04',
@@ -64,6 +69,7 @@ CATEGORIES = {
     },
     'shop': {
         'slug': 'shop',
+        'icon': 'shopping-bag',   # static/icons/shopping-bag.svg
         'name': '在地購物',
         'emoji': '🛍️',
         'color': '#2F6FB0',
@@ -73,10 +79,13 @@ CATEGORIES = {
         'tags': ['伴手禮', '職人選物', '在地農產'],
         'description': '茶葉、好酒、工藝品與農產伴手禮，把錢留在南投的土地上，也把職人的心意帶回家。',
         # 待做：與「品味南投」平台合作的店家名單確定後加進 MERCHANTS；沒有店家時網站顯示這段說明
+        # 在地購物目前導向「品味南投」平台；首頁卡片、主視覺、分類頁都連到這個網址
+        'external_url': 'https://www.tastingnantou.com.tw/',
         'coming_soon': '我們正與「品味南投」平台合作，整理南投在地好物與職人選品，即將上線，敬請期待。',
     },
     'uncategorized': {
         'slug': 'uncategorized',
+        'icon': 'map-pin',   # static/icons/map-pin.svg
         'name': '未分類',
         'emoji': '📍',
         'color': '#8A8F87',

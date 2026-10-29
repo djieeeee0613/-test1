@@ -65,9 +65,11 @@ a { color: inherit; }
 .feat b { display: block; font-size: 14px; }
 .feat small { opacity: .7; }
 .feat .ic { font-size: 22px; }
+.ic svg.ic { width: 1em; height: 1em; display: block; margin: 0 auto; border-radius: 0; background: none; animation: none; transform: none; }
 .login-card { margin-top: 90px; background: #fff; color: var(--text); border-radius: 28px; padding: 40px 34px 32px; width: 360px; max-width: 100%; text-align: center; box-shadow: 0 30px 80px rgba(0,0,0,.35); position: relative; }
 .login-mascot { width: 150px; height: 150px; object-fit: contain; margin: -110px auto 10px; filter: drop-shadow(0 12px 18px rgba(0,0,0,.28)); animation: bob 3.2s ease-in-out infinite; cursor: pointer; }
 .login-mascot.wiggle { animation: wiggle .7s ease; }
+.replay-intro { margin: -6px 0 18px; background: none; border: 1px solid rgba(255,255,255,.45); color: #fff; border-radius: 999px; padding: 7px 16px; font-size: 13px; cursor: pointer; font-family: inherit; }
 .login-bubble { background: var(--gold-soft); border: 1px solid #ecdcb6; border-radius: 16px; padding: 12px 14px; font-size: 14px; line-height: 1.7; margin-bottom: 22px; position: relative; color: #5a4a26; min-height: 72px; }
 .login-bubble::before { content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%) rotate(45deg); width: 14px; height: 14px; background: var(--gold-soft); border-left: 1px solid #ecdcb6; border-top: 1px solid #ecdcb6; }
 .login-card h2 { font-size: 20px; color: var(--green); margin-bottom: 18px; }
@@ -161,7 +163,7 @@ body.menu-open .sidebar { transform: none; }
 
 /* ───────── 主頁 ───────── */
 .hello { background: linear-gradient(135deg, var(--green) 0%, var(--green-2) 100%); color: #fff; border-radius: 26px; padding: 28px; display: flex; align-items: center; gap: 24px; position: relative; overflow: hidden; }
-.hello::after { content: '🍃'; position: absolute; right: -10px; bottom: -30px; font-size: 140px; opacity: .08; transform: rotate(-20deg); }
+.hello::after { content: ''; position: absolute; right: -10px; bottom: -30px; font-size: 140px; opacity: .08; transform: rotate(-20deg); }
 .ring { width: 132px; height: 132px; flex-shrink: 0; position: relative; }
 .ring svg { transform: rotate(-90deg); }
 .ring .bg { stroke: rgba(255,255,255,.15); }
@@ -381,6 +383,7 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 <link rel="stylesheet" href="/static/css/typography.css">
+<link rel="stylesheet" href="/static/css/story.css">
 </head>
 <body>
 
@@ -393,25 +396,26 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
   </div>
   <div class="login-main">
     <div class="login-hero reveal">
-      <span class="chip">🎮 緣投探索遊戲</span>
+      <span class="chip">緣投探索遊戲</span>
       <h1>緣投<span>探索者</span></h1>
-      <p>和吉祥物緣投一起走訪南投 {{ total_merchants }} 間在地職人，打卡收集印章、挑戰問答、分享旅程，從「旅人」一路升級成「永續達人」，領取專屬認證證書！</p>
+      <p>緣投原本住在遙遠的緣投星，一不小心掉進蟲洞，來到了南投！和他一起走訪 {{ total_merchants }} 間在地職人，打卡、答題、分享旅程累積回家能量，升到「{{ cfg.max_title }}」時蟲洞會再次打開，送緣投回家，你也會拿到專屬認證證書。</p>
+      <button type="button" class="replay-intro" onclick="Story.intro()">重看緣投的故事 →</button>
       <div class="feat-row">
-        <div class="feat"><span class="ic">📸</span><div><b>職人打卡</b><small>AI 驗證 · +{{ cfg.xp_checkin }} XP</small></div></div>
-        <div class="feat"><span class="ic">🧠</span><div><b>問答大挑戰</b><small>無限挑戰 · 連擊加分</small></div></div>
-        <div class="feat"><span class="ic">💬</span><div><b>旅人動態</b><small>分享、按讚、留言</small></div></div>
-        <div class="feat"><span class="ic">📜</span><div><b>永續達人證書</b><small>Lv.{{ cfg.max_level }} 自動寄送</small></div></div>
+        <div class="feat"><span class="ic">{{ icon("camera") }}</span><div><b>職人打卡</b><small>AI 驗證 · +{{ cfg.xp_checkin }} XP</small></div></div>
+        <div class="feat"><span class="ic">{{ icon("brain") }}</span><div><b>問答大挑戰</b><small>無限挑戰 · 連擊加分</small></div></div>
+        <div class="feat"><span class="ic">{{ icon("message-circle") }}</span><div><b>旅人動態</b><small>分享、按讚、留言</small></div></div>
+        <div class="feat"><span class="ic">{{ icon("certificate") }}</span><div><b>永續達人證書</b><small>Lv.{{ cfg.max_level }} 自動寄送</small></div></div>
       </div>
     </div>
     <div class="login-card reveal">
       <img src="/static/images/mascot/mascot-sleep.png" alt="緣投" class="login-mascot" id="login-mascot">
-      <div class="login-bubble" id="login-bubble">嗨！我是緣投 🌿<br>登入後我就能幫你記錄冒險囉！</div>
+      <div class="login-bubble" id="login-bubble">嗨！我是緣投，我迷路了……<br>登入後陪我一起找回家的路吧！</div>
       <h2>開始你的南投冒險</h2>
       <div class="gbtn">
         <div id="g_id_onload" data-client_id="{{ google_client_id }}" data-callback="handleGoogleLogin" data-auto_prompt="false"></div>
         <div class="g_id_signin" data-type="standard" data-size="large" data-theme="filled_blue" data-text="signin_with" data-shape="pill" data-locale="zh-TW" data-width="280"></div>
       </div>
-      {% if not google_client_id %}<p class="warn">⚠️ 尚未設定 GOOGLE_CLIENT_ID 環境變數</p>{% endif %}
+      {% if not google_client_id %}<p class="warn">尚未設定 GOOGLE_CLIENT_ID 環境變數</p>{% endif %}
       <p class="login-note">使用 Google 登入僅取得你的名稱、頭像與 Email（用於寄送證書）。</p>
     </div>
   </div>
@@ -437,17 +441,17 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
       <img id="side-avatar" src="/static/images/mascot.jpg" alt="">
       <div class="info">
         <div class="nm" id="side-name">—</div>
-        <div class="tt" id="side-title">Lv.1 旅人 🧳</div>
+        <div class="tt" id="side-title">Lv.1 旅人 </div>
         <div class="mini-bar"><i id="side-bar" style="width:0"></i></div>
       </div>
     </div>
     <nav class="menu">
-      <button class="menu-item" data-view="home"><span class="ic">🏠</span>探索主頁</button>
-      <button class="menu-item" data-view="checkin"><span class="ic">📸</span>職人打卡<span class="badge" id="badge-checkin">0/{{ total_merchants }}</span></button>
-      <button class="menu-item" data-view="quiz"><span class="ic">🧠</span>問答大挑戰</button>
-      <button class="menu-item" data-view="feed"><span class="ic">💬</span>旅人動態</button>
-      <button class="menu-item" data-view="rank"><span class="ic">🏆</span>排行榜</button>
-      <button class="menu-item" data-view="cert"><span class="ic">📜</span>永續達人證書</button>
+      <button class="menu-item" data-view="home"><span class="ic">{{ icon("home") }}</span>探索主頁</button>
+      <button class="menu-item" data-view="checkin"><span class="ic">{{ icon("camera") }}</span>職人打卡<span class="badge" id="badge-checkin">0/{{ total_merchants }}</span></button>
+      <button class="menu-item" data-view="quiz"><span class="ic">{{ icon("brain") }}</span>問答大挑戰</button>
+      <button class="menu-item" data-view="feed"><span class="ic">{{ icon("message-circle") }}</span>旅人動態</button>
+      <button class="menu-item" data-view="rank"><span class="ic">{{ icon("trophy") }}</span>排行榜</button>
+      <button class="menu-item" data-view="cert"><span class="ic">{{ icon("certificate") }}</span>永續達人證書</button>
     </nav>
     <div class="side-foot">
       <a href="/">回首頁</a>
@@ -474,14 +478,14 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
       </div>
 
       <div class="grid g4" style="margin-top:16px">
-        <div class="card stat reveal"><div class="ic">📍</div><div class="num" id="st-checkin">0</div><div class="lbl">走訪職人</div></div>
-        <div class="card stat reveal"><div class="ic">🧠</div><div class="num" id="st-quiz">0</div><div class="lbl">答對題數</div></div>
-        <div class="card stat reveal"><div class="ic">💬</div><div class="num" id="st-post">0</div><div class="lbl">分享貼文</div></div>
-        <div class="card stat reveal"><div class="ic">⭐</div><div class="num" id="st-xp">0</div><div class="lbl">累積 XP</div></div>
+        <div class="card stat reveal"><div class="ic">{{ icon("map-pin") }}</div><div class="num" id="st-checkin">0</div><div class="lbl">走訪職人</div></div>
+        <div class="card stat reveal"><div class="ic">{{ icon("brain") }}</div><div class="num" id="st-quiz">0</div><div class="lbl">答對題數</div></div>
+        <div class="card stat reveal"><div class="ic">{{ icon("message-circle") }}</div><div class="num" id="st-post">0</div><div class="lbl">分享貼文</div></div>
+        <div class="card stat reveal"><div class="ic">{{ icon("star") }}</div><div class="num" id="st-xp">0</div><div class="lbl">累積 XP</div></div>
       </div>
 
       <div class="card reveal" style="margin-top:16px">
-        <h3>🗺️ 升級之路</h3>
+        <h3>回家之路</h3>
         <div class="roadmap" id="roadmap" style="--edge: {{ (50 / levels|length)|round(3) }}%">
           <div class="fill" id="road-fill" style="width:0"></div>
           {% for lv in levels %}
@@ -491,9 +495,9 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
       </div>
 
       <div class="grid g3" style="margin-top:16px">
-        <button class="quick reveal" onclick="go('checkin')"><span class="ic" style="background:#eaf1ec">📸</span><div><b>去打卡</b><small>每家職人 +{{ cfg.xp_checkin }} XP</small></div></button>
-        <button class="quick reveal" onclick="go('quiz')"><span class="ic" style="background:#fbf5e8">🧠</span><div><b>挑戰問答</b><small>連擊越多分越高</small></div></button>
-        <button class="quick reveal" onclick="go('feed')"><span class="ic" style="background:#fdeef2">💬</span><div><b>看看大家</b><small>每日前 {{ cfg.post_daily_limit }} 篇 +{{ cfg.xp_post }} XP</small></div></button>
+        <button class="quick reveal" onclick="go('checkin')"><span class="ic" style="background:#eaf1ec">{{ icon("camera") }}</span><div><b>去打卡</b><small>每家職人 +{{ cfg.xp_checkin }} XP</small></div></button>
+        <button class="quick reveal" onclick="go('quiz')"><span class="ic" style="background:#fbf5e8">{{ icon("brain") }}</span><div><b>挑戰問答</b><small>連擊越多分越高</small></div></button>
+        <button class="quick reveal" onclick="go('feed')"><span class="ic" style="background:#fdeef2">{{ icon("message-circle") }}</span><div><b>看看大家</b><small>每日前 {{ cfg.post_daily_limit }} 篇 +{{ cfg.xp_post }} XP</small></div></button>
       </div>
 
       <div class="card reveal" style="margin-top:16px">
@@ -504,16 +508,16 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
     <!-- 打卡 -->
     <div class="view" id="v-checkin">
       <div class="event-slot"></div>
-      <div class="page-head"><h1>📸 職人打卡</h1><p>到職人工坊拍一張有你入鏡的照片，緣投確認後就幫你蓋章！</p></div>
+      <div class="page-head"><h1>職人打卡</h1><p>到職人工坊拍一張有你入鏡的照片，緣投確認後就幫你蓋章！</p></div>
       <div class="grid g2">
         <div class="card">
-          <h3>📍 我在這裡</h3>
+          <h3>我在這裡</h3>
           <div class="field">
             <label>選擇職人商家</label>
             <select id="ck-merchant" onchange="refreshCheckinBtn()">
               <option value="">— 請選擇 —</option>
               {% for g in merchant_groups %}
-              <optgroup label="{{ g.emoji }} {{ g.name }}">
+              <optgroup label="{{ g.name }}">
                 {% for m in g.merchants %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
               </optgroup>
               {% endfor %}
@@ -524,16 +528,16 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
             <div class="drop" id="ck-drop" onclick="document.getElementById('ck-file').click()">
               <div class="scanline"></div>
               <img id="ck-preview" alt="">
-              <div class="ph"><div class="ic">📷</div><div style="font-size:14px">點擊拍照或上傳</div><div class="muted" style="font-size:11px">JPG / PNG · 10MB 以內</div></div>
+              <div class="ph"><div class="ic">{{ icon("camera") }}</div><div style="font-size:14px">點擊拍照或上傳</div><div class="muted" style="font-size:11px">JPG / PNG · 10MB 以內</div></div>
             </div>
             <input type="file" id="ck-file" accept="image/*" capture="environment" hidden onchange="pickImage(this, 'ck')">
           </div>
-          <button class="btn btn-green block" id="ck-btn" onclick="submitCheckin()" disabled>✨ 請緣投驗證並蓋章</button>
+          <button class="btn btn-green block" id="ck-btn" onclick="submitCheckin()" disabled>請緣投驗證並蓋章</button>
           <div class="result" id="ck-result"></div>
         </div>
         <div class="card">
           <div class="collection-head">
-            <h3 style="margin:0">📖 職人圖鑑</h3>
+            <h3 style="margin:0">職人圖鑑</h3>
             <div class="progress-pill"><i id="col-bar" style="width:0"></i></div>
             <b id="col-count" style="color:var(--green)">0/{{ total_merchants }}</b>
           </div>
@@ -545,14 +549,14 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
     <!-- 問答 -->
     <div class="view" id="v-quiz">
       <div class="event-slot"></div>
-      <div class="page-head"><h1>🧠 問答大挑戰</h1><p>每局 {{ cfg.quiz_round_size }} 題，想玩幾局就玩幾局！連續答對有連擊加分，全對再送 +{{ cfg.xp_quiz_perfect }} XP。</p></div>
+      <div class="page-head"><h1>問答大挑戰</h1><p>每局 {{ cfg.quiz_round_size }} 題，想玩幾局就玩幾局！連續答對有連擊加分，全對再送 +{{ cfg.xp_quiz_perfect }} XP。</p></div>
       <div class="card" id="quiz-box"></div>
     </div>
 
     <!-- 動態 -->
     <div class="view" id="v-feed">
       <div class="event-slot"></div>
-      <div class="page-head"><h1>💬 旅人動態</h1><p>分享你在南投遇見的人、味道和風景。</p></div>
+      <div class="page-head"><h1>旅人動態</h1><p>分享你在南投遇見的人、味道和風景。</p></div>
       <div class="feed">
         <div class="card">
           <div class="composer">
@@ -561,10 +565,10 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
               <textarea id="cp-text" maxlength="500" placeholder="今天在南投發生了什麼好事？"></textarea>
               <div class="attach-preview" id="cp-attach"><img id="cp-preview" alt=""><button onclick="clearAttach()">✕</button></div>
               <div class="composer-tools">
-                <button class="tool-btn" onclick="document.getElementById('cp-file').click()">🖼️ 照片</button>
+                <button class="tool-btn" onclick="document.getElementById('cp-file').click()">照片</button>
                 <select id="cp-merchant">
-                  <option value="">📍 標記職人（選填）</option>
-                  {% for g in merchant_groups %}<optgroup label="{{ g.emoji }} {{ g.name }}">{% for m in g.merchants %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</optgroup>{% endfor %}
+                  <option value="">標記職人（選填）</option>
+                  {% for g in merchant_groups %}<optgroup label="{{ g.name }}">{% for m in g.merchants %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</optgroup>{% endfor %}
                 </select>
                 <button class="btn btn-green" style="padding:9px 18px;font-size:14px" id="cp-btn" onclick="submitPost()">發佈</button>
               </div>
@@ -579,13 +583,13 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
 
     <!-- 排行榜 -->
     <div class="view" id="v-rank">
-      <div class="page-head"><h1>🏆 探索者排行榜</h1><p>看看誰是最認真的南投探索者！</p></div>
+      <div class="page-head"><h1>探索者排行榜</h1><p>看看誰是最認真的南投探索者！</p></div>
       <div class="card"><div id="rank-box"></div></div>
     </div>
 
     <!-- 證書 -->
     <div class="view" id="v-cert">
-      <div class="page-head"><h1>📜 永續達人證書</h1><p>達到 Lv.{{ cfg.max_level }}「{{ cfg.max_title }}」後，緣投會把證書寄到你的 Gmail。</p></div>
+      <div class="page-head"><h1>永續達人證書</h1><p>達到 Lv.{{ cfg.max_level }}「{{ cfg.max_title }}」後，緣投會把證書寄到你的 Gmail。</p></div>
       <div id="cert-box"></div>
     </div>
   </main>
@@ -603,19 +607,20 @@ select:focus, textarea:focus, input[type=text]:focus { border-color: var(--green
     <div class="lu-new" id="lu-new">緣投換上新造型</div>
     <div class="lbl">LEVEL UP</div>
     <div class="lv" id="lu-lv">Lv.2</div>
-    <div class="tt" id="lu-title">探索者 🗺️</div>
+    <div class="tt" id="lu-title">探索者 </div>
     <p id="lu-msg">緣投替你開心得跳起來了！</p>
     <button class="btn btn-gold" onclick="closeLevelUp()">繼續冒險 →</button>
   </div>
 </div>
 <div class="toast" id="toast"></div>
 <div id="report-modal" onclick="if(event.target===this)closeReport()"><div class="box">
-  <h3>⚑ 檢舉這則內容</h3><div style="font-size:13px;color:var(--muted)">管理員會看到你的檢舉，對方不會知道是誰檢舉的。</div>
+  <h3>檢舉這則內容</h3><div style="font-size:13px;color:var(--muted)">管理員會看到你的檢舉，對方不會知道是誰檢舉的。</div>
   <div class="reasons"></div>
   <button class="btn btn-ghost" style="width:100%" onclick="closeReport()">取消</button>
 </div></div>
 <div id="lightbox" onclick="this.style.display='none'"><img id="lightbox-img" alt=""></div>
 
+<script src="/static/js/story.js"></script>
 <script>
 const MERCHANT_GROUPS = {{ merchant_groups|tojson }};
 const TOTAL = {{ total_merchants }};
@@ -658,18 +663,18 @@ function timeAgo(iso) {
 
 // ═══════ 緣投台詞 ═══════
 const LINES = {
-  poke: ['嘿嘿，好癢！', '你知道嗎？南投是台灣唯一不靠海的縣喔！', '要不要去喝杯國姓咖啡？☕', '我最喜歡竹山的竹子了 🎋', '今天也要慢慢走、深深玩！', '戳我也不會掉 XP 啦 😆', '日月潭的拉魯島是邵族的聖地喔～'],
+  poke: ['嘿嘿，好癢！', '你知道嗎？南投是台灣唯一不靠海的縣喔！', '要不要去喝杯國姓咖啡？', '我最喜歡竹山的竹子了！', '今天也要慢慢走、深深玩！', '戳我也不會掉 XP 啦！', '日月潭的拉魯島是邵族的聖地喔～'],
   home: ['今天想去哪裡探險呢？', '還有好多職人在等你喔！', '答幾題問答暖暖身吧？'],
-  checkin: ['拍照記得笑一個 📸', '每家職人都有一枚專屬印章喔！', '收集越多，離永續達人越近！'],
-  quiz: ['準備好了嗎？我要出題囉！', '連續答對會有連擊加分喔 🔥'],
+  checkin: ['拍照記得笑一個！', '每家職人都有一枚專屬印章喔！', '收集越多，離永續達人越近！'],
+  quiz: ['準備好了嗎？我要出題囉！', '連續答對會有連擊加分喔！'],
   feed: ['看看大家都去了哪裡～', '分享你的故事，我想看！'],
   rank: ['你的名字也能上榜的！', '加油加油，衝刺第一名！'],
-  cert: ['證書上會有你的名字喔 ✨', '永續達人，是我們最高的榮譽！'],
-  correct: ['答對了！你好懂南投！', '太聰明了吧 🤩', '完全正確！', '漂亮！繼續保持！'],
+  cert: ['證書上會有你的名字喔！', '等你升到最高等級，我就能回家了！'],
+  correct: ['答對了！你好懂南投！', '太聰明了吧！', '完全正確！', '漂亮！繼續保持！'],
   wrong: ['差一點點！沒關係～', '學到新知識也很棒！', '下一題一定可以！'],
-  combo: n => `${n} 連擊！你停不下來了 🔥`,
-  checkinOk: m => `蓋章成功！歡迎來到「${m}」🎉`,
-  posted: ['謝謝你的分享，我看到了！', '好棒的故事 💚'],
+  combo: n => `${n} 連擊！你停不下來了！`,
+  checkinOk: m => `蓋章成功！歡迎來到「${m}」`,
+  posted: ['謝謝你的分享，我看到了！', '好棒的故事！'],
 };
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const TIPS = [
@@ -704,18 +709,19 @@ function floatXp(amount, anchor) {
 
 // ═══════ 登入畫面 ═══════
 (function initLogin() {
-  const box = $('leaves'), icons = ['🍃', '🌿', '🍂', '🌱'];
+  const box = $('leaves'), icons = ['·'];   // 飄落的光點
   for (let i = 0; i < 14; i++) {
     const s = document.createElement('span');
-    s.className = 'leaf'; s.textContent = icons[i % 4];
+    s.className = 'leaf'; s.textContent = icons[i % icons.length];
     s.style.left = Math.random() * 100 + '%';
     s.style.animationDuration = (9 + Math.random() * 10) + 's';
     s.style.animationDelay = (-Math.random() * 15) + 's';
     s.style.fontSize = (14 + Math.random() * 16) + 'px';
     box.appendChild(s);
   }
-  const lines = ['嗨！我是緣投 🌿<br>登入後我就能幫你記錄冒險囉！', '南投有 {{ total_merchants }} 間職人<br>你能全部蓋到章嗎？', '升到 Lv.{{ cfg.max_level }} 我會寄證書給你喔 📜', '點我幹嘛啦～快登入 😆'];
+  const lines = ['嗨！我是緣投，我迷路了……<br>登入後陪我一起找回家的路吧！', '南投有 {{ total_merchants }} 間職人<br>每蓋一個章，我就多一點回家能量！', '升到 Lv.{{ cfg.max_level }}，蟲洞就會打開<br>我也會寄證書給你喔！', '點我幹嘛啦～快登入！'];
   let i = 0;
+  if (!Story.seenIntro()) setTimeout(() => Story.intro(), 400);   // 第一次進遊戲：播放開場
   $('login-mascot').onclick = () => {
     const m = $('login-mascot'); m.classList.remove('wiggle'); void m.offsetWidth; m.classList.add('wiggle');
     i = (i + 1) % lines.length; $('login-bubble').innerHTML = lines[i];
@@ -723,7 +729,7 @@ function floatXp(amount, anchor) {
 })();
 
 async function handleGoogleLogin(resp) {
-  $('login-bubble').innerHTML = '登入中…緣投正在幫你開門 🚪';
+  $('login-bubble').innerHTML = '登入中…緣投正在幫你開門 ';
   const d = await api('/api/game/login', { method: 'POST', body: { id_token: resp.credential } });
   if (!d.ok) { $('login-bubble').innerHTML = '咦？登入失敗了：' + esc(d.error || '請再試一次'); return; }
   enterApp(d.user, d.level_info, true);
@@ -743,10 +749,10 @@ function enterApp(user, li, fresh) {
   renderProfile();
   loadCheckins();
   loadEvents();
-  if (user.muted) $('cp-text').closest('.card').insertAdjacentHTML('afterbegin', '<div class="muted-note">🔇 你的帳號目前被暫停發言，暫時無法發文或留言。</div>');
+  if (user.muted) $('cp-text').closest('.card').insertAdjacentHTML('afterbegin', '<div class="muted-note">你的帳號目前被暫停發言，暫時無法發文或留言。</div>');
   const v = (location.hash || '#home').slice(1);
   go(['home','checkin','quiz','feed','rank','cert'].includes(v) ? v : 'home', true);
-  setTimeout(() => say(fresh ? `歡迎你，${user.name || '探索者'}！一起出發吧 🌿` : `歡迎回來，${user.name || '探索者'}！`), 500);
+  setTimeout(() => say(fresh ? `歡迎你，${user.name || '探索者'}！一起出發，幫我找回家的路吧！` : `歡迎回來，${user.name || '探索者'}！`), 500);
 }
 
 function toggleMenu(force) {
@@ -774,7 +780,7 @@ function renderProfile() {
   const avatar = me.avatar_url || MASCOT;
   ['top-avatar', 'side-avatar', 'cp-avatar'].forEach(id => $(id).src = avatar);
   $('side-name').textContent = me.name || '探索者';
-  $('side-title').textContent = `Lv.${lvl.level} ${lvl.title} ${lvl.emoji}`;
+  $('side-title').textContent = `Lv.${lvl.level} ${lvl.title}`;
   $('chip-lv').textContent = 'Lv.' + lvl.level;
   $('chip-xp').textContent = lvl.xp.toLocaleString() + ' XP';
   $('side-bar').style.width = levelPct() + '%';
@@ -794,7 +800,7 @@ function applyStats(stats, anchor, inc = {}) {
   renderProfile();
   floatXp(gained, anchor);
   const chip = $('xp-chip'); chip.classList.remove('bump'); void chip.offsetWidth; chip.classList.add('bump');
-  if (stats.level_up) setTimeout(() => showLevelUp(stats), 700);
+  if (stats.level_up) setTimeout(() => queueLevelUp(stats), 0);   // 等同一輪的任務動畫先排進佇列
   if ($('v-home').classList.contains('active')) renderHome();
 }
 
@@ -803,10 +809,10 @@ function renderHome() {
   const hour = new Date().getHours();
   const greet = hour < 11 ? '早安' : hour < 18 ? '午安' : '晚安';
   $('hello-title').textContent = `${greet}，${me.name || '探索者'}！`;
-  $('hello-sub').innerHTML = `目前等級 <b>Lv.${lvl.level} ${esc(lvl.title)} ${lvl.emoji}</b>，累積 <b>${lvl.xp.toLocaleString()} XP</b>`;
+  $('hello-sub').innerHTML = `目前等級 <b>Lv.${lvl.level} ${esc(lvl.title)}</b>，累積 <b>${lvl.xp.toLocaleString()} XP</b>`;
   $('hello-next').textContent = lvl.next_xp
     ? `再 ${(lvl.next_xp - lvl.xp).toLocaleString()} XP 就能升到「${lvl.next_title}」`
-    : '🏆 你已經是最高等級的永續達人！';
+    : '你已經是最高等級的永續達人！';
   $('ring-lv').textContent = lvl.level;
   requestAnimationFrame(() => $('ring-fg').style.strokeDashoffset = 351.86 * (1 - levelPct() / 100));
   countUp('st-checkin', me.checkin_count || 0);
@@ -873,7 +879,7 @@ function renderCollection(newOne) {
   $('col-bar').style.width = (got.size / TOTAL * 100) + '%';
   $('collection').innerHTML = MERCHANT_GROUPS.map(g => {
     const n = g.merchants.filter(m => got.has(m)).length;
-    return `<div class="cat-block"><div class="cat-title" style="color:${g.color}">${g.emoji} ${esc(g.name)} <span class="muted">${n}/${g.merchants.length}</span></div>
+    return `<div class="cat-block"><div class="cat-title" style="color:${g.color}">${esc(g.name)} <span class="muted">${n}/${g.merchants.length}</span></div>
       <div class="stamps">${g.merchants.map(m => `<div class="stamp ${got.has(m) ? 'got' : ''} ${m === newOne ? 'new' : ''}" onclick="selectMerchant(this.dataset.m)" data-m="${esc(m)}">${esc(m)}</div>`).join('')}</div></div>`;
   }).join('');
 }
@@ -887,23 +893,24 @@ function refreshCheckinBtn() { $('ck-btn').disabled = !($('ck-merchant').value &
 
 async function submitCheckin() {
   const merchant = $('ck-merchant').value, btn = $('ck-btn'), res = $('ck-result');
-  btn.disabled = true; btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite">🌀</span> 緣投驗證中…';
+  btn.disabled = true; btn.innerHTML = '緣投驗證中…';
   res.className = 'result'; $('ck-drop').classList.add('scanning');
-  say('讓我仔細看看照片… 🔍', 6000);
+  say('讓我仔細看看照片…', 6000);
   const d = await api('/api/game/checkin', { method: 'POST', body: { merchant_name: merchant, image: images.ck } });
   $('ck-drop').classList.remove('scanning');
-  btn.innerHTML = '✨ 請緣投驗證並蓋章';
+  btn.innerHTML = '請緣投驗證並蓋章';
   if (!d.ok) {
-    res.className = 'result ng'; res.textContent = '❌ ' + (d.error || '打卡失敗，請再試一次');
+    res.className = 'result ng'; res.textContent = '' + (d.error || '打卡失敗，請再試一次');
     say(pick(LINES.wrong)); refreshCheckinBtn(); return;
   }
   res.className = 'result ok';
-  res.innerHTML = `🎉 蓋章成功！<b>${esc(merchant)}</b> <span class="xp-tag">+${d.xp_earned} XP</span>
-    <div style="margin-top:10px"><button class="btn btn-gold" style="padding:9px 16px;font-size:13px" onclick="shareCheckin()">💬 分享到旅人動態</button></div>`;
+  res.innerHTML = `蓋章成功！<b>${esc(merchant)}</b> <span class="xp-tag">+${d.xp_earned} XP</span>
+    <div style="margin-top:10px"><button class="btn btn-gold" style="padding:9px 16px;font-size:13px" onclick="shareCheckin()">分享到旅人動態</button></div>`;
   shareUrl = d.photo_url; shareCheckin.merchant = merchant;
   checkins.unshift({ merchant_name: merchant });
   renderCollection(merchant);
   applyStats(d.new_stats, btn, { checkin_count: 1 });
+  Story.mission('checkin', { xp: d.xp_earned, pct: levelPct(), form: formFor(lvl.level) });
   say(LINES.checkinOk(merchant));
   images.ck = null; $('ck-drop').classList.remove('has'); $('ck-merchant').value = '';
   refreshCheckinBtn();
@@ -925,8 +932,8 @@ function renderQuizStart(prev) {
     <img src="${MASCOT}" alt="緣投">
     <h2>${prev ? '再來一局？' : '緣投出題時間！'}</h2>
     <p class="muted">南投的地理、歷史、職人與永續旅行，你懂多少？</p>
-    <div class="rules"><span>📝 每局 ${CFG.quiz_round_size} 題</span><span>⏱️ 每題 ${CFG.quiz_seconds} 秒</span><span>✅ 答對 +${CFG.xp_quiz_correct}</span><span>🔥 連擊每題 +${CFG.xp_quiz_combo}</span><span>💯 全對 +${CFG.xp_quiz_perfect}</span><span>📚 答錯也有 +${CFG.xp_quiz_wrong}</span></div>
-    <button class="btn btn-gold" onclick="startQuiz()">🎯 開始挑戰</button></div>`;
+    <div class="rules"><span>每局 ${CFG.quiz_round_size} 題</span><span>每題 ${CFG.quiz_seconds} 秒</span><span>答對 +${CFG.xp_quiz_correct}</span><span>連擊每題 +${CFG.xp_quiz_combo}</span><span>全對 +${CFG.xp_quiz_perfect}</span><span>答錯也有 +${CFG.xp_quiz_wrong}</span></div>
+    <button class="btn btn-gold" onclick="startQuiz()">開始挑戰</button></div>`;
 }
 async function startQuiz() {
   const d = await api('/api/game/quiz/start', { method: 'POST' });
@@ -942,7 +949,7 @@ function renderQuestion() {
     <div class="q-top">
       <b style="color:var(--green)">第 ${quiz.i + 1} / ${quiz.qs.length} 題</b>
       <div class="q-dots">${quiz.qs.map((_, i) => `<i class="${quiz.marks[i] || (i === quiz.i ? 'cur' : '')}"></i>`).join('')}</div>
-      <div class="combo ${quiz.streak > 1 ? 'on' : ''}" id="combo">🔥 ${quiz.streak} 連擊</div>
+      <div class="combo ${quiz.streak > 1 ? 'on' : ''}" id="combo">${quiz.streak} 連擊</div>
     </div>
     <div class="timer"><i id="timer-bar"></i></div>
     <div class="q-host"><img src="${MASCOT}" alt=""><div class="q">${esc(q.q)}</div></div>
@@ -970,9 +977,9 @@ async function answer(idx) {
   quiz.streak = d.streak;
   const dots = document.querySelectorAll('.q-dots i'); dots[quiz.i].className = quiz.marks[quiz.i];
   const combo = $('combo');
-  combo.textContent = `🔥 ${d.streak} 連擊`; combo.classList.toggle('on', d.streak > 1);
+  combo.textContent = `${d.streak} 連擊`; combo.classList.toggle('on', d.streak > 1);
   const f = $('fact');
-  f.innerHTML = `${d.correct ? '✅ 答對了！' : idx < 0 ? '⏰ 時間到！' : '❌ 可惜！'} <span class="xp-tag">+${d.xp_earned} XP</span><br>💡 ${esc(d.fact)}`;
+  f.innerHTML = `${d.correct ? '答對了！' : idx < 0 ? '時間到！' : '可惜！'} <span class="xp-tag">+${d.xp_earned} XP</span><br>${esc(d.fact)}`;
   f.classList.add('show');
   say(d.correct ? (d.streak > 1 ? LINES.combo(d.streak) : pick(LINES.correct)) : pick(LINES.wrong));
   applyStats(d.new_stats, btns[d.correct_answer], d.correct ? { quiz_correct: 1 } : {});
@@ -985,20 +992,21 @@ async function answer(idx) {
 }
 function showSummary(r) {
   const total = quiz.qs.length;
-  const msg = r.perfect ? '全對！你根本是南投百科 🏆' : r.c >= 4 ? '超厲害！差一點就全對了！' : r.c >= 2 ? '不錯喔！再挑戰一次會更好！' : '多玩幾局，你會越來越懂南投的！';
+  const msg = r.perfect ? '全對！你根本是南投百科！' : r.c >= 4 ? '超厲害！差一點就全對了！' : r.c >= 2 ? '不錯喔！再挑戰一次會更好！' : '多玩幾局，你會越來越懂南投的！';
   $('quiz-box').innerHTML = `<div class="summary">
     <img src="${MASCOT}" alt="" style="width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto;animation:jump .8s var(--ease) 2">
-    <div class="stars">${Array.from({ length: total }, (_, i) => `<span style="animation-delay:${i * .12}s">${i < r.c ? '⭐' : '☆'}</span>`).join('')}</div>
+    <div class="stars">${Array.from({ length: total }, (_, i) => `<span style="animation-delay:${i * .12}s">${i < r.c ? '★' : '☆'}</span>`).join('')}</div>
     <h2 style="color:var(--green)">${r.c} / ${total} 題答對</h2>
     <p class="muted" style="margin:6px 0 14px">${msg}</p>
     <div class="big">+${r.xp} XP</div>
-    ${r.perfect ? `<div class="xp-tag" style="margin-top:8px">💯 全對加碼 +${CFG.xp_quiz_perfect} XP 已包含</div>` : ''}
+    ${r.perfect ? `<div class="xp-tag" style="margin-top:8px">全對加碼 +${CFG.xp_quiz_perfect} XP 已包含</div>` : ''}
     <div style="margin-top:22px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <button class="btn btn-gold" onclick="startQuiz()">🔁 再來一局</button>
-      <button class="btn btn-ghost" onclick="go('rank')">🏆 看排行榜</button>
+      <button class="btn btn-gold" onclick="startQuiz()">再來一局</button>
+      <button class="btn btn-ghost" onclick="go('rank')">看排行榜</button>
     </div></div>`;
   say(msg, 5000);
   quiz = { done: true };
+  if (r.xp > 0) Story.mission('quiz', { xp: r.xp, pct: levelPct(), form: formFor(lvl.level) });
 }
 
 // ═══════ 動態 ═══════
@@ -1016,15 +1024,15 @@ function postHtml(p) {
   return `<article class="post" id="post-${p.id}">
     <div class="post-head">
       <img src="${esc(p.user_avatar || MASCOT)}" alt="" onerror="this.src='${MASCOT}'">
-      <div><div class="nm">${esc(p.user_name || '探索者')} <span class="lv-badge">Lv.${p.user_level || 1}</span>${p.pinned ? ' <span class="pin-badge">📌 置頂</span>' : ''}</div><div class="meta">${timeAgo(p.created_at)}</div></div>
-      ${p.mine ? `<button class="post-del" onclick="deletePost(${p.id})">刪除</button>` : `<button class="post-del" title="檢舉" onclick="openReport('post', ${p.id})">⚑ 檢舉</button>`}
+      <div><div class="nm">${esc(p.user_name || '探索者')} <span class="lv-badge">Lv.${p.user_level || 1}</span>${p.pinned ? ' <span class="pin-badge">置頂</span>' : ''}</div><div class="meta">${timeAgo(p.created_at)}</div></div>
+      ${p.mine ? `<button class="post-del" onclick="deletePost(${p.id})">刪除</button>` : `<button class="post-del" title="檢舉" onclick="openReport('post', ${p.id})">⚑檢舉</button>`}
     </div>
-    ${p.merchant_name ? `<span class="post-tag">📍 ${esc(p.merchant_name)}</span>` : ''}
+    ${p.merchant_name ? `<span class="post-tag">${esc(p.merchant_name)}</span>` : ''}
     <div class="post-body">${esc(p.content)}</div>
     ${p.image_url ? `<img class="post-img" src="${esc(p.image_url)}" alt="" loading="lazy" onclick="openImg(this.src)">` : ''}
     <div class="post-actions">
-      <button class="act ${p.liked ? 'liked' : ''}" id="like-${p.id}" onclick="toggleLike(${p.id})"><span class="h">${p.liked ? '❤️' : '🤍'}</span><span class="n">${p.likes || 0}</span></button>
-      <button class="act" onclick="toggleComments(${p.id})">💬 <span id="cc-${p.id}">${p.comment_count || 0}</span></button>
+      <button class="act ${p.liked ? 'liked' : ''}" id="like-${p.id}" onclick="toggleLike(${p.id})"><span class="h">${p.liked ? '已讚' : '讚'}</span><span class="n">${p.likes || 0}</span></button>
+      <button class="act" onclick="toggleComments(${p.id})"><span id="cc-${p.id}">${p.comment_count || 0}</span></button>
     </div>
     <div class="comments" id="cm-${p.id}"></div>
   </article>`;
@@ -1044,6 +1052,7 @@ async function submitPost() {
   const empty = $('feed-list').querySelector('.empty'); if (empty) empty.remove();
   $('feed-list').insertAdjacentHTML('afterbegin', postHtml(d.post));
   applyStats(d.new_stats, btn, { post_count: 1 });
+  if (d.xp_earned) Story.mission('post', { xp: d.xp_earned, pct: levelPct(), form: formFor(lvl.level) });
   say(pick(LINES.posted));
   if (!d.xp_earned) toast('今天的發文 XP 已領滿，明天再來！');
 }
@@ -1055,11 +1064,11 @@ async function deletePost(id) {
 }
 async function toggleLike(id) {
   const b = $('like-' + id), wasLiked = b.classList.contains('liked'), n = b.querySelector('.n'), h = b.querySelector('.h');
-  b.classList.toggle('liked', !wasLiked); h.textContent = wasLiked ? '🤍' : '❤️';
+  b.classList.toggle('liked', !wasLiked); h.textContent = wasLiked ? '讚' : '已讚';
   n.textContent = Math.max(0, +n.textContent + (wasLiked ? -1 : 1));
   if (!wasLiked) { h.classList.remove('anim'); void h.offsetWidth; h.classList.add('anim'); }
   const d = await api(`/api/game/posts/${id}/like`, { method: 'POST' });
-  if (d.ok) { b.classList.toggle('liked', d.liked); h.textContent = d.liked ? '❤️' : '🤍'; n.textContent = d.likes; }
+  if (d.ok) { b.classList.toggle('liked', d.liked); h.textContent = d.liked ? '已讚' : '讚'; n.textContent = d.likes; }
 }
 async function toggleComments(id) {
   const box = $('cm-' + id);
@@ -1093,11 +1102,11 @@ async function loadRank() {
   const rows = Array.isArray(d) ? d : Object.values(d).filter(r => r && r.name !== undefined);
   if (!rows.length) { $('rank-box').innerHTML = `<div class="empty"><img src="${MASCOT}" alt="">還沒有人上榜，快去搶第一！</div>`; return; }
   const pod = (u, cls, n) => u ? `<div class="pod ${cls}"><img src="${esc(u.avatar_url || MASCOT)}" alt="" onerror="this.src='${MASCOT}'"><div class="nm">${esc(u.name || '探索者')}</div><div class="x">${u.xp.toLocaleString()} XP</div><div class="block">${n}</div></div>` : '';
-  $('rank-box').innerHTML = `<div class="podium">${pod(rows[1], 'p2', 2)}${pod(rows[0], 'p1', '👑')}${pod(rows[2], 'p3', 3)}</div>
+  $('rank-box').innerHTML = `<div class="podium">${pod(rows[1], 'p2', 2)}${pod(rows[0], 'p1', 1)}${pod(rows[2], 'p3', 3)}</div>
     <div style="margin-top:14px">${rows.map((u, i) => `<div class="rank-row ${u.me ? 'me' : ''}" style="animation-delay:${i * .04}s">
-      <div class="r">${['🥇','🥈','🥉'][i] || i + 1}</div>
+      <div class="r">${i + 1}</div>
       <img src="${esc(u.avatar_url || MASCOT)}" alt="" onerror="this.src='${MASCOT}'">
-      <div><div class="nm">${esc(u.name || '探索者')}${u.me ? ' （你）' : ''}</div><div class="sub">Lv.${u.level} ${esc(u.title)} ${u.emoji} · 走訪 ${u.checkin_count || 0} 家</div></div>
+      <div><div class="nm">${esc(u.name || '探索者')}${u.me ? ' （你）' : ''}</div><div class="sub">Lv.${u.level} ${esc(u.title)} · 走訪 ${u.checkin_count || 0} 家</div></div>
       <div class="x">${u.xp.toLocaleString()}</div></div>`).join('')}</div>`;
 }
 
@@ -1106,45 +1115,53 @@ function renderCert() {
   if (lvl.level >= CFG.max_level) {
     $('cert-box').innerHTML = `<div class="card" style="margin-bottom:16px;display:flex;gap:14px;align-items:center">
         <img src="${FORMS[3]}" alt="" style="width:64px;height:64px;object-fit:contain">
-        <div><b style="color:var(--green)">恭喜你成為永續達人！</b><div class="muted">證書已寄到你的 Gmail，也可以在這裡隨時查看、截圖分享。</div></div>
+        <div><b style="color:var(--green)">緣投平安回家了！</b><div class="muted">證書已寄到你的 Gmail，也可以在這裡隨時查看、截圖分享。<a href="#" onclick="Story.farewell({ form: FORMS[3], button: '關閉' }); return false" style="color:var(--gold)">重看緣投回家</a></div></div>
         <a class="btn btn-gold" style="margin-left:auto;padding:9px 14px;font-size:13px;text-decoration:none" href="/game/certificate/${encodeURIComponent(me.google_id)}" target="_blank">開新分頁</a></div>
       <iframe class="cert-frame" src="/game/certificate/${encodeURIComponent(me.google_id)}" title="永續達人證書"></iframe>`;
   } else {
     const need = CFG.max_level_xp - lvl.xp;
     $('cert-box').innerHTML = `<div class="card locked">
-      <div class="lock">🔒</div>
+      <div class="lock">{{ icon("lock") }}</div>
       <h2 style="color:var(--green);margin-bottom:6px">證書還沒解鎖</h2>
       <p class="muted">升到 <b>Lv.${CFG.max_level} ${esc(CFG.max_title)}</b>（${CFG.max_level_xp.toLocaleString()} XP）就能解鎖，緣投會自動寄到你的 Gmail！</p>
       <div class="progress-pill" style="max-width:360px;margin:18px auto 8px;height:12px"><i style="width:${Math.min(100, lvl.xp / CFG.max_level_xp * 100)}%"></i></div>
       <div class="muted">${lvl.xp.toLocaleString()} / ${CFG.max_level_xp.toLocaleString()} XP · 還差 <b style="color:var(--gold)">${need.toLocaleString()} XP</b></div>
       <div style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-green" onclick="go('checkin')">📸 去打卡</button>
-        <button class="btn btn-gold" onclick="go('quiz')">🧠 去答題</button>
+        <button class="btn btn-green" onclick="go('checkin')">去打卡</button>
+        <button class="btn btn-gold" onclick="go('quiz')">去答題</button>
       </div></div>`;
   }
 }
 
 // ═══════ 升級動畫 ═══════
 const LEVEL_MSG = {
-  2: '你已經不只是過客了，開始真正認識南投！',
-  3: '在地人都要叫你一聲「內行的」！',
-  4: '職人們都記得你了，你是他們的知音 ⭐',
-  5: '你是真正的永續達人！證書已經寄到你的 Gmail 囉 📜',
+  2: '回家能量又多了一格！緣投開始真正認識南投了。',
+  3: '蟲洞的光越來越亮，在地人都要叫你一聲「內行的」！',
+  4: '職人們都記得你了，緣投離回家只差一點點！',
 };
 function showLevelUp(s) {
   // renderProfile 已先換好側欄造型，所以用「上一級的造型」判斷這次有沒有換裝
   $('lu-img').src = formFor(s.level);
   $('lu-new').style.display = formFor(s.level) !== formFor(s.level - 1) ? '' : 'none';
   $('lu-lv').textContent = 'Lv.' + s.level;
-  $('lu-title').textContent = `${s.title} ${s.emoji}`;
+  $('lu-title').textContent = `${s.title}`;
   $('lu-msg').textContent = s.level >= CFG.max_level
-    ? `你是真正的${CFG.max_title}！證書已經寄到你的 Gmail 囉 📜`
-    : (LEVEL_MSG[s.level] || '緣投替你開心得跳起來了！');
+    ? `緣投平安回家了！你是真正的${CFG.max_title}，證書已經寄到你的 Gmail 囉。`
+    : (LEVEL_MSG[s.level] || '回家能量又多了一格，緣投替你開心得跳起來了！');
   $('levelup').classList.add('show');
   confetti();
   say(`升級啦！你現在是「${s.title}」！`, 5000);
 }
-function closeLevelUp() { $('levelup').classList.remove('show'); if (lvl.level >= CFG.max_level) go('cert', true); }
+let levelUpDone = null;
+function queueLevelUp(s) {
+  if (s.level >= CFG.max_level) Story.farewell({ form: FORMS[3] });
+  Story.enqueue(() => new Promise(res => { levelUpDone = res; showLevelUp(s); }));
+}
+function closeLevelUp() {
+  $('levelup').classList.remove('show');
+  if (levelUpDone) { levelUpDone(); levelUpDone = null; }
+  if (lvl.level >= CFG.max_level) go('cert', true);
+}
 function confetti() {
   const c = $('confetti'), ctx = c.getContext('2d');
   c.width = innerWidth; c.height = innerHeight;
@@ -1188,7 +1205,7 @@ async function loadEvents() {
   const d = await api('/api/game/events');
   if (d.ok) EVENTS = d;
   renderEventBanners();
-  if (EVENTS.active.length) setTimeout(() => say(`🎉 「${EVENTS.active[0].name}」進行中！XP ×${EVENTS.active[0].multiplier}`, 5000), 2500);
+  if (EVENTS.active.length) setTimeout(() => say(`「${EVENTS.active[0].name}」進行中！XP ×${EVENTS.active[0].multiplier}`, 5000), 2500);
 }
 function eventTarget(e) { return e.category_name ? `${e.category_name}打卡` : e.scope === 'all' ? '打卡、問答、發文' : e.scope_name; }
 function timeLeft(iso) {
@@ -1196,9 +1213,9 @@ function timeLeft(iso) {
   return h >= 48 ? `剩 ${Math.floor(h / 24)} 天` : h >= 1 ? `剩 ${h} 小時` : '即將結束';
 }
 function renderEventBanners() {
-  const html = EVENTS.active.map(e => `<div class="event-banner"><span class="ic">🎉</span><div><b>${esc(e.name)}</b>
+  const html = EVENTS.active.map(e => `<div class="event-banner"><span class="ic">{{ icon("confetti") }}</span><div><b>${esc(e.name)}</b>
       <small>${esc(e.description || '')}${e.description ? ' · ' : ''}${esc(eventTarget(e))} · ${timeLeft(e.end_at)}</small></div><span class="mult">×${e.multiplier}</span></div>`).join('')
-    + EVENTS.upcoming.slice(0, 1).map(e => `<div class="event-soon">⏳ 即將開始：<b>${esc(e.name)}</b>（${esc(eventTarget(e))} XP ×${e.multiplier}）· ${new Date(e.start_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 開始</div>`).join('');
+    + EVENTS.upcoming.slice(0, 1).map(e => `<div class="event-soon">即將開始：<b>${esc(e.name)}</b>（${esc(eventTarget(e))} XP ×${e.multiplier}）· ${new Date(e.start_at).toLocaleString('zh-TW', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })} 開始</div>`).join('');
   document.querySelectorAll('.event-slot').forEach(el => el.innerHTML = html);
 }
 

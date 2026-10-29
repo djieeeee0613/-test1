@@ -299,7 +299,7 @@ def certificate_html(name, xp, checkins, date_str):
 <tr><td style="padding:0 40px 8px;">
   <div style="font-size:13px;color:#666;line-height:1.9;background:#fffaf0;border-left:3px solid #C8A96E;padding:12px 16px;border-radius:0 10px 10px 0;">
     <b style="color:#2d4a35;">緣投想對你說：</b><br>
-    謝謝你用旅行守護南投 🌱 每一次打卡、每一次預約，都讓職人的手藝多傳承一天。
+    謝謝你用旅行守護南投。每一次打卡、每一次預約，都讓職人的手藝多傳承一天。
     下次回來，記得帶朋友一起來，把這份美好分享出去！
   </div>
 </td></tr>
@@ -332,7 +332,7 @@ def send_email(email, subject, html, name=None):
 
 def send_certificate(email, name, xp, checkins):
     date_str = datetime.now(TW).strftime('%Y 年 %m 月 %d 日')
-    send_email(email, "🏆 恭喜！您已獲得「南投永續達人」認證證書", certificate_html(name, xp, checkins, date_str), name)
+    send_email(email, "恭喜！您已獲得「南投永續達人」認證證書", certificate_html(name, xp, checkins, date_str), name)
 
 # ───────── 網站設定（公告列、AI 補充指示；存在 game_settings 表 key=site）─────────
 DEFAULT_SITE = {"announcement": {"enabled": False, "text": "", "link": "", "style": "info"}, "ai_extra": ""}
@@ -464,7 +464,7 @@ def checkin():
     if sb_get("checkins", {"google_id": f"eq.{gid}", "merchant_name": f"eq.{merchant}", "select": "id"}):
         return jsonify({"error": "你已經在這家打過卡囉！去探索其他職人吧"}), 400
     if not photo_has_person(image):
-        return jsonify({"error": "緣投在照片裡沒看到你耶！請拍一張有你本人入鏡的照片 📸"}), 400
+        return jsonify({"error": "緣投在照片裡沒看到你耶！請拍一張有你本人入鏡的照片"}), 400
 
     mult = xp_multiplier("checkin", MERCHANT_CATEGORY.get(merchant))
     xp = round(settings()["xp_checkin"] * mult)

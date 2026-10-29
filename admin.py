@@ -1280,7 +1280,7 @@ def validate_booking(d):
 
 def booking_email_html(b, status, note):
     ok = status == "已確認"
-    title = "您的南投職人體驗預約已確認 🎉" if ok else "關於您的南投職人體驗預約"
+    title = "您的南投職人體驗預約已確認" if ok else "關於您的南投職人體驗預約"
     body = ("商家已確認您的預約，期待與您見面！" if ok else
             "很抱歉，商家這次無法接受您的預約。歡迎回到網站，請 AI 嚮導緣投幫您推薦其他職人體驗。")
     esc = html_escape
@@ -1339,7 +1339,7 @@ def update_booking(rid):
     mailed = False
     if d.get("notify_customer") and old.get("status") != clean["status"] and clean["status"] in ("已確認", "已婉拒") and clean["email"]:
         merged = {**old, **clean}
-        subject = "✅ 您的南投職人體驗預約已確認" if clean["status"] == "已確認" else "關於您的南投職人體驗預約"
+        subject = "您的南投職人體驗預約已確認" if clean["status"] == "已確認" else "關於您的南投職人體驗預約"
         threading.Thread(target=send_email, args=(clean["email"], subject,
                                                    booking_email_html(merged, clean["status"], str(d.get("note") or "")[:200]),
                                                    clean["customer_name"]), daemon=True).start()

@@ -76,6 +76,10 @@ button { font: inherit; cursor: pointer; border: none; background: none; color: 
 .section { padding: 80px 0; }
 .alt-bg { background: var(--bg-alt); }
 
+/* 線條圖示（Tabler Icons）：大小與顏色跟著文字 */
+.ic { vertical-align: -0.15em; flex-shrink: 0; }
+.cat-title .ic { color: var(--muted); margin-right: 2px; }
+
 /* 標題共用：宋體、寬字距 */
 h1, h2, h3, .serif { font-family: var(--font-serif); font-weight: 700; letter-spacing: 0.1em; line-height: 1.4; }
 h3 { font-weight: 600; letter-spacing: 0.06em; }
@@ -415,9 +419,9 @@ h3 { font-weight: 600; letter-spacing: 0.06em; }
 {% if announcement %}
 <!-- ═══════════ 首頁公告列（後台設定；訪客關閉後同一則公告這次瀏覽不再顯示） ═══════════ -->
 <div class="ann ann-{{ announcement.style }}" id="site-ann" data-key="{{ announcement.text|e }}" hidden>
-  <span>{{ {'info': '📢', 'promo': '🎉', 'warning': '⚠️'}.get(announcement.style, '📢') }}</span>
+  <span>{{ icon({'info': 'speakerphone', 'promo': 'confetti', 'warning': 'alert-triangle'}.get(announcement.style, 'speakerphone')) }}</span>
   {% if announcement.link %}<a href="{{ announcement.link|e }}">{{ announcement.text }} →</a>{% else %}<span>{{ announcement.text }}</span>{% endif %}
-  <button class="ann-close" id="ann-close" aria-label="關閉公告">✕</button>
+  <button class="ann-close" id="ann-close" aria-label="關閉公告">{{ icon("x") }}</button>
 </div>
 {% endif %}
 
@@ -446,8 +450,8 @@ h3 { font-weight: 600; letter-spacing: 0.06em; }
 <!-- ═══════════ 主視覺：6 大分類照片輪播（點照片或標題進入該分類） ═══════════ -->
 {% if categories %}
 <section class="hero" id="hero">
-  {% for c in categories %}<a class="hero-slide{% if loop.first %} active{% endif %}" href="/category/{{ c.slug }}"
-     style="background-image: url('/static/images/hero/{{ c.slug }}.jpg')" aria-label="查看{{ c.name }}的商家" data-label="{{ c.emoji }} {{ c.name }}"></a>
+  {% for c in categories %}<a class="hero-slide{% if loop.first %} active{% endif %}" href="{{ c.external_url or '/category/' ~ c.slug }}"{% if c.external_url %} target="_blank" rel="noopener"{% endif %}
+     style="background-image: url('/static/images/hero/{{ c.slug }}.jpg')" aria-label="查看{{ c.name }}" data-label="{{ c.name }}"></a>
   {% endfor %}
   <div class="hero-content">
     <span class="section-tag">深度與美學旅遊研究室</span>
@@ -460,7 +464,7 @@ h3 { font-weight: 600; letter-spacing: 0.06em; }
   </div>
   <div class="hero-nav">
     <div class="wrap">
-      <a class="hero-caption" id="hero-caption" href="/category/{{ categories[0].slug }}">{{ categories[0].emoji }} {{ categories[0].name }}　查看商家 →</a>
+      <a class="hero-caption" id="hero-caption" href="/category/{{ categories[0].slug }}">{{ categories[0].name }}　查看商家 →</a>
       <div class="hero-dots">{% for c in categories %}<button class="hero-dot{% if loop.first %} active{% endif %}" aria-label="{{ c.name }}" data-i="{{ loop.index0 }}"></button>{% endfor %}</div>
     </div>
   </div>
@@ -528,17 +532,17 @@ h3 { font-weight: 600; letter-spacing: 0.06em; }
     <div class="cat-grid">
       {% for c in categories %}
       <article class="cat-card card reveal">
-        <a href="/category/{{ c.slug }}" class="media">
+        <a href="{{ c.external_url or '/category/' ~ c.slug }}"{% if c.external_url %} target="_blank" rel="noopener"{% endif %} class="media">
           <img src="/static/images/categories/{{ c.image }}" alt="{{ c.name }}">
           <span class="cat-count">{% if c.merchants %}{{ c.merchants|length }} 家{% else %}即將推出{% endif %}</span>
         </a>
         <div class="cat-body">
-          <h3><a href="/category/{{ c.slug }}" class="title-link">{{ c.emoji }} {{ c.name }}</a></h3>
+          <h3><a href="{{ c.external_url or '/category/' ~ c.slug }}"{% if c.external_url %} target="_blank" rel="noopener"{% endif %} class="title-link cat-title">{{ icon(c.icon) }} {{ c.name }}</a></h3>
           <p class="tagline">{{ c.tagline }}</p>
           <div class="chips">{% for t in c.tags %}<span>{{ t }}</span>{% endfor %}</div>
           <div class="cat-foot">
-            <a href="/category/{{ c.slug }}" class="title-link">查看商家 →</a>
-            <button class="cat-ask" data-ask="【分類探索】我對「{{ c.emoji }} {{ c.name }}」類別感興趣，請介紹南投有哪些相關的商家與體驗。">問問 AI</button>
+            <a href="{{ c.external_url or '/category/' ~ c.slug }}"{% if c.external_url %} target="_blank" rel="noopener"{% endif %} class="title-link">{% if c.external_url %}前往品味南投 ↗{% else %}查看商家 →{% endif %}</a>
+            <button class="cat-ask" data-ask="【分類探索】我對「{{ c.name }}」類別感興趣，請介紹南投有哪些相關的商家與體驗。">問問 AI</button>
           </div>
         </div>
       </article>
@@ -623,7 +627,7 @@ h3 { font-weight: 600; letter-spacing: 0.06em; }
     <div id="nantou-map" role="region" aria-label="南投職人地圖"></div>
     <div class="legend" id="legend">
       <button data-cat="all" class="active">全部</button>
-      {% for c in map_categories %}<button data-cat="{{ c.slug }}"><span class="dot" style="background: {{ c.color }}"></span>{{ c.emoji }} {{ c.name }}</button>
+      {% for c in map_categories %}<button data-cat="{{ c.slug }}"><span class="dot" style="background: {{ c.color }}"></span>{{ c.name }}</button>
       {% endfor %}
     </div>
   </div>
@@ -687,7 +691,8 @@ h3 { font-weight: 600; letter-spacing: 0.06em; }
   <div class="wrap">
     <a href="#top" class="brand"><img src="/static/images/logo-mark.png" alt="深度與美學旅遊研究室 logo"><span>深度與美學旅遊研究室</span></a>
     <p>職人帶路・南投永續深度旅行</p>
-    <a href="/admin" class="admin-link">🔒 管理員登入</a>
+    <p>© 2026 深度與美學旅遊研究室・本網站非政府機關官方網站</p>
+    <a href="/admin" class="admin-link">{{ icon("lock") }} 管理員登入</a>
   </div>
 </footer>
 
@@ -701,21 +706,21 @@ h3 { font-weight: 600; letter-spacing: 0.06em; }
   <div class="chat-head">
     <img src="/static/images/mascot.jpg" alt="吉祥物緣投">
     <div><div class="name">緣投 AI 嚮導</div><div class="status">● 線上，隨時為您服務</div></div>
-    <button class="close" id="chat-close" aria-label="關閉聊天">✕</button>
+    <button class="close" id="chat-close" aria-label="關閉聊天">{{ icon("x") }}</button>
   </div>
   <div id="chat-box">
     <div class="msg bot">
-      你好！我是緣投，你的南投在地 AI 嚮導 🌿<br><br>請選擇您感興趣的體驗類別，或直接輸入需求：
+      你好！我是緣投，你的南投在地 AI 嚮導。<br><br>請選擇您感興趣的體驗類別，或直接輸入需求：
       <div class="quick" id="quick">
-        {% for c in categories %}<button data-ask="【分類探索】{{ c.emoji }} {{ c.name }}">{{ c.emoji }} {{ c.name }}</button>
-        {% endfor %}<button class="full" data-ask="幫我規劃南投一日行程">📅 規劃一日行程</button>
+        {% for c in categories %}<button data-ask="【分類探索】{{ c.name }}">{{ icon(c.icon) }} {{ c.name }}</button>
+        {% endfor %}<button class="full" data-ask="幫我規劃南投一日行程">{{ icon("route") }} 規劃一日行程</button>
       </div>
     </div>
     <div class="typing" id="typing"><span></span><span></span><span></span></div>
   </div>
   <div class="chat-input">
     <input type="text" id="user-input" placeholder="輸入你的需求..." autocomplete="off" aria-label="輸入訊息">
-    <button id="send-btn" aria-label="送出">➤</button>
+    <button id="send-btn" aria-label="送出">{{ icon("send") }}</button>
   </div>
 </div>
 
@@ -756,11 +761,16 @@ h3 { font-weight: 600; letter-spacing: 0.06em; }
     i = (n + slides.length) % slides.length;
     slides[i].classList.add('active'); dots[i].classList.add('active');
     cap.href = slides[i].getAttribute('href');
+    cap.target = slides[i].target || '';
     cap.textContent = slides[i].dataset.label + '　查看商家 →';
   }
   function start() { clearInterval(timer); if (slides.length > 1) timer = setInterval(() => show(i + 1), 6000); }
   dots.forEach(d => d.addEventListener('click', e => { e.stopPropagation(); show(+d.dataset.i); start(); }));
-  hero.addEventListener('click', e => { if (!e.target.closest('a, button')) location.href = slides[i].getAttribute('href'); });
+  hero.addEventListener('click', e => {
+    if (e.target.closest('a, button')) return;
+    if (slides[i].target === '_blank') window.open(slides[i].href, '_blank', 'noopener');
+    else location.href = slides[i].getAttribute('href');
+  });
   document.addEventListener('visibilitychange', () => document.hidden ? clearInterval(timer) : start());
   start();
 })();
@@ -778,18 +788,19 @@ document.querySelectorAll('.rail-body').forEach(body => {
 // ═══════════ 互動地圖：分類顏色與圖示由後端依店名提供 ═══════════
 (function () {
   const MERCHANT_CAT = {{ merchant_cat|tojson }};
+  const CAT_ICONS = {{ cat_icons|tojson }}, UI_ICONS = {{ ui_icons|tojson }};   // 黑白線條圖示（Tabler Icons，MIT）
   const map = L.map('nantou-map', { scrollWheelZoom: false }).setView([23.88, 120.9], 10);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 17 }).addTo(map);
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const icon = (color, emoji) => L.divIcon({
+  const icon = (color, svg) => L.divIcon({
     className: '', iconSize: [34, 34], iconAnchor: [17, 34], popupAnchor: [0, -34],
-    html: `<div style="width:34px;height:34px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;border:2px solid var(--white);box-shadow:var(--shadow)"><span style="transform:rotate(45deg);font-size:16px">${emoji}</span></div>`
+    html: `<div style="width:34px;height:34px;background:${color};border-radius:50% 50% 50% 0;transform:rotate(-45deg);display:grid;place-items:center;border:2px solid var(--white);box-shadow:var(--shadow)"><span style="transform:rotate(45deg);font-size:17px;line-height:0;color:var(--white)">${svg}</span></div>`
   });
   const markers = LOCATIONS.map(loc => {
-    const mc = MERCHANT_CAT[loc.name] || { cat: 'uncategorized', emoji: '📍', color: 'var(--green)' };
-    const m = L.marker([loc.lat, loc.lng], { icon: icon(mc.color, mc.emoji), title: loc.label }).addTo(map);
+    const mc = MERCHANT_CAT[loc.name] || { cat: 'uncategorized', color: 'var(--green)' };
+    const m = L.marker([loc.lat, loc.lng], { icon: icon(mc.color, CAT_ICONS[mc.cat] || CAT_ICONS.uncategorized), title: loc.label }).addTo(map);
     m._cat = mc.cat;
-    m.bindPopup(`<div class="map-popup"><b>${mc.emoji} ${esc(loc.label)}</b><p>${esc(loc.desc)}</p>${loc.phone ? `<div class="phone">📞 ${esc(loc.phone)}</div>` : ''}<button data-ask="${esc(loc.ask)}">🤖 讓 AI 推薦</button></div>`, { maxWidth: 260 });
+    m.bindPopup(`<div class="map-popup"><b>${esc(loc.label)}</b><p>${esc(loc.desc)}</p>${loc.phone ? `<div class="phone">${UI_ICONS.phone} ${esc(loc.phone)}</div>` : ''}<button data-ask="${esc(loc.ask)}">${UI_ICONS['message-chatbot']} 讓 AI 推薦</button></div>`, { maxWidth: 260 });
     return m;
   });
   document.getElementById('legend').addEventListener('click', e => {
@@ -805,6 +816,7 @@ document.querySelectorAll('.rail-body').forEach(body => {
 })();
 
 // ═══════════ AI 嚮導聊天 ═══════════
+const CHAT_ICONS = {{ ui_icons|tojson }};
 const chat = document.getElementById('chat'), chatBox = document.getElementById('chat-box');
 const userInput = document.getElementById('user-input'), typing = document.getElementById('typing');
 const fab = document.getElementById('ai-fab');
@@ -892,7 +904,7 @@ function appendMessage(text, who) {
 function shareBar(planText) {
   const bar = document.createElement('div');
   bar.className = 'chat-extra';
-  bar.innerHTML = '<span>📤 分享此行程</span>';
+  bar.innerHTML = `<span>${CHAT_ICONS.share} 分享此行程</span>`;
   const btn = document.createElement('button');
   btn.textContent = '取得連結';
   btn.onclick = async () => {
@@ -902,7 +914,7 @@ function shareBar(planText) {
       const data = await res.json();
       if (!data.url) throw new Error(data.error);
       const link = location.origin + data.url;
-      bar.innerHTML = `<span>🔗 行程連結：</span><a href="${link}" target="_blank" rel="noopener">${link}</a>`;
+      bar.innerHTML = `<span>${CHAT_ICONS.link} 行程連結：</span><a href="${link}" target="_blank" rel="noopener">${link}</a>`;
       try { navigator.clipboard.writeText(link); } catch (e) {}
     } catch (e) { btn.textContent = '失敗，請重試'; btn.disabled = false; }
   };
@@ -913,7 +925,7 @@ function shareBar(planText) {
 function ratingNote(bookingId) {
   const div = document.createElement('div');
   div.className = 'chat-extra';
-  div.innerHTML = `<span>🌟 體驗結束後，歡迎回來評分：</span><a href="/rate/${bookingId}" target="_blank" rel="noopener">預約 ${bookingId} 的評價頁面 →</a>`;
+  div.innerHTML = `<span>${CHAT_ICONS.star} 體驗結束後，歡迎回來評分：</span><a href="/rate/${bookingId}" target="_blank" rel="noopener">預約 ${bookingId} 的評價頁面 →</a>`;
   return div;
 }
 
