@@ -50,7 +50,7 @@
         .nav-logo span { color: var(--accent); }
 
         .nav-links {
-            margin-left: auto; margin-right: 28px;
+            position: absolute; left: 50%; transform: translateX(-50%);   /* 選單置中於整個導覽列；寬度不夠時（≤1180px）會改成漢堡選單 */
             display: flex;
             gap: 32px;
             list-style: none;
@@ -140,7 +140,7 @@
             transform: skewX(-20deg); animation: glow-sweep 3s ease-in-out infinite;
         }
         .glow-btn:hover { transform: translateY(-2px) scale(1.04); }
-        .nav-game { margin-left: 20px; }
+        .nav-game { margin-left: auto; }
         .nav-game > span { padding: 7px 16px 7px 8px; font-size: 14px; }
         .nav-game img { width: 30px; height: 30px; object-fit: contain; margin: -4px 0; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.25)); }
         .nav-game-new {
@@ -1385,6 +1385,23 @@
             .value-item { padding: 24px 22px; gap: 22px; }
             .value-photo { min-height: 260px; }
             .value-title { font-size: 21px; }
+            /* 分類卡片：手機改一欄橫式（左照片、右文字），兩欄時每張只剩 160px 太擠 */
+            .cat-grid { grid-template-columns: 1fr; gap: 14px; }
+            .cat-card { flex-direction: row; min-height: 172px; }
+            .cat-photo { width: 38%; height: auto; flex-shrink: 0; }
+            .cat-count { top: 8px; right: auto; left: 8px; }
+            .cat-body { padding: 14px 16px; gap: 6px; }
+            .cat-name { font-size: 16px; }
+            /* 頁尾 CTA：按鈕不要沿用主視覺的 210px 寬，置中且不斷行 */
+            .cta-section .btn-primary { display: inline-block; width: auto; white-space: nowrap; }
+        }
+        /* 小螢幕（≤360px，例如 iPhone SE 1 代）：遊戲按鈕只留緣投頭像，避免被店名擠壓 */
+        @media (max-width: 360px) {
+            nav { padding: 0 14px; }
+            .nav-logo { font-size: 13px; }
+            .nav-game { flex-shrink: 0; margin-right: 8px; }
+            .nav-game > span { padding: 4px; }
+            .ng-short { display: none; }
         }
 </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -1557,11 +1574,13 @@ const UI_ICONS = {{ ui_icons|tojson }};
             <div class="value-head"><span class="value-num">01</span><span class="value-icon">{{ icon('palette') }}</span></div>
             <div><div class="value-title">文化傳承</div><div class="value-desc">職人故事經本人確認後，以中、英、日文介紹；部落內容由族人詮釋。</div></div>
         </div>
-        <div class="value-item">
+        <div class="value-item value-photo">
+            <div class="value-bg" style="background-image: url('/static/images/values/local.jpg')"></div>
             <div class="value-head"><span class="value-num">02</span><span class="value-icon">{{ icon('users-group') }}</span></div>
             <div><div class="value-title">在地受益</div><div class="value-desc">旅客直接向職人預約，縮短中間通路，讓消費留在南投。</div></div>
         </div>
-        <div class="value-item">
+        <div class="value-item value-photo">
+            <div class="value-bg" style="background-image: url('/static/images/values/impact.jpg')"></div>
             <div class="value-head"><span class="value-num">03</span><span class="value-icon">{{ icon('target') }}</span></div>
             <div><div class="value-title">看見成效</div><div class="value-desc">記錄到訪與人流、分散熱門景點，並規劃職人回饋機制，持續改善。</div></div>
         </div>

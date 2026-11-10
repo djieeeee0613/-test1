@@ -143,7 +143,8 @@ Render 環境變數（在 Render dashboard 設定）：
 
 ### `templates/index.html` 關鍵細節
 
-- **手機優化**：hamburger 選單、聊天視窗全螢幕（88vh）、各 breakpoint（900px / 768px / 480px）響應式
+- **手機優化**：hamburger 選單、聊天視窗全螢幕（88vh）、各 breakpoint（900px / 768px / 480px）響應式；≤600px 分類卡片改一欄橫式（左照片右文字），≤360px 導覽列遊戲按鈕只留緣投頭像
+- **導覽列**：五個選單用絕對定位置中於整個導覽列（>1180px 才顯示，以下改漢堡選單），遊戲按鈕靠右
 - **聊天 UI**：開啟時顯示 6 個類別 inline chip（`pickCategory()` 送出並消失）；AI 回覆中的 `[選項: A | B | C]` 解析為 `.opt-chip` 按鈕（`selectOpt()` 點擊後消失並送出）
 - **語言切換**：繁中 / EN / 日本語，切換後通知 AI 改換語言回覆
 - **聊天 session**：每次開頁產生 `chatSessionId`，隨 `/api/chat` 送出，用於後台 AI 嚮導分析
@@ -152,7 +153,7 @@ Render 環境變數（在 Render dashboard 設定）：
 - **頁尾**：「🔒 管理員登入」連到 `/admin`
 - **遊戲橫幅「幫緣投回家」**（`#game`）：滿版、至少一個螢幕高（`.game-banner` 覆寫 `section` 通用的 `max-width: 1200px`），星空與南投山稜背景，左邊是三個任務（打卡、問答、分享旅程，能量數字讀 `game_cfg`），右邊是蟲洞傳送門舞台（`#gb-stage`）：緣投依等級換造型輪播（`_game_stages()`，與 `game.html` 的 `formFor` 同規則），回家能量環跑滿就 LEVEL UP；到最高等級時蟲洞放大、「回家之路」最後的緣投星亮起，接著從 Lv.1 重新輪播。等級名稱與數量讀後台遊戲設定
 - **首頁主視覺輪播**（`#hero`）：背景輪流顯示 6 大分類照片（`static/images/hero/{slug}.jpg`，1920×1080，原圖在 `pic/`），每 6 秒換一張，下方有分類名稱與圓點可切換。點照片或標題文字會進入目前那張的分類頁（`.hero-content` 設 `pointer-events: none`，只有按鈕和連結能點）；分類由 `categories` 產生，新增分類時要補一張同名照片
-- **永續承諾**（`.values-grid`）：桌機三欄錯落排版，照片卡（文化傳承、友善環境，`.value-photo` + `.value-bg`，照片在 `static/images/values/`，原圖在 `pic/`）加 `.value-wide` 佔兩欄，與文字卡（在地受益、看見成效）交錯；每張卡左上是編號、右上是圖示。平板兩欄、手機一欄（手機規則放在 `<style>` 最後，才不會被前面的斷點蓋掉）
+- **永續承諾**（`.values-grid`）：桌機三欄錯落排版，四張都是照片卡（`.value-photo` + `.value-bg`，照片在 `static/images/values/`：`culture.jpg`、`local.jpg` 吊橋、`impact.jpg` 階梯、`environment.jpg`，原圖在 `pic/`），文化傳承、友善環境加 `.value-wide` 佔兩欄，與在地受益、看見成效交錯；每張卡左上是編號、右上是圖示。平板兩欄、手機一欄（手機規則放在 `<style>` 最後，才不會被前面的斷點蓋掉）
 - **活動輪播**（`#ad-carousel`）：
   - `_loadAds()` 在 DOMContentLoaded 呼叫 `GET /api/events`
   - `_buildSlide()` 判斷 `ev.image_url`：有圖則顯示全版照片 + 半透明漸層文字列；無圖則顯示色塊卡片
